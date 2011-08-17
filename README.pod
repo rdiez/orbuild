@@ -1,0 +1,378 @@
+
+This is the source file from which the README file is generated.
+
+This file is written in Perl's Plain Old Documentation (POD) format.
+Run the following Perl commands to convert it to text or to HTML
+for easy reading:
+
+  podchecker README.pod  # Optional, check syntax.
+  pod2text README.pod >README.txt
+
+  # pod2html seems buggy, at least in perl v5.10.1, therefore
+  # I'm using this long one-liner instead (with bash):
+  perl -MPod::Simple::HTML  -e "\$p = Pod::Simple::HTML->new; \$p->index( 1 ); \$p->output_fh( *STDOUT{IO} ); \$p->force_title('orbuild'); \$p->parse_file('README.pod');"  >README.html
+
+This file is best edited with emacs module pod-mode, available in CPAN.
+However, the POD syntax is quite simple and can be edited with a standard text editor.
+
+=pod
+
+=head1 I<< orbuild >> - a build system for OpenRISC
+
+----- NOTE THAT THIS PROJECT IS STILL IN THE PLANNING STAGE, THE SOFTWARE DOES NOT EXIST YET! -----
+
+I<< orbuild >> is a set of scripts that automatically download, build
+and test a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
+
+=head1 Motivation
+
+The OpenRISC project has grown and is now made up of many different components
+that need to be separately downloaded, configured and built. To many people,
+all these manual steps are a hassle, they just want to use the processor
+in their FPGA designs and have no interest in the supporting tools and technologies.
+I<< orbuild >> is designed to automate the initial setup steps.
+
+I<< orbuild >> can also help OpenRISC developers to keep up. Changes in one component
+may negatively affect some other one and it's impractical to manually run
+all regression tests in all possible scenarios.
+
+I<< orbuild >> is not meant to be mandatory, it is just a helping hand which
+only performs standard downloads and software builds. Users and developers
+are or course free to ignore it and manuall perform the installation and test steps.
+
+In the OpenRISC development community there is also the need to run a daily build
+with many possible component configurations, in order to alert the developers
+early when something has broken. This is in fact the main reason why I<< orbuild >>
+was developed, and the first task it was actually used for.
+
+The daily build can also take on the job of generating software releases,
+as manual release procedures often result in human error.
+
+=head1 Objectives
+
+=over
+
+=item * Automatically download, configure, build, test and install all OpenRISC components locally.
+
+All users end up with the same directory structure.
+
+=item * Generate a daily build.
+
+Output directories are rotated by date, an HTML report is generated at the end.
+
+Components are automatically packaged for offline installation.
+
+=back
+
+=head1 Audience
+
+=over
+
+=item * Users who wish to install OpenRISC components
+
+=item * Developers who wish to test OpenRISC components together
+
+=item * Daily build managers
+
+=back
+
+=head1 Prerequisites
+
+I<< orbuild >> runs on Unix-like systems as well as in the Cygwin environment on Microsoft Windows.
+
+Reasonably up-to-date versions of bash, GNU make and perl are required.
+
+TODO: Mention all the packages needed for orbuild and for the OpenRISC components under Linux and Cygwin.
+
+TODO: Could we optionally automate the installation of packages under the most common OSes?
+
+=head1 Usage
+
+The general steps are:
+
+=over
+
+=item * Download the latest version of I<< orbuild >>
+
+=item * Edit the F<< orbuild.conf >> file
+
+=item * Start the build process
+
+=back
+
+When the build starts, the current date and time is taken as a baseline. A new directory,
+whose name includes that timestamp, is created on disk. All source-control repositories
+are checked out at that point in time, in order to minimise the risk
+of skew across the repositories.
+
+=head2 Standard usage scenarios
+
+=over
+
+=item * The user wants to get the OpenRISC components for the first time
+
+The steps are (with bash):
+
+   mkdir orbuild-2010-11-30
+   cd    orbuild-2010-11-30
+
+   git clone git://TODO.TODO/path/to/repo.git/
+
+   < edit the orbuild.config file, there should be little to change >
+
+   ./orbuild new       # start a new build
+   ./orbuild resume    # resume a failed build
+
+At the end, the user will probably find it convenient to set an environment variable
+like this, so that all other software will automatically find the just-built OpenRISC components:
+
+   export OPENRISC_TOOLS="$PWD/<new subdir name>"
+
+=item * The user wants to update his OpenRISC components
+
+There are several alternatives:
+
+=over
+
+=item * Create a new sandbox, maybe reuse the downloaded files
+
+The safest way is to repeat the first-time scenario in a different directory.
+If the new build is successful, the user can then update the OPENRISC_TOOLS
+environment variable to point to the new version.
+
+If the user wants to conserve Internet bandwidth, it should be safe
+to edit F<< orbuild.conf >> in the new sandbox in order to share a global cache 
+of downloaded tarball files.
+
+=item * Reuse the sandbox
+
+In order to further conserve Internet bandwidth, it is possible to reuse
+the I<< orbuild >> sandbox and avoid checking out new copies
+of all repositories. The steps are:
+
+   cd orbuild-2010-11-30
+
+   # Update orbuild itself. This is optional but should be done often.
+   git pull
+
+   ./orbuild new       # start a new build
+   ./orbuild resume    # resume a failed build
+     
+   export OPENRISC_TOOLS="$PWD/<new subdir name>"
+
+=back
+
+=item * A daily build scenario
+
+The server administrator will have to edit the F<< orbuild.conf >> file extensively
+in order to generate non-standard builds.
+
+Instead of the 'new' command, a daily build server should probably use the 'rotate' command.
+
+In addition to generating HTML report files, the server will probably want to send
+a notification e-mail to some mailing list at the end of the build. See file
+F<< orbuild.conf >> for details.
+
+=back
+
+TODO: how to build without Internet access.
+
+=head2 Resuming a failed build
+
+The build is designed to be a one-shot process: the OpenRISC components are built just once,
+from beginning to end. However, if the build fails, it is possible to fix the problem
+in the local computer and resume from the point of failure.
+
+I<< orbuild >> only moves forwards: components that were successfully built the last time around
+will never be rebuilt. There is no dependency checking at source-code level, and
+the tool versions are not checked either. Therefore, it is not safe to change
+any local build tools or update I<< orbuild >> itself before
+resuming a build, as not all components will then be built with the same tool versions.
+Coping with such dependencies is well beyond the scope of this project.
+
+Note also that, if the OpenRISC components change in the mean time, the current
+I<< orbuild >> version may no longer be up-to-date enough to build them properly.
+
+=head1 Commands
+
+I<< orbuild >> takes the following commands:
+
+=over
+
+=item * new
+
+Start a build in a new subdirectory.
+
+=item * resume
+
+Resume a failed build.
+
+=item * rotate
+
+Like the 'new' command, only possibly delete some of the older builds,
+in order to limit the amount of builds kept on disk.
+
+=item * test-email
+
+Send a test e-mail to check that the e-mail configuration in file F<< orbuild.conf >> is correct.
+
+=item * test-visual-notification
+
+Display the end-of-build visual notification. If it does not work,
+maybe the right package is not installed, or the configuration
+in file F<< orbuild.conf >> is not quite right.
+
+=back
+
+=head1 Directory structure
+
+This is what the directory structure looks like:
+
+  orbuild-2010-11-30/
+
+    scripts/             # orbuild's own source code
+      orbuild.status     # Contains the current destination subdir name "build-2011-02-20-23:59/"
+      orbuild.version    # The orbuild sandbox layout version. After a "git pull",
+                         # the new layout may no longer be compatible with the existing one.
+
+    downloads/         # All tarballs downloaded from the Internet.
+
+    repositories/      # All git and subversion repositories downloaded from the Internet.
+      gnu-src/
+      ...
+
+    builds/
+      build-2011-02-19/  # The build from yesterday.
+        gnu-src-obj/
+        gnu-src-bin/
+        ...
+        build-report/
+
+      build-2011-02-20/  # Files being built now.
+        ...
+
+    orbuild            # The main driving script.
+    orbuild.conf
+    README             # This file.
+
+=head1 The F<< orbuild.conf >> configuration file
+
+=head2 Why a configuration file is needed
+
+Unfortunately, even the standard user needs to edit the configuration file.
+At the very least, I<< orbuild >> needs a login and password
+for the opencores.org web site.
+
+Most users will probably want to set up the visual notification feature,
+in order to start using the build as soon as it is finished.
+
+OpenRISC developers will want to specify which repository branch
+should be checked out.
+
+Daily build administrators may want to temporarily build a specific component
+version if the latest one is known to be broken.
+
+A graphical user interface able to edit the config file would be
+a nice addition to this project.
+
+=head2 Configuration file format
+
+F<< orbuild.conf >> is a text file in simplified .INI file format. There are no [sections],
+all entries have the form "key = value", and lines starting with # are considered comments.
+
+=head2 Generic build system settings
+
+=over
+
+=item * parallel-process-count
+
+This is the -j argument to GNU make. You would normally specify value 1 for
+sequential processing or 'auto' to use all available processors.
+
+=item * notification-email-xxx
+
+A set of options in order to send a notification e-mail at the end of the build process.
+
+=item * visual-notification
+
+Specifies what kind of visual notification is generated at the end of the build process.
+
+TODO: document needed packages under cygwin / linux / etc.
+
+=item * download-cache
+
+Specifies the location of the shared file cache. All downloaded tarballs
+can be then shared between several I<< orbuild >> sandboxes.
+
+It's best to use absolute paths.
+
+=item * repository-timestamp
+
+Freeze the timestamp to a specific point in time. Example: "2011-02-20-08:10".
+
+This is useful when developing a component, so that all other components
+stay unchanged.
+
+=item * rotate-slot-count
+
+Mainly useful for a nightly build server, see the 'rotate' command.
+
+=back
+
+=head2 Specific OpenRISC settings
+
+=over
+
+=item * opencores-login, opencores-password
+
+Needed to access the Subversion repositories.
+
+=item * gnu-src-branch
+
+Which branch should be checked out for the gnu-src repository.
+
+=item * gnu-src-url
+
+The address where the gnu-src repository should be downloaded from.
+
+=item * build-linux-toolchain
+
+Whether to build the linux-based toolchain.
+
+=item * build-bare-metal-toolchain
+
+Whether to build the bare-metal toolchain.
+
+=item * build-gdb
+
+Whether to build gdb.
+
+=item * TODO
+
+=back
+
+=head1 Why write I<< orbuild >> in perl, bash and make
+
+There are open-source tools like Apache Continuum, CruiseControl or BuildBot that could take on the task of building software components. However, at the time I<< orbuild >> was developed, they seemed overkill. Besides, most OpenRISC users would not be prepared to install such a build system locally in order to get the build running on their machines.
+
+Perl, Bash and Make are very popular and should be easy to install on all systems, if they are not already there.
+
+The original author of I<< orbuild >> was already familiar with Perl and had no experience with Python, Ruby and so on.
+
+The dash shell would be faster, but speed is not so important here, and bash has more features.
+
+Makefiles are hard to write, linear scripts would have been much easier to maintain. However, GNU Make has a killer feature: all make subprocesses coordinate with each other in order to limit the amount of concurrent processes and keep the system's load within the given limit (see the documentation for the -j switch for more information). The user can easily set the number of concurrent processes to 1 (sequential processing), in order to keep his PC responsive for other tasks, or set it to 'auto' and use all available CPUs, but without starting so many processes at once that the PC overloads and starts thrashing.
+
+The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact, most of them have evolved over the years in other unrelated projects.
+
+
+=head1 License
+
+Copyright (C) R. Diez 2011,  rdiezmail-openrisc at yahoo.de
+
+The I<< orbuild >> source code is released under the GPL 3 license.
+
+This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
+
+=cut
+
