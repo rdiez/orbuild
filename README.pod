@@ -100,7 +100,11 @@ The general steps are:
 
 =back
 
-When the build starts, the current date and time is taken as a baseline. A new directory,
+Run the following command for quick help text.
+
+  ./orbuild --help      # Alternative:  perl orbuild --help
+
+When the build starts, the current date is taken as a baseline. A new directory,
 whose name includes that timestamp, is created on disk. All source-control repositories
 are checked out at that point in time, in order to minimise the risk
 of skew across the repositories.
@@ -126,7 +130,7 @@ The steps are (with bash):
 At the end, the user will probably find it convenient to set an environment variable
 like this, so that all other software will automatically find the just-built OpenRISC components:
 
-   export OPENRISC_TOOLS="$PWD/<new subdir name>"
+   export OPENRISC_TOOLS="$PWD/builds/<new subdir name>"
 
 =item * The user wants to update his OpenRISC components
 
@@ -158,7 +162,7 @@ of all repositories. The steps are:
    ./orbuild new       # start a new build
    ./orbuild resume    # resume a failed build
      
-   export OPENRISC_TOOLS="$PWD/<new subdir name>"
+   export OPENRISC_TOOLS="$PWD/builds/<new subdir name>"
 
 =back
 
@@ -235,9 +239,9 @@ This is what the directory structure looks like:
       orbuild.version    # The orbuild sandbox layout version. After a "git pull",
                          # the new layout may no longer be compatible with the existing one.
 
-    downloads/         # All tarballs downloaded from the Internet.
+    download-cache/      # All tarballs downloaded from the Internet.
 
-    repositories/      # All git and subversion repositories downloaded from the Internet.
+    repositories/        # All git and subversion repositories downloaded from the Internet.
       gnu-src/
       ...
 
