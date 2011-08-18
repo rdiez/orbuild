@@ -2,7 +2,7 @@
 
 =head1 OVERVIEW
 
-RotateDir version 2.00
+RotateDir version 2.01
 
 This tool makes room for a new slot, deleting older slots if necessary. Each slot is just a directory on disk.
 
@@ -70,7 +70,7 @@ Print this help text.
 
 B<--slot-count n>
 
-Maximum number of rotating directores. The default is 3.
+Maximum number of rotating directores. The default is 3. Zero means "do not delete any older slots".
 
 =item *
 
@@ -203,7 +203,7 @@ use Pod::Usage;
 use Class::Struct;
 
 use constant SCRIPT_NAME => $0;
-use constant SCRIPT_VERSION => "2.00";  # If you update it, update also the perldoc text above.
+use constant SCRIPT_VERSION => "2.01";  # If you update it, update also the perldoc text above.
 
 use constant EXIT_CODE_SUCCESS       => 0;
 use constant EXIT_CODE_FAILURE_ARGS  => 1;
@@ -292,9 +292,9 @@ sub main ()
     return EXIT_CODE_SUCCESS;
   }
 
-  if ( $arg_slotCount < 2 )
+  if ( $arg_slotCount != 0 and $arg_slotCount < 2 )
   {
-    die "The slot count must be at least 2.\n";
+    die "The slot count must be at least 2 (or zero to disable old slot deletion).\n";
   }
 
   if ( $arg_dirNamingScheme ne NS_SEQUENCE and
@@ -529,7 +529,7 @@ sub delete_old_slots ( $ $ $ )
 
   my $currentSlotCount = scalar @$allSlots;
 
-  return if ( $currentSlotCount < $arg_slotCount );
+  return if ( $arg_slotCount == 0 or $currentSlotCount < $arg_slotCount );
 
   my @toDelete = sort compare_slots @$allSlots;
 
