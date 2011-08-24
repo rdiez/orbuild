@@ -2,7 +2,7 @@
 
 =head1 OVERVIEW
 
-RotateDir version 2.01
+RotateDir version 2.03
 
 This tool makes room for a new slot, deleting older slots if necessary. Each slot is just a directory on disk.
 
@@ -70,7 +70,9 @@ Print this help text.
 
 B<--slot-count n>
 
-Maximum number of rotating directores. The default is 3. Zero means "do not delete any older slots".
+Maximum number of rotating directores on disk. The default is 3.
+
+This option is incompatible with --no-slot-deletion .
 
 =item *
 
@@ -114,7 +116,7 @@ B<--timestamp E<lt>yyyy-mm-ddE<gt>>
 
 This option is only allowed when the naming scheme has been set to a timestamp-based type.
 
-The given timestamp will be used to name the slot directories. An example
+The given timestamp will be used to name the new slot directory. An example
 timestamp would be "2010-12-31". In order to avoid surprises, it's best to
 zero-fill the date fields, therefore "2010-01-02" is better than "2010-1-2".
 
@@ -133,6 +135,26 @@ The default is to take the current local time. An error will be generated
 if the perl environment cannot handle years after 2038,
 even if that date has not been reached yet.
 
+This option is incompatible with --no-slot-creation .
+
+=item *
+
+B<< --no-slot-deletion >>
+
+Create a new slot but do not delete any old ones.
+
+This option is incompatible with --slot-count, --no-slot-creation and --deletion-delay.
+
+=item *
+
+B<< --no-slot-creation >>
+
+Make room for a new slot, deleting older slots if necessary,
+but do not create a new slot. Therefore, assuming --slot-count is set to 10,
+this option will leave a maximum of 9 slots behind.
+
+This option is incompatible with --no-slot-deletion and with --output-only-new-dir-name .
+
 =item *
 
 B<--output-only-new-dir-name>
@@ -142,9 +164,11 @@ Useful when running this tool from automated scripts, so that there is no other 
 to parse and discard.
 The output includes the containing directory name and a new-line character at the end.
 
+This option is incompatible with --no-slot-creation .
+
 =item *
 
-B<--delete-delay E<lt>secondsE<gt>>
+B<--deletion-delay E<lt>secondsE<gt>>
 
 On Microsoft Windows, sometimes it takes a few seconds for a deleted directory
 to actually go away, especially if the user is looking at it
@@ -154,6 +178,8 @@ and check again whether the directory continues to exist. If the directory is st
 after the wait, an error will be generated.
 
 The default is 5 seconds. A value of 0 disables the waiting and the second check.
+
+This option is incompatible with --no-slot-deletion .
 
 =item *
 
@@ -203,7 +229,7 @@ use Pod::Usage;
 use Class::Struct;
 
 use constant SCRIPT_NAME => $0;
-use constant SCRIPT_VERSION => "2.01";  # If you update it, update also the perldoc text above.
+use constant SCRIPT_VERSION => "2.03";  # If you update it, update also the perldoc text above.
 
 use constant EXIT_CODE_SUCCESS       => 0;
 use constant EXIT_CODE_FAILURE_ARGS  => 1;
@@ -248,23 +274,27 @@ sub main ()
   my $arg_h                = 0;
   my $arg_version          = 0;
   my $arg_license          = 0;
-  my $arg_slotCount        = 3;
-  my $arg_deleteDelay      = 5;
+  my $arg_slotCount;
+  my $arg_deletionDelay;
   my $arg_dirNamePrefix    = "rotated-dir-";
   my $arg_dirNamingScheme  = NS_SEQUENCE;
   my $arg_timestamp;
   my $arg_outputOnlyNewDir = 0;
+  my $arg_noSlotDeletion   = 0;
+  my $arg_noSlotCreation   = 0;
 
   my $result = GetOptions(
                  'help'                =>  \$arg_help,
                  'h'                   =>  \$arg_h,
                  'version'             =>  \$arg_version,
                  'license'             =>  \$arg_license,
-                 'slot-count=i'        =>  \$arg_slotCount,
-                 'delete-delay=i'      =>  \$arg_deleteDelay,
+                 'slot-count=s'        =>  \$arg_slotCount,
+                 'deletion-delay=s'    =>  \$arg_deletionDelay,
                  'dir-name-prefix=s'   =>  \$arg_dirNamePrefix,
                  'dir-naming-scheme=s' =>  \$arg_dirNamingScheme,
                  'timestamp=s'         =>  \$arg_timestamp,
+                 'no-slot-deletion'    =>  \$arg_noSlotDeletion,
+                 'no-slot-creation'    =>  \$arg_noSlotCreation,
                  'output-only-new-dir-name' => \$arg_outputOnlyNewDir
                 );
 
@@ -292,9 +322,40 @@ sub main ()
     return EXIT_CODE_SUCCESS;
   }
 
-  if ( $arg_slotCount != 0 and $arg_slotCount < 2 )
+  if ( $arg_noSlotDeletion && ( defined( $arg_slotCount ) || $arg_noSlotCreation || defined( $arg_deletionDelay ) ) )
   {
-    die "The slot count must be at least 2 (or zero to disable old slot deletion).\n";
+    die "Option --no-slot-deletion is incompatible with options --slot-count, --no-slot-creation and --deletion-delay .\n";
+  }
+
+  if ( $arg_noSlotCreation && $arg_outputOnlyNewDir )
+  {
+    die "Option --no-slot-creation is incompatible with option --output-only-new-dir-name.\n";
+  }
+
+  if ( not defined $arg_slotCount )
+  {
+    $arg_slotCount = 3;  # Default value.
+  }
+
+  if ( has_non_digits( $arg_slotCount ) )
+  {
+    die qq<Invalid slot count "$arg_slotCount".\n>;
+  }
+
+
+  if ( not defined $arg_deletionDelay )
+  {
+    $arg_deletionDelay = 5;  # Default value.
+  }
+
+  if ( has_non_digits( $arg_deletionDelay ) )
+  {
+    die qq<Invalid deletion delay "$arg_deletionDelay".\n>;
+  }
+
+  if ( $arg_slotCount < 2 )
+  {
+    die "The slot count must be at least 2.\n";
   }
 
   if ( $arg_dirNamingScheme ne NS_SEQUENCE and
@@ -303,9 +364,17 @@ sub main ()
     die qq<Invalid naming scheme "$arg_dirNamingScheme".\n>;
   }
 
-  if ( defined( $arg_timestamp ) and $arg_dirNamingScheme ne NS_DATE )
+  if ( defined( $arg_timestamp ) )
   {
-     die "Option --timestamp is only allowed together with a timestamp-based naming scheme.\n";
+    if ( $arg_dirNamingScheme ne NS_DATE )
+    {
+      die "Option --timestamp is only allowed together with a timestamp-based naming scheme.\n";
+    }
+
+    if ( $arg_noSlotCreation )
+    {
+      die "Option --timestamp is incompatible with option --no-slot-creation.\n";
+    }
   }
 
   if ( 1 != scalar @ARGV )
@@ -325,9 +394,17 @@ sub main ()
   }
   elsif ( $arg_dirNamingScheme eq NS_DATE )
   {
-    my $nextTimestamp = get_next_timestamp( $arg_timestamp );
+    if ( $arg_noSlotCreation )
+    {
+      process_timestamp_slots( \@allSlots, undef );
+      $newSlotName = undef;
+    }
+    else
+    {
+      my $nextTimestamp = get_next_timestamp( $arg_timestamp );
 
-    $newSlotName = process_timestamp_slots( \@allSlots, $nextTimestamp );
+      $newSlotName = process_timestamp_slots( \@allSlots, $nextTimestamp );
+    }
   }
   else
   {
@@ -335,14 +412,20 @@ sub main ()
     die qq<Invalid naming scheme "$arg_dirNamingScheme".\n>;
   }
 
-  delete_old_slots( \@allSlots,
-                    $arg_slotCount,
-                    $arg_outputOnlyNewDir,
-                    $arg_deleteDelay );
+  if ( not $arg_noSlotDeletion )
+  {
+    delete_old_slots( \@allSlots,
+                      $arg_slotCount,
+                      $arg_outputOnlyNewDir,
+                      $arg_deletionDelay );
+  }
 
-  create_new_slot( cat_path( $baseDir,
-                             $arg_dirNamePrefix . $newSlotName ),
-                   $arg_outputOnlyNewDir );
+  if ( not $arg_noSlotCreation )
+  {
+    create_new_slot( cat_path( $baseDir,
+                               $arg_dirNamePrefix . $newSlotName ),
+                     $arg_outputOnlyNewDir );
+  }
 
   return EXIT_CODE_SUCCESS;
 }
@@ -456,7 +539,7 @@ sub process_sequence_slots ( $ )
 sub process_timestamp_slots ( $ $ )
 {
   my $allSlots      = shift;
-  my $nextTimestamp = shift;
+  my $nextTimestamp = shift;  # If undef, there will be no next slot.
 
   my $nextSequenceNumber = FIRST_TIMESTAMP_SEQUENCE_NUMBER - 1;
 
@@ -474,36 +557,46 @@ sub process_timestamp_slots ( $ $ )
       die "Error extracting the timestamp from slot \"" . $slotFound->slotSubdirName . "\": $errorMessage\n";
     }
 
-    my $cmp = compare_timestamps( $slotFound, $nextTimestamp );
-
-    if ( $cmp >= 1 )
+    if ( defined $nextTimestamp )
     {
-      die "The given timestamp \"" .
-          format_timestamp( $nextTimestamp->year,
-                            $nextTimestamp->month,
-                            $nextTimestamp->day ) .
-          "\" is less than the timestamp extracted from existing slot \"" .
-          $slotFound->slotSubdirName . "\".\n";
-    }
+      my $cmp = compare_timestamps( $slotFound, $nextTimestamp );
 
-    if ( $cmp == 0 )
-    {
+      if ( $cmp >= 1 )
+      {
+        die "The given timestamp \"" .
+            format_timestamp( $nextTimestamp->year,
+                              $nextTimestamp->month,
+                              $nextTimestamp->day ) .
+            "\" is less than the timestamp extracted from existing slot \"" .
+            $slotFound->slotSubdirName . "\".\n";
+      }
+
+      if ( $cmp == 0 )
+      {
         if ( $slotFound->sequenceNumber >= $nextSequenceNumber )
         {
           $nextSequenceNumber = $slotFound->sequenceNumber + 1;
           check_valid_sequence_number( $nextSequenceNumber );
         }
+      }
     }
   }
 
-  my $suffix = $nextSequenceNumber < FIRST_TIMESTAMP_SEQUENCE_NUMBER
-                   ? ""
-                   : DATE_SEPARATOR . "$nextSequenceNumber";
+  if ( defined $nextTimestamp )
+  {
+    my $suffix = $nextSequenceNumber < FIRST_TIMESTAMP_SEQUENCE_NUMBER
+                     ? ""
+                     : DATE_SEPARATOR . "$nextSequenceNumber";
 
-  return format_timestamp( $nextTimestamp->year,
-                           $nextTimestamp->month,
-                           $nextTimestamp->day ) .
-                  $suffix;
+    return format_timestamp( $nextTimestamp->year,
+                             $nextTimestamp->month,
+                             $nextTimestamp->day ) .
+           $suffix;
+  }
+  else
+  {
+    return undef;
+  }
 }
 
 
@@ -525,11 +618,11 @@ sub delete_old_slots ( $ $ $ )
   my $allSlots             = shift;
   my $arg_slotCount        = shift;
   my $arg_outputOnlyNewDir = shift;
-  my $arg_deleteDelay = shift;
+  my $arg_deletionDelay    = shift;
 
   my $currentSlotCount = scalar @$allSlots;
 
-  return if ( $arg_slotCount == 0 or $currentSlotCount < $arg_slotCount );
+  return if ( $currentSlotCount < $arg_slotCount );
 
   my @toDelete = sort compare_slots @$allSlots;
 
@@ -551,7 +644,7 @@ sub delete_old_slots ( $ $ $ )
     # come before the progress message.
     STDOUT->flush();
 
-    delete_folder( $delPath, FALSE, $arg_deleteDelay );
+    delete_folder( $delPath, FALSE, $arg_deletionDelay );
 
     if ( !$arg_outputOnlyNewDir )
     {
@@ -629,6 +722,7 @@ sub get_next_timestamp ( $ )
     use constant MORE_THAN_32BITS => 2247483650;
 
     my ($sec2,$min2,$hour2,$mday2,$mon2,$year2,$wday2,$yday2,$isdst2) = localtime( MORE_THAN_32BITS );
+    $mon2 += 1;
     $year2 += 1900;
 
     if ( $year2 != 2041 )
@@ -644,6 +738,7 @@ sub get_next_timestamp ( $ )
     eval
     {
       my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime( time() );
+      $mon  += 1;
       $year += 1900;
       my $timestampStr = format_timestamp( $year, $mon, $mday );
       parse_timestamp( $timestampStr, FALSE, $nextTimestamp );
@@ -891,7 +986,7 @@ sub delete_folder ( $ $ $ )
 {
   my $folder_path    = shift;
   my $print_progress = shift;
-  my $deleteDelay    = shift;
+  my $deletionDelay  = shift;
 
   if ( $print_progress )
   {
@@ -920,7 +1015,7 @@ sub delete_folder ( $ $ $ )
   }
   
 
-  if ( $deleteDelay > 0 )  
+  if ( $deletionDelay > 0 )  
   {
     # Give it a few seconds, so that Windows Explorer realises
     # and stops showing the deleted folder. After that,
@@ -929,7 +1024,7 @@ sub delete_folder ( $ $ $ )
     
     #   write_stdout( "WARNING: The deleted folder is still visible.\n" );
     
-    sleep_seconds( $deleteDelay );
+    sleep_seconds( $deletionDelay );
     
     if ( not -d $folder_path )
     {
