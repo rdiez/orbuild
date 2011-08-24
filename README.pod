@@ -80,7 +80,29 @@ Components are automatically packaged for offline installation.
 
 I<< orbuild >> runs on Unix-like systems as well as in the Cygwin environment on Microsoft Windows.
 
-Reasonably up-to-date versions of bash, GNU make and perl are required.
+Reasonably up-to-date versions of the following software is required:
+
+=over
+
+=item * GNU make
+
+Tested with version 3.81.
+
+=item * perl
+
+=item * bash
+
+Some of the scripts use regular expressions, so bash versions older than 3.2 may not work.
+
+=item * curl
+
+Used to download the tarballs.
+
+=item * subversion, git
+
+Used to checkout the OpenRISC repositories.
+
+=back
 
 TODO: Mention all the packages needed for orbuild and for the OpenRISC components under Linux and Cygwin.
 
@@ -106,7 +128,7 @@ Run the following command for quick help text.
 
 When the build starts, the current date is taken as a baseline. A new directory,
 whose name includes that timestamp, is created on disk. All source-control repositories
-are checked out at that point in time, in order to minimise the risk
+are checked out at that point in time (TODO: not implemented yet), in order to minimise the risk
 of skew across the repositories.
 
 =head2 Standard usage scenarios
@@ -239,9 +261,9 @@ This is what the directory structure looks like:
       orbuild.version    # The orbuild sandbox layout version. After a "git pull",
                          # the new layout may no longer be compatible with the existing one.
 
-    download-cache/      # All tarballs downloaded from the Internet.
+    download-cache/         # All tarballs downloaded from the Internet.
 
-    repositories/        # All git and subversion repositories downloaded from the Internet.
+    repositories/      # All git and subversion repositories downloaded from the Internet.
       gnu-src/
       ...
 
@@ -312,7 +334,22 @@ It's best to use absolute paths.
 
 =item * repository-timestamp
 
-Freeze the timestamp to a specific point in time. Example: "2011-02-20-08:10".
+Freeze the timestamp to a specific point in time, in local time (not UTC).
+Only has an effect when creating new build directories, existing builds keep the timestamp they had when created.
+
+Examples:
+
+=over
+
+=item * 2011-02-20
+
+Translates to "2011-02-20 00:00:00".
+
+=item * 2011-02-20 08:10
+
+=item * 2011-02-20 08:10:05
+
+=back
 
 This is useful when developing a component, so that all other components
 stay unchanged.
