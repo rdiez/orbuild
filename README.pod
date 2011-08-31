@@ -104,7 +104,13 @@ Used to checkout the OpenRISC repositories.
 
 =back
 
-TODO: Mention all the packages needed for orbuild and for the OpenRISC components under Linux and Cygwin.
+Under Ubuntu/Debian systems, the following command installs all prerequisites in a single sweep:
+
+sudo apt-get install git curl
+
+TODO: libhtml-parser-perl  for the git svn mirroring support
+
+TODO: Mention all the packages needed for orbuild and for the OpenRISC components under Cygwin.
 
 TODO: Could we optionally automate the installation of packages under the most common OSes?
 
@@ -125,11 +131,6 @@ The general steps are:
 Run the following command for quick help text.
 
   ./orbuild --help      # Alternative:  perl orbuild --help
-
-When the build starts, the current date is taken as a baseline. A new directory,
-whose name includes that timestamp, is created on disk. All source-control repositories
-are checked out at that point in time (TODO: not implemented yet), in order to minimise the risk
-of skew across the repositories.
 
 =head2 Standard usage scenarios
 
@@ -392,6 +393,48 @@ Whether to build gdb.
 
 =back
 
+=head1 Caveats
+
+=head2 Repository skew
+
+At the beginning of the daily build, all source code repositories are updated in order to downloada the latest file versions. The update itself is not atomic: if a developer checks in changes to one of the repositories during the update process, it's not clear whether the new or the old file versions will be picked up by today's build.
+
+In order to minimize the risk of such skew across the repositories, the daily build could take the current date/time as today's baseline and check out all repositories at that timestamp. However, the following issues remain unresolved:
+
+=over
+
+=item * There may be a realtime clock skew across the different repository servers.
+
+=item * Git may deliver the wrong results for a given timestamp.
+
+If a developer merges a branch into head, and then tries to check out head as of last week, git may go down the merged branch and return a different set of files as it would have been the case had the deloper done a check out last week.
+
+In order to prevent that from happening, git developers must follow this kind of rules:
+
+=over
+
+=item * Never do a non-fast-forward (i.e., forced) push.
+
+=item * Never have any clock skew.
+
+=item * Always merge features into master (not the other way around).
+
+Upstream should always merge with --no-ff, which usually means making upstream an automated bot, and not a human being using "git push".
+
+Or maybe never do "git merge", but "git rebase" instead. Rebasing ensures that the commits are always re-applied so that the history stays linear.
+
+=item * Always push immediately after committing on master.
+
+=back
+
+Under those conditions, it would be possible to retrieve consistent results with "git log -1 --first-parent --until=...".
+
+=back
+
+=head2 Year 2038 compliance
+
+Some of the perl scripts use mktime and the like and are not year 2038 compliant on 32-bit Linux systems and on Cygwin.
+
 =head1 Why write I<< orbuild >> in perl, bash and make
 
 There are open-source tools like Apache Continuum, CruiseControl or BuildBot that could take on the task of building software components. However, at the time I<< orbuild >> was developed, they seemed overkill. Besides, most OpenRISC users would not be prepared to install such a build system locally in order to get the build running on their machines.
@@ -406,6 +449,15 @@ Makefiles are hard to write, linear scripts would have been much easier to maint
 
 The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact, most of them have evolved over the years in other unrelated projects.
 
+=head1 Alternatives to orbuild
+
+=over
+
+=item * Create a main git repository where each component is a git submodule.
+
+=item * Use a fully-fledged continuous integration server like Apache Continuum, CruiseControl or BuildBot.
+
+=back
 
 =head1 License
 
@@ -416,4 +468,3 @@ The I<< orbuild >> source code is released under the GPL 3 license.
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 
 =cut
-
