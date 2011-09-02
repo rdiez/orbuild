@@ -120,7 +120,7 @@ The general steps are:
 
 =over
 
-=item * Download the latest version of I<< orbuild >>
+=item * Download the latest version of I<< orbuild >> from L<< https://github.com/rdiez/orbuild >>
 
 =item * Edit the F<< orbuild.conf >> file
 
@@ -143,7 +143,7 @@ The steps are (with bash):
    mkdir orbuild-2010-11-30
    cd    orbuild-2010-11-30
 
-   git clone git://TODO.TODO/path/to/repo.git/
+   git clone git://github.com/rdiez/orbuild.git
 
    < edit the orbuild.config file, there should be little to change >
 
@@ -257,18 +257,15 @@ This is what the directory structure looks like:
 
   orbuild-2010-11-30/
 
-    scripts/             # orbuild's own source code
-      orbuild.status     # Contains the current destination subdir name "build-2011-02-20-23:59/"
-      orbuild.version    # The orbuild sandbox layout version. After a "git pull",
-                         # the new layout may no longer be compatible with the existing one.
+    Scripts/             # orbuild's own source code
 
-    download-cache/         # All tarballs downloaded from the Internet.
+    DownloadCache/       # All tarballs downloaded from the Internet.
 
-    repositories/      # All git and subversion repositories downloaded from the Internet.
+    Repositories/        # All git and subversion repositories downloaded from the Internet.
       gnu-src/
       ...
 
-    builds/
+    Builds/
       build-2011-02-19/  # The build from yesterday.
         gnu-src-obj/
         gnu-src-bin/
@@ -278,9 +275,12 @@ This is what the directory structure looks like:
       build-2011-02-20/  # Files being built now.
         ...
 
-    orbuild            # The main driving script.
+    orbuild            # The main script.
     orbuild.conf
-    README             # This file.
+    orbuild.status     # Contains the current destination subdir name "build-2011-02-20-23:59"
+    orbuild.version    # The orbuild sandbox layout version. After a "git pull",
+                       # the new layout may no longer be compatible with the existing one.
+    README.pod         # This file.
 
 =head1 The F<< orbuild.conf >> configuration file
 
