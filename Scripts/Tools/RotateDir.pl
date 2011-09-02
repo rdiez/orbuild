@@ -2,7 +2,7 @@
 
 =head1 OVERVIEW
 
-RotateDir version 2.03
+RotateDir version 2.04
 
 This tool makes room for a new slot, deleting older slots if necessary. Each slot is just a directory on disk.
 
@@ -229,7 +229,7 @@ use Pod::Usage;
 use Class::Struct;
 
 use constant SCRIPT_NAME => $0;
-use constant SCRIPT_VERSION => "2.03";  # If you update it, update also the perldoc text above.
+use constant SCRIPT_VERSION => "2.04";  # If you update it, update also the perldoc text above.
 
 use constant EXIT_CODE_SUCCESS       => 0;
 use constant EXIT_CODE_FAILURE_ARGS  => 1;
@@ -995,9 +995,9 @@ sub delete_folder ( $ $ $ )
 
   my $deleteCount = File::Path::rmtree( $folder_path );
 
-  if ( $deleteCount != 1 )
+  if ( $deleteCount < 1 )
   {
-    die "Cannot delete folder \"$folder_path\".\n";
+    die "deleteCount: $deleteCount --- Cannot delete folder \"$folder_path\".\n";
   }
 
   if ( $print_progress )
