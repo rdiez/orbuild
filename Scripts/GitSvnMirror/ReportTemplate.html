@@ -1,0 +1,56 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+        "http://www.w3.org/TR/html4/strict.dtd">
+
+<html>
+<head>
+<title>OpenRISC subversion->git mirror</title>
+<!-- table{border: 1px solid #000} -->
+<!-- td{border: 1px solid #000} -->
+<style TYPE="text/css">
+</style>
+</head>
+<body>
+
+<h1>OpenRISC subversion->git mirror</h1>
+
+<p> <span style="background-color:red; color:white"> --------- WARNING --------- EXPERIMENTAL STATUS --------- </span> </p>
+
+<p> This is a collection of read-only Git mirrors of OpenRISC Subversion repositories,
+inspired by a similar collection at <a href="http://git.apache.org/">http://git.apache.org/</a> (whose
+source code is at <a href="https://svn.apache.org/repos/infra/infrastructure/trunk/projects/git/">https://svn.apache.org/repos/infra/infrastructure/trunk/projects/git/</a>).</p>
+
+<p> Note that these Git mirrors are missing all Subversion properties except for <i>svn:executable</i>
+and some features like empty directories.</p>
+
+<h1>Mirror status</h1>
+
+<p>Last update started at UTC ${ LAST_UPDATE_START_TIME }.</p>
+
+<form>
+<table summary="Mirror repositories table"
+       border="1"
+       CELLSPACING="0">
+
+  <thead>
+        <tr>
+          <th>Name</th>
+          <th width="35%">Description</th>
+          <th>Status</th>
+          <th>Last <br/> Update <br/> Log</th>
+          <th width="35%">Git Commands</th>
+        </tr>
+  </thead>
+
+  <tbody>
+
+    ${ GIT_REPOSITORY_TABLE }
+
+  </tbody>
+
+</table>
+</form>
+
+<p> Copyright (C) 2011 R. Diez - see the <a href="https://github.com/rdiez/orbuild">orbuild project</a> for source code and licensing information.</p>
+
+</body>
+</html>
