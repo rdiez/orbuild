@@ -9,6 +9,7 @@ use warnings;
 use File::Temp;
 
 use FileUtils;
+use StringUtils;
 
 
 sub run_process ( $ )
@@ -114,7 +115,7 @@ sub run_process_capture_single_value_output ( $ )
       die "Unexpected output from child process for command \"$cmd\": " . join( "", @capturedStdout ) . "\n";
   }
 
-  return $capturedStdout[ 0 ];
+  return StringUtils::trim_blanks( $capturedStdout[ 0 ] );
 }
 
 
