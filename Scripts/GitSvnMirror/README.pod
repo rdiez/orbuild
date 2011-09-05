@@ -28,7 +28,7 @@ for an overview of this toolset, which is part of the I<< orbuild >> project.
 
 =item * Manually clone the subversion repository
 
-git svn init --username=<login> http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
+git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
 
   TODO: The Apache Foundation performs the following extra steps here:
   git config gitweb.owner "The Apache Software Foundation"
@@ -39,6 +39,14 @@ git svn init --username=<login> http://opencores.org/ocsvn/openrisc/openrisc/tru
   # Normally you get "ref: refs/heads/master" in the .git/HEAD file"
   echo "ref: refs/heads/trunk" > "$GIT_DIR/HEAD"
   git update-server-info
+
+=item * Run "git svn fetch --username=<login>" manually on the new repository
+
+You'll have the chance to enter the password, see section "About the Subversion credentials"
+below for more information.
+
+Note that, although "git svn init" does recognise option "--username=<login>",
+it does not seem to store it properly, at least for git version 1.7.0.4.
 
 =item * Create file .git/OrbuildGitSvnInit
 
@@ -73,10 +81,10 @@ Any help with this will be appreciated.
 
 =head2 About the Subversion credentials
 
-Subversion will ask for a password and cache the credentials.
-Caching the credentials is necessary because, although "git svn" does
-understand Subversion's option --username , it does not understand Subversion's
-option --password .
+The first time a "git svn fetch" is performed, Subversion will ask for the password and cache the credentials.
+Caching the credentials is necessary because, although 'git svn' does
+understand Subversion's option '--username',
+it does not understand Subversion's option '--password'.
 
 If you ever need to change the cached username or password for that repository,
 you'll have to manually do this on the git repository:
@@ -120,7 +128,7 @@ but that's not a problem if you only intend to develop on a patch basis.
 
 Copyright (C) R. Diez 2011
 
-The I<< GitSvnMirror >> source code is released under the AGPL 3 license.
+The I<< GitSvnMirror >> source code is released under the GPL 3 license.
 
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 
