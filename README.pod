@@ -102,11 +102,15 @@ Used to download the tarballs.
 
 Used to checkout the OpenRISC repositories.
 
+=item * TeX binaries
+
+The or1ksim distcheck needs it.
+
 =back
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites in a single sweep:
 
-sudo apt-get install git curl
+sudo apt-get install git-core curl texlive
 
 TODO: libhtml-parser-perl  for the git svn mirroring support
 
