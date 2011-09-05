@@ -87,10 +87,10 @@ sub run_process_capture_output ( $ $ $ )
   }
 
   unlink( $child_stdout_file_name ) # Hopes that unlink() reports errors like open(), etc.
-    or die "Can't delete file \"$child_stdout_file_name\": $!"; 
+    or die "Cannot delete file \"$child_stdout_file_name\": $!"; 
 
   unlink( $child_stderr_file_name ) # Hopes that unlink() reports errors like open(), etc.
-    or die "Can't delete file \"$child_stderr_file_name\": $!"; 
+    or die "Cannot delete file \"$child_stderr_file_name\": $!"; 
 
   return $exit_code;
 }

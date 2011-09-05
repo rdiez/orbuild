@@ -45,7 +45,7 @@ sub write_stdout ( $ )
 
 sub close_or_die ( $ )
 {
-  close ( $_[0] ) or die "Can't close file descriptor: $!";
+  close ( $_[0] ) or die "Cannot close file descriptor: $!";
 }
 
 
