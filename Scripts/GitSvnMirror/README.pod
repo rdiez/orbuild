@@ -120,7 +120,7 @@ but that's not a problem if you only intend to develop on a patch basis.
 
 Copyright (C) R. Diez 2011
 
-The I<< GitSvnMirror >> source code is released under the GPL 3 license.
+The I<< GitSvnMirror >> source code is released under the AGPL 3 license.
 
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 
