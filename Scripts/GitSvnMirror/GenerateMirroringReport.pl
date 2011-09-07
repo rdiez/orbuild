@@ -161,7 +161,6 @@ sub main ()
 
 
 sub process_report ( $ $ $ )
-sub process_report ( $ $ )
 {
   my $report      = shift;
   my $gitBaseDir  = shift;
