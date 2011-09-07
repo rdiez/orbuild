@@ -28,7 +28,12 @@ for an overview of this toolset, which is part of the I<< orbuild >> project.
 
 =item * Manually clone the subversion repository
 
-git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
+Examples:
+  cd orbuild/GitSvnMirrors/Repositories
+
+  git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
+    or
+  git svn init http://opencores.org/ocsvn/minsoc/minsoc/trunk/ minsoc
 
   TODO: The Apache Foundation performs the following extra steps here:
   git config gitweb.owner "The Apache Software Foundation"
@@ -40,7 +45,9 @@ git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
   echo "ref: refs/heads/trunk" > "$GIT_DIR/HEAD"
   git update-server-info
 
-=item * Run "git svn fetch --username=<login>" manually on the new repository
+=item * Manuall fetch the new repository
+
+  git svn fetch --username=<login> --log-window-size=10000
 
 You'll have the chance to enter the password, see section "About the Subversion credentials"
 below for more information.
