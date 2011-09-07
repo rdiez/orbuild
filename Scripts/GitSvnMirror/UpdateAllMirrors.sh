@@ -67,7 +67,7 @@ set +o errexit
 set -o errexit
 
 
-perl "$MIRROR_TOOLS/GenerateMirroringReport.pl" \
+perl "$MIRROR_TOOLS/GenerateGitSvnMirrorReport.pl" \
          "$INTERNAL_REPORTS_DIR" \
          "$GIT_BASE_DIR" \
          "$MAKEFILE_REPORT_FILENAME" \

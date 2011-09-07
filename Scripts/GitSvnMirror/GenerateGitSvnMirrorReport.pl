@@ -6,7 +6,7 @@ Generates an HTML report of the last update of the OpenRISC git svn mirrors.
 
 =head1 USAGE
 
-perl GenerateMirroringReport.pl <reports dir> <git base dir>  <makefile report filename> <html output filename>
+perl GenerateGitSvnMirrorReport.pl <reports dir> <git base dir>  <makefile report filename> <html output filename>
 
 =head1 OPTIONS
 
@@ -59,7 +59,7 @@ use AGPL3;
 
 use constant SCRIPT_NAME => $0;
 
-use constant APP_NAME    => "GenerateReport.pl";
+use constant APP_NAME    => "GenerateGitSvnMirrorReport.pl";
 use constant APP_VERSION => "0.10";  # If you update it, update also the perldoc text above if needed.
 
 use constant REPORT_EXTENSION => ".report";
