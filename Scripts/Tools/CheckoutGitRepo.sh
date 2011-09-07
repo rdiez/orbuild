@@ -6,30 +6,44 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-if [ $# -ne 4 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git url> <base dir> <sentinel filename> <timestamp>"
+if [ $# -ne 6 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename> <branch> <timestamp>"
 fi
 
 GIT_URL="$1"
-BASE_DIR="$2"
-SENTINEL_FILENAME="$3"
-TIMESTAMP="$4"
+DEST_DIR="$2"
+BASE_DIR="$3"
+SENTINEL_FILENAME="$4"
+BRANCH="$5"
+TIMESTAMP="$6"
 
-NAME_ONLY="${GIT_URL##*/}"
-
-REPO_DIR="$BASE_DIR/$NAME_ONLY"
+REPO_DIR="$BASE_DIR/$DEST_DIR"
 
 pushd "$REPO_DIR" >/dev/null
 
-COMMIT_ID="$(git rev-list -n 1 --before="$TIMESTAMP" origin/master)"
-
-if [ -z "$COMMIT_ID" ]; then
-  abort "The git repository \"$GIT_URL\" does not have a history at timestamp \"$TIMESTAMP\"."
+if [ -n "$TIMESTAMP" ] && [ -n "$BRANCH" ]; then
+  abort "This script does not support both a branch and a timestamp argument at the same time."
 fi
 
-echo "Checking out git repository from URL \"$GIT_URL\" at timestamp \"$TIMESTAMP\"..."
+if [ -n "$TIMESTAMP" ]; then
 
-git checkout "$COMMIT_ID"
+  COMMIT_ID="$(git rev-list -n 1 --before="$TIMESTAMP" origin/master)"
+
+  if [ -z "$COMMIT_ID" ]; then
+    abort "The git repository \"$GIT_URL\" does not have a history at timestamp \"$TIMESTAMP\"."
+  fi
+
+  echo "Checking out git repository from URL \"$GIT_URL\" at timestamp \"$TIMESTAMP\"..."
+
+  git checkout "$COMMIT_ID"
+
+elif [ -n "$BRANCH" ]; then
+  echo "Checking out git repository from URL \"$GIT_URL\" at branch \"origin/$BRANCH\"..."
+  git checkout "origin/$BRANCH"
+else
+  echo "Checking out git repository from URL \"$GIT_URL\"..."
+  git checkout
+fi
 
 popd >/dev/null
 

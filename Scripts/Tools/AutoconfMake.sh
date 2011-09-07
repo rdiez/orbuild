@@ -6,16 +6,17 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-if [ $# -ne 2 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <obj dir> <sentinel filename>"
+if [ $# -ne 3 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <obj dir> <extra make args> <sentinel filename>"
 fi
 
 OBJ_DIR="$1"
-SENTINEL_FILENAME="$2"
+EXTRA_MAKE_ARGS="$2"
+SENTINEL_FILENAME="$3"
 
 pushd "$OBJ_DIR" >/dev/null
 
-make -s --no-builtin-variables
+make -s $EXTRA_MAKE_ARGS
 
 echo "Done" >"$SENTINEL_FILENAME"
 
