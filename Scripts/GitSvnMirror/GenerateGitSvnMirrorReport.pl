@@ -142,7 +142,7 @@ sub main ()
     $injectedHtml .= process_report( $report, $gitBaseDir, $makefileUserFriendlyName, $gitUrlPrefix );
   }
 
-  my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "ReportTemplate.html" );
+  my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "GitSvnReportTemplate.html" );
 
   my $htmlText = FileUtils::read_whole_binary_file( $htmlTemplateFilename );
 
