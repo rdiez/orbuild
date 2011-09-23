@@ -7,6 +7,8 @@ use strict;
 use warnings;
 
 use XML::Parser;
+use HTML::Entities;
+use File::Spec;
 
 use StringUtils;
 use FileUtils;
@@ -178,6 +180,175 @@ sub sort_reports ( $ $ )
   my @sortedReports = sort $comparator @$allReports;
 
   return @sortedReports;
+}
+
+
+sub convert_text_file_to_html ( $ $ )
+{
+  my $srcFilename  = shift;
+  my $destFilename = shift;
+
+  open( my $srcFile, "<$srcFilename" )
+    or die "Cannot open file \"$srcFilename\": $!\n";
+
+  binmode( $srcFile );  # Avoids CRLF conversion.
+
+  open( my $destFile, ">$destFilename" )
+    or die "Cannot open for writing file \"$destFilename\": $!\n";
+
+  binmode( $destFile );  # Avoids CRLF conversion.
+
+  # Alternative with HTML::FromText
+  #   my $logFilenameContents = FileUtils::read_whole_binary_file( $logFilename );
+  #   my $t2h  = HTML::FromText->new( { lines => 1 } );
+  #   my $logContentsAsHtml = $t2h->parse( $logFilenameContents );
+
+  my $header = "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\"\n" .
+               "\"http://www.w3.org/TR/html4/strict.dtd\">\n" .
+               "<html>\n" .
+               "<head>\n" .
+               "<title>Log file</title>\n" .
+               "<style type=\"text/css\">\n" .
+
+               "td.linenumber {\n" .
+               "text-align:right;\n" .
+               "font-family: monospace;\n" .
+               "vertical-align: top;\n" .
+               "padding-right: 10px;\n" .
+               "border-style: solid;\n" .
+               "border-width: 1px;\n" .
+               "border-color: #B0B0B0;\n" .
+               "}\n" .
+
+               "td.logline {\n" .
+               "text-align:left;\n" .
+               "font-family: monospace;\n" .
+               "padding-left:  10px;\n" .
+               "padding-right: 10px;\n" .
+               "border-style: solid;\n" .
+               "border-width: 0px;\n" .
+               "}\n" .
+
+               "</style>\n" .
+               "</head>\n" .
+               "<body>\n" .
+               "<table summary=\"Log file\" border=\"1\" CELLSPACING=\"0\">\n" .
+               "<thead>\n" .
+               "<tr>\n" .
+               "<th>No</th>\n" .
+               "<th>Log line text</th>\n" .
+               "</tr>\n" .
+               "</thead>\n" .
+               "<tbody>\n";
+
+  (print $destFile $header) or
+      die "Cannot write to file \"$destFilename\": $!\n";
+
+  for ( my $lineNumber = 1; ; ++$lineNumber )
+  {
+    my $line = readline( $srcFile );
+
+    last if not defined $line;
+
+    # Strip trailing new-line characters.
+    $line =~ s/[\n\r]*$//;
+
+    if ( 0 != length( $line ) )
+    {
+      # $line = "<code>" . encode_entities( $line ) . "</code>";
+      $line = encode_entities( $line );
+    }
+
+    $line = "<tr>" .
+            "<td class=\"linenumber\">$lineNumber</td>" .
+            "<td class=\"logline\">$line</td>" .
+            "</tr>\n";
+
+    (print $destFile $line) or
+        die "Cannot write to file \"$destFilename\": $!\n";
+  }
+
+  my $footer = "</tbody>\n" .
+               "</table>\n" .
+               "</body>\n" .
+               "</html>\n";
+
+  (print $destFile $footer) or
+      die "Cannot write to file \"$destFilename\": $!\n";
+
+  FileUtils::close_or_die( $destFile );
+  FileUtils::close_or_die( $srcFile  );
+}
+
+
+sub generate_html_log_file_and_cell_links ( $ )
+{
+  my $logFilename = shift;
+
+  my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
+
+  use constant SUFFIX_TO_REMOVE => ".txt";
+
+  my $htmlLogFilenameOnly = $logFilenameOnly;
+
+  if ( StringUtils::str_ends_with( $htmlLogFilenameOnly, SUFFIX_TO_REMOVE ) )
+  {
+    $htmlLogFilenameOnly = substr( $htmlLogFilenameOnly, 0, length( $htmlLogFilenameOnly ) - length( SUFFIX_TO_REMOVE ) );
+  }
+
+  $htmlLogFilenameOnly .= ".html";
+
+  my $htmlLogFilename = FileUtils::cat_path( $volume, $directories, $htmlLogFilenameOnly );
+
+  ReportUtils::convert_text_file_to_html( $logFilename, $htmlLogFilename );
+
+
+  my $html = "";
+
+  my $link1 = encode_entities( $htmlLogFilenameOnly );  # Absolute link: "file://" . encode_entities( $htmlLogFilenameOnly );
+  my $link2 = encode_entities( $logFilenameOnly );
+  $html .= "<td>";
+  $html .= html_link( $link1, "HTML" );
+  $html .= " or ";
+  $html .= html_link( $link2, "plain txt"  );
+  $html .= "</td>\n";
+
+  return $html;
+}
+
+
+sub generate_status_cell ( $ )
+{
+  my $exitCode = shift;
+
+  my $styleClass;
+  my $text;
+
+  if ( $exitCode == 0 )
+  {
+    $styleClass = "StatusOk";
+    $text = "OK";
+  }
+  else
+  {
+    $styleClass = "StatusFailed";
+    $text = "FAILED";
+  }
+
+  my $html = "";
+
+  $html .= "<td class=\"$styleClass\">";
+  $html .= $text;
+  $html .= "</td>\n";
+}
+
+
+sub html_link ( $ $ )
+{
+  my $link = shift;
+  my $text = shift;
+
+  return "<a href=\"$link\">$text</a>";
 }
 
 
