@@ -453,6 +453,11 @@ Makefiles are hard to write, linear scripts would have been much easier to maint
 
 The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact, most of them have evolved over the years in other unrelated projects.
 
+=head1 GitSvnMirror
+
+This project contains a set of tools to create and maintain a collection of read-only Git mirrors
+of OpenRISC Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for more information.
+
 =head1 Alternatives to orbuild
 
 =over
