@@ -161,39 +161,19 @@ sub main ()
 
 sub process_report ( $ $ )
 {
-  my $report      = shift;
+  my $report                   = shift;
   my $makefileUserFriendlyName = shift;
 
-  my $logFilename = $report->{ "LogFile" };
+  my $logFilename      = $report->{ "LogFile" };
   my $userFriendlyName = $report->{ "UserFriendlyName" };
-
-  my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
 
   my $html = "<tr>\n";
 
-  $html.= text_cell( $userFriendlyName );
+  $html .= text_cell( $userFriendlyName );
 
-  if ( $report->{ "ExitCode" } == 0 )
-  {
-    $html.= "<td ALIGN=\"center\" BGCOLOR=\"#00FF00\">" .
-            "<font color=\"black\">" .
-            "<strong>" .
-            "OK" .
-            "</strong>" .
-            "</font>" . "</td>\n";
-  }
-  else
-  {
-    $html.= "<td ALIGN=\"center\" BGCOLOR=\"#FF0000\">" .
-            "<font color=\"white\">" .
-            "<strong>" .
-            "FAILED" .
-            "</strong>" .
-            "</font>" . "</td>\n";
-  }
+  $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } );
 
-  my $link2 = encode_entities( $logFilenameOnly );  # Absolute link: "file://" . encode_entities( $logFilename );
-  $html.= link_cell( $link2, "Log&nbsp;File" );
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename );
 
   $html.= "</tr>\n";
   $html.= "\n";
@@ -206,15 +186,6 @@ sub text_cell ( $ )
 {
   my $contents = shift;
   return "<td>" . encode_entities( $contents ) . "</td>\n";
-}
-
-
-sub link_cell ( $ $ )
-{
-  my $link = shift;
-  my $text = shift;
-
-  return "<td> <a href=\"$link\">$text</a> </td>";
 }
 
 

@@ -7,6 +7,23 @@
 <!-- table{border: 1px solid #000} -->
 <!-- td{border: 1px solid #000} -->
 <style TYPE="text/css">
+
+  td.StatusOk
+  {
+    background: #00FF00;
+    color: black;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  td.StatusFailed
+  {
+    background: #FF0000;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+  }
+
 </style>
 </head>
 <body>
@@ -26,13 +43,13 @@
         <tr>
           <th>Build step</th>
           <th>Status</th>
-          <th>Log</th>
+          <th>Log File</th>
         </tr>
   </thead>
 
   <tbody>
 
-    ${ REPORT_TABLE }
+${ REPORT_TABLE }
 
   </tbody>
 
