@@ -39,7 +39,15 @@ START_TIME_LOCAL="$(date +"%Y-%m-%d %T %z")"
 START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 
 {
-    echo "$(basename $0): Log from command: $@"
+    # Print the executed command with proper quoting, so that the user can
+    # copy-and-paste the command from the log file and expect it to work.
+    printf "%s" "$(basename $0): Log from command:"
+    for arg
+    do
+	  printf ' %q' "$arg"
+	done
+    printf "\n"
+
     echo "$(basename $0): Start time,  local: $START_TIME_LOCAL, UTC: $START_TIME_UTC"
     echo "$(basename $0): Current directory: $PWD"
     echo
