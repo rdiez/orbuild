@@ -3,15 +3,32 @@
 
 <html>
 <head>
-<title>OpenRISC subversion->git mirror</title>
+<title>OpenRISC GitSvnMirror</title>
 <!-- table{border: 1px solid #000} -->
 <!-- td{border: 1px solid #000} -->
 <style TYPE="text/css">
+
+  td.StatusOk
+  {
+    background: #00FF00;
+    color: black;
+    font-weight: bold;
+    text-align: center;
+  }
+
+  td.StatusFailed
+  {
+    background: #FF0000;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+  }
+
 </style>
 </head>
 <body>
 
-<h1>OpenRISC subversion->git mirror</h1>
+<h1>OpenRISC GitSvnMirror</h1>
 
 <p> <span style="background-color:red; color:white"> --------- WARNING --------- EXPERIMENTAL STATUS --------- </span> </p>
 
@@ -44,7 +61,7 @@ are not imported either. </p>
 
   <tbody>
 
-    ${ GIT_REPOSITORY_TABLE }
+${ GIT_REPOSITORY_TABLE }
 
   </tbody>
 

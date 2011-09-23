@@ -19,74 +19,65 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< GitSvnMirror >> - a git mirror of the OpenRISC Subversion repositories
 
-Please see the HTML template file in this directory, or look at an HTML report generated with it,
-for an overview of this toolset, which is part of the I<< orbuild >> project.
+GitSvnMirror is a set of tools to create and maintain a collection of read-only Git mirrors
+of OpenRISC Subversion repositories.
+The scripts are designed to run on a public server, but they can also be run locally
+to create a personal mirror collection.
+
+This project was inspired by a similar mirror collection at L<< http://git.apache.org/ >>,
+whose source code is available at L<< https://svn.apache.org/repos/infra/infrastructure/trunk/projects/git/ >>.
+
+=head1 Getting started
+
+To start the mirroring process, run the I<< UpdateAllMirrors.sh >> script from the command line. 
+The update process assumes that the connection
+to the Subversion server is not reliable and will retry a few times before giving up.
+
+The first time you will have to manually enter your Subversion login and password.
+If the wrong username is displayed, leave the password blank and you should be able
+to enter another username on the next prompt. Your local Subversion client
+will cache this authentication information for subsequent runs,
+see section "About the Subversion credentials" below for more information. Afterwards, you can automate
+the process by scheduling the script to run at regular intervals.
+
+If you use the mirrored repositories for local development, keep in mind
+that the update procedure performs a "git svn rebase" every time, which may not be
+what you want if you have uncommitted changes in your sandbox.
+
+If you run the script on a web server, use environment variable ORBUILD_GIT_URL_PREFIX
+in order to generate correct git clone URLs. For example:
+export ORBUILD_GIT_URL_PREFIX="git://myserver.com/GitSvnMirrors/"
+
+Please see the HTML template file in this directory, or look at the generated HTML report,
+for more information.
 
 =head1 How to add a new repository
 
 =over
 
-=item * Manually clone the subversion repository
+=item * Edit the Makefile
 
-Examples:
-  cd orbuild/GitSvnMirrors/Repositories
+Just copy, paste and modify one of the existing entries.
 
-  git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
-    or
-  git svn init http://opencores.org/ocsvn/minsoc/minsoc/trunk/ minsoc
+=item * Start the update process at least once from an interactive console
 
-  TODO: The Apache Foundation performs the following extra steps here:
-  git config gitweb.owner "The Apache Software Foundation"
-  echo "git://git.apache.org/$GIT_DIR" > "$GIT_DIR/cloneurl"
-  echo "http://git.apache.org/$GIT_DIR" >> "$GIT_DIR/cloneurl"
-  echo "$DESCRIPTION" > "$GIT_DIR/description"
-  touch "$GIT_DIR/git-daemon-export-ok"
-  # Normally you get "ref: refs/heads/master" in the .git/HEAD file"
-  echo "ref: refs/heads/trunk" > "$GIT_DIR/HEAD"
-  git update-server-info
+This is so that you can enter your Subversion login and password, if necessary.
 
-=item * Manuall fetch the new repository
-
-  git svn fetch --username=<login> --log-window-size=10000
-
-You'll have the chance to enter the password, see section "About the Subversion credentials"
-below for more information.
-
-Note that, although "git svn init" does recognise option "--username=<login>",
-it does not seem to store it properly, at least for git version 1.7.0.4.
-
-=item * Create file .git/OrbuildGitSvnInit
-
-Write in that file the "git svn init" command you created the repository with,
-so that other users can use the same parameters when further cloning the git repository.
-
-=item * Create or edit file .git/description
-
-The generated HTML mirror status report shows next to each repository the contents of this description file.
-
-=item * Update the Makefile to include the new repository
-
-=item * Update the repositories every now and then
-
-Script UpdateAllMirrors.sh is normally scheduled to run every day on the server,
-so that all repositories get updated regularly.
-
-The update procedure issues a "git svn rebase" every time, so the git repositories
-should be considered read-only and should not be used for manual development.
-
-The daily script assumes that the connection to the Subversion server is not
-reliable and will retry a few times before giving up.
+Afterwards, no further interaction should be necessary, therefore you can
+continue to run the script in an automated fashion.
 
 =back
 
-=head2 About branches and tags
+=head1 Subversion branches and tags are not mirrored
 
-Project or1ksim has tags in the subversion repository, but not branches.
-I have not been able to import the tags into git. I have tried all thinkable combinations,
-but as soon as I specify the -t option to "git svn init", the fetch operation downloads nothing at all.
-Any help with this will be appreciated.
+At the moment, only the Subversion I<< trunk >> is tracked by the git mirrors.
 
-=head2 About the Subversion credentials
+The OpenRISC project or1ksim has tags in its subversion repository, but not branches.
+However, I have not been able to import the tags into git. I have tried all thinkable combinations,
+but as soon as I specify the -t option to "git svn init", the fetch operation does not download anything at all.
+This problem probably exists with other OpenRISC repositories. Any help will be appreciated.
+
+=head1 About the Subversion credentials
 
 The first time a "git svn fetch" is performed, Subversion will ask for the password and cache the credentials.
 Caching the credentials is necessary because, although 'git svn' does
@@ -94,7 +85,7 @@ understand Subversion's option '--username',
 it does not understand Subversion's option '--password'.
 
 If you ever need to change the cached username or password for that repository,
-you'll have to manually do this on the git repository:
+you'll have to manually run this command on the git repository:
 
 git svn fetch --username=<login>
 
@@ -108,7 +99,7 @@ but that does not seem to be the case.
 You may be able to automate your credentials in some other way, for example,
 with SSH keys. Or you may not need any authentication at all.
 
-=head2 Cloning the git repositories
+=head1 Cloning the git mirror repositories
 
 If you wish to further clone or push the git repository, keep in mind that
 the Subversion information is not automatically cloned.
@@ -121,13 +112,16 @@ Alternatives to overcome this issue are:
 
 =item * Initialise the destination repository with the same "git svn init" parameters.
 
-It is possible to do that on an existing clone, search the Internet for
+That is the reason why the report page includes the I<< git svn >> command used to create the mirrored repository.
+
+It is possible to initialise the Subversion information on an existing clone, search the Internet for
 "Rebuilding git-svn metadata" for details.
 
 =item * Clone as usual and do nothing else.
 
 The other cloned git repositories will carry no links to the orignal subversion repository,
-but that's not a problem if you only intend to develop on a patch basis.
+but that's not a problem if you only intend to contribute your changes
+on a patch basis.
 
 =back
 
@@ -135,7 +129,7 @@ but that's not a problem if you only intend to develop on a patch basis.
 
 Copyright (C) R. Diez 2011
 
-The I<< GitSvnMirror >> source code is released under the GPL 3 license.
+The I<< GitSvnMirror >> source code is part of the I<< orbuild >> project and is released under the GPL 3 license.
 
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 

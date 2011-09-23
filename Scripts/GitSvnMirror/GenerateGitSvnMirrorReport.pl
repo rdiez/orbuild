@@ -106,15 +106,16 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( scalar( @ARGV ) != 4 )
+  if ( scalar( @ARGV ) != 5 )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
-  my $reportsDir = shift @ARGV;
-  my $gitBaseDir = shift @ARGV;
+  my $reportsDir             = shift @ARGV;
+  my $gitBaseDir             = shift @ARGV;
   my $makefileReportFilename = shift @ARGV;
-  my $htmlOutputFilename = shift @ARGV;
+  my $htmlOutputFilename     = shift @ARGV;
+  my $gitUrlPrefix           = shift @ARGV;
 
   write_stdout( "Collecting reports...\n" );
 
@@ -138,7 +139,7 @@ sub main ()
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $gitBaseDir, $makefileUserFriendlyName );
+    $injectedHtml .= process_report( $report, $gitBaseDir, $makefileUserFriendlyName, $gitUrlPrefix );
   }
 
   my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "ReportTemplate.html" );
@@ -154,17 +155,18 @@ sub main ()
 
   FileUtils::write_string_to_new_file( $htmlOutputFilename, $htmlText );
   
-  write_stdout( "HTML report finished, the resulting file is: $htmlOutputFilename\n" );
+  write_stdout( "HTML report finished.\n" );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
 }
 
 
-sub process_report ( $ $ $ )
+sub process_report ( $ $ $ $ )
 {
   my $report      = shift;
   my $gitBaseDir  = shift;
   my $makefileUserFriendlyName = shift;
+  my $gitUrlPrefix = shift;
 
   my $logFilename = $report->{ "LogFile" };
   my $userFriendlyName = $report->{ "UserFriendlyName" };
@@ -199,7 +201,7 @@ sub process_report ( $ $ $ )
     my $gitSvnInitContents = StringUtils::trim_blanks( FileUtils::read_whole_binary_file( $orbuildGitSvnInitFilename ) );
 
     my $gitSvnInit  = encode_entities( $gitSvnInitContents );
-    my $gitClone = encode_entities( "git clone git://openrisc.net/git-svn-mirrors/" . $gitDirname );
+    my $gitClone = encode_entities( "git clone $gitUrlPrefix$gitDirname" );
 
     my $sizeInit  = "style=\"width:100%;\"";
     my $sizeClone = "style=\"width:100%;\"";
@@ -224,27 +226,9 @@ sub process_report ( $ $ $ )
   $html.= text_cell( $userFriendlyName );
   $html.= text_cell( $description );
 
-  if ( $report->{ "ExitCode" } == 0 )
-  {
-    $html.= "<td ALIGN=\"center\" BGCOLOR=\"#00FF00\">" .
-            "<font color=\"black\">" .
-            "<strong>" .
-            "OK" .
-            "</strong>" .
-            "</font>" . "</td>\n";
-  }
-  else
-  {
-    $html.= "<td ALIGN=\"center\" BGCOLOR=\"#FF0000\">" .
-            "<font color=\"white\">" .
-            "<strong>" .
-            "FAILED" .
-            "</strong>" .
-            "</font>" . "</td>\n";
-  }
+  $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } );
 
-  my $link2 = encode_entities( $logFilenameOnly );  # Absolute link: "file://" . encode_entities( $logFilename );
-  $html.= link_cell( $link2, "Log&nbsp;File" );
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename );
 
   $html.= "<td>$gitCloneUrlCellContents</td>\n";
 
@@ -259,15 +243,6 @@ sub text_cell ( $ )
 {
   my $contents = shift;
   return "<td>" . encode_entities( $contents ) . "</td>\n";
-}
-
-
-sub link_cell ( $ $ )
-{
-  my $link = shift;
-  my $text = shift;
-
-  return "<td> <a href=\"$link\">$text</a> </td>";
 }
 
 
