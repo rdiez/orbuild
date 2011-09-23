@@ -5,7 +5,7 @@
 set -o errexit
 SCRIPT_DIR="$(dirname $(readlink -f "$0"))"
 source "$SCRIPT_DIR/../ShellModules/StandardShellHeader.sh"
-source "$SCRIPT_DIR/../ShellModules/MakeJVal.sh"
+# source "$SCRIPT_DIR/../ShellModules/MakeJVal.sh"
 
 
 delete_file_if_exists ()
@@ -16,6 +16,17 @@ delete_file_if_exists ()
     fi
 }
 
+
+create_dir_if_not_exists ()
+{
+    if ! test -d "$1"
+    then
+        echo "Creating directory \"$1\" ..."
+        mkdir --parents "$1"
+    fi
+}
+
+
 ORBUILD_SANDBOX="$(readlink -f "$SCRIPT_DIR/../..")"
 ORBUILD_TOOLS="$ORBUILD_SANDBOX/Scripts/Tools"
 MIRROR_TOOLS="$ORBUILD_SANDBOX/Scripts/GitSvnMirror"
@@ -24,6 +35,10 @@ GIT_BASE_DIR="$BASE_MIRROR_DIR/Repositories"
 
 ALL_INTERNAL_REPORTS_DIR="$BASE_MIRROR_DIR/InternalReports"
 ALL_PUBLIC_REPORTS_DIR="$BASE_MIRROR_DIR/PublicReports"
+
+create_dir_if_not_exists "$ALL_INTERNAL_REPORTS_DIR"
+create_dir_if_not_exists "$ALL_PUBLIC_REPORTS_DIR"
+create_dir_if_not_exists "$GIT_BASE_DIR"
 
 SLOT_COUNT=100  #  Keep a more than 3 months' worth of logs and reports.
 
@@ -40,7 +55,15 @@ MAKEFILE_REPORT_FILENAME="$INTERNAL_REPORTS_DIR/makefile.report"
 MAKEFILE_LOG_FILENAME="$PUBLIC_REPORTS_DIR/makefile-log.txt"
 TOP_LEVEL_FRIENDLY_NAME="top-level process"
 
-get_make_j_val MAKE_J_VAL
+# Updating the repositories is done sequentially for these reasons:
+# 1) Sometimes the user needs to manually enter a username and a password,
+#    and the parallel build mixes the console messages in a confusing way.
+# 2) If 2 processes try to interactively ask for a username at the same time,
+#    one of them will fail, because the other one is holding the console input.
+# 3) Most repositories come from the same server, and we don't want
+#    to overload the connection.
+# get_make_j_val MAKE_J_VAL
+MAKE_J_VAL=1
 
 
 # If the following command fails, it normally writes a report file
@@ -66,14 +89,23 @@ set +o errexit
 
 set -o errexit
 
+REPORT_NAME_ONLY="Status.html"
+REPORT_FILENAME="$PUBLIC_REPORTS_DIR/$REPORT_NAME_ONLY"
+
+if [ "${ORBUILD_GIT_URL_PREFIX:-first}" != "${ORBUILD_GIT_URL_PREFIX:-second}" ]
+then
+  ORBUILD_GIT_URL_PREFIX="file://$GIT_BASE_DIR/"
+fi
 
 perl "$MIRROR_TOOLS/GenerateGitSvnMirrorReport.pl" \
          "$INTERNAL_REPORTS_DIR" \
          "$GIT_BASE_DIR" \
          "$MAKEFILE_REPORT_FILENAME" \
-         "$PUBLIC_REPORTS_DIR/Status.html"
-
+         "$REPORT_FILENAME" \
+         "$ORBUILD_GIT_URL_PREFIX"
 
 LATEST_LINK_NAME="$ALL_PUBLIC_REPORTS_DIR/Latest"
 
 ln --symbolic --no-dereference --force "$PUBLIC_REPORTS_DIR" "$LATEST_LINK_NAME"
+
+printf "The generated update report is:\n$LATEST_LINK_NAME/$REPORT_NAME_ONLY\n"
