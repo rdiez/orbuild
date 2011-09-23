@@ -132,10 +132,11 @@ sub parse_config_file_line ( $ $ $ $ )
 }
 
 
-sub check_config_file_contents ( $ $ $ )
+sub check_config_file_contents ( $ $ $ $ )
 {
   my $configEntries           = shift;  # Reference to a hash.
   my $mandatoryEntries        = shift;  # Reference to an array.
+  my $optionalEntries         = shift;  # Reference to an array.
   my $filenameForErrorMessage = shift;
 
   my %man;
@@ -150,19 +151,41 @@ sub check_config_file_contents ( $ $ $ )
     $man{ $setting } = 0;
   }
 
+  my %opt;
+
+  if ( defined $optionalEntries )
+  {
+    foreach my $setting ( @$optionalEntries )
+    {
+      if ( exists $opt{ $setting } )
+      {
+        die "Duplicate setting name \"$setting\"\n";
+      }
+
+      $opt{ $setting } = 0;
+    }
+  }
+
   foreach my $key ( keys %$configEntries )
   {
-    if ( not defined $man{ $key } )
+    if ( defined $man{ $key } )
     {
-      die "Unknown setting \"$key\" in file \"$filenameForErrorMessage\"\n";
+
+      if ( length( $configEntries->{ $key } ) == 0 )
+      {
+        die "Setting \"$key\" has an empty value in file \"$filenameForErrorMessage\"\n";
+      }
+
+      $man{ $key } = 1;
+      next;
     }
 
-    if ( length( $configEntries->{ $key } ) == 0 )
+    if ( defined $opt{ $key } )
     {
-      die "Setting \"$key\" has an empty value in file \"$filenameForErrorMessage\"\n";
+      next;
     }
 
-    $man{ $key } = 1;
+    die "Unknown setting \"$key\" in file \"$filenameForErrorMessage\"\n";
   }
 
   foreach my $key ( keys %man )
