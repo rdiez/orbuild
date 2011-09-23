@@ -16,7 +16,7 @@ SENTINEL_FILENAME="$3"
 
 pushd "$OBJ_DIR" >/dev/null
 
-make -s $EXTRA_MAKE_ARGS install
+make -s $EXTRA_MAKE_ARGS
 
 echo "Done" >"$SENTINEL_FILENAME"
 
