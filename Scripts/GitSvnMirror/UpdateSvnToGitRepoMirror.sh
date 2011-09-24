@@ -6,82 +6,15 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-# This script helps automatically keep a git clone of a subversion repository up to date.
-# The focus is on the OpenRISC subversion repositories at opencores.org ,
-# which require a login and password for access.
-#
-# The steps to use this script are:
-# 
-# 1) Manually clone the subversion repository like this:
-#
-#      git svn init --username=<login> http://opencores.org/ocsvn/openrisc/openrisc/trunk/<project name>
-#
-#      TODO: The Apache Foundation performs the following extra steps here:
-#        git config gitweb.owner "The Apache Software Foundation"
-#        echo "git://git.apache.org/$GIT_DIR" > "$GIT_DIR/cloneurl"
-#        echo "http://git.apache.org/$GIT_DIR" >> "$GIT_DIR/cloneurl"
-#        echo "$DESCRIPTION" > "$GIT_DIR/description"
-#        touch "$GIT_DIR/git-daemon-export-ok"
-#
-#        # Normally you get "ref: refs/heads/master" in the .git/HEAD file"
-#        echo "ref: refs/heads/trunk" > "$GIT_DIR/HEAD"
-#
-#        git update-server-info
-#
-#    About branches and tags:
-#      Project or1ksim has tags in the subversion repository, but not branches.
-#      I have not been able to import the tags into git. I have tried all thinkable combinations,
-#      but as soon as I specify the -t option to "git svn init", the fetch operation downloads nothing at all.
-#
-#    About the credentials:
-#      Subversion will ask for a password and cache the credentials.
-#      Caching the credentials is necessary because, although "git svn" does
-#      understand Subversion's option --username , it does not understand Subversion's
-#      option --password .
-#
-#      If you ever need to change the cached username or password for that repository,
-#      you'll have to manually do this on the git repository:
-#        git svn fetch --username=<login>
-#      You'll then be asked for the password, and the new credentials will be cached.
-#
-#      I thought running the following command would refresh the credentials globally,
-#      but that does not seem to be the case.
-#        (does not work) svn log -rHEAD --username <login> svn://example.com/svn-repo
-#
-#      You may be able to automate your credentials in some other way, for example,
-#      with SSH keys. Or you may not need any authentication at all.
-#
-# 2) Run this script like this every now and then to update the git repository from subversion:
-#
-#      bash UpdateSvnToGitRepoMirror.sh  svn://example.com/svn-repo svn-repo/
-#
-#    If the update fails, this script will retry a number of times before giving up.
-#
-# 3) If you have made local changes to your repository, you may want to rebase your changes:
-#      git svn rebase --local
-#
-# 4) If you wish to further clone or push the git repository, keep in mind that
-#    the subversion information is not automatically cloned.
-#    Alternatives to overcome this issue are:
-#    a) Clone the git repository with rsync.
-#    b) Initialise the destination repository with the same "git svn init" parameters.
-#       It is possible to do that on an existing clone, search the Internet for
-#       "Rebuilding git-svn metadata" for details.
-#    c) Do nothing. The other cloned git repositories will carry no links to
-#       the orignal subversion repository, but that's not a problem if you only
-#       intend to develop on a patch basis.
-#
-
-
 if [ $# -ne 1 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <svn url> <git dir>"
+  abort "Invalid number of command-line arguments. Usage: $0 <git dir>"
 fi
 
 GIT_DIR="$1"
 
 ATTEMPT_COUNT=5  # At least one, as the first time also counts.
 
-echo "Updating git repository at \"$GIT_DIR\"..."
+echo "Updating the git repository at \"$GIT_DIR\"..."
 
 pushd "$GIT_DIR" >/dev/null
 
@@ -93,7 +26,9 @@ do
   # TODO: Option --authors-file may be useful to map the subversion user names to the git ones.
 
   # The Apache Foundation uses parameter --log-window-size to accelerate the download.
-  git svn fetch --log-window-size=10000
+  # However, with this argument 'git svn fetch' reliably fails to fetch anything from the or1ksim repository:
+  #   git svn fetch --log-window-size=10000
+  git svn fetch
 
   EXIT_CODE=$?
 

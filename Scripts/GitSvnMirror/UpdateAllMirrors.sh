@@ -45,7 +45,8 @@ SLOT_COUNT=100  #  Keep a more than 3 months' worth of logs and reports.
 ROTATE_DIR_CMD="perl $ORBUILD_SANDBOX/Scripts/Tools/RotateDir.pl \
                 --dir-naming-scheme date \
                 --slot-count $SLOT_COUNT \
-                --dir-name-prefix Timestamp-
+                --dir-name-prefix Timestamp- \
+                --timestamp "$(date +"%Y-%m-%d" --utc)" \
                 --output-only-new-dir-name"
 
 INTERNAL_REPORTS_DIR=$($ROTATE_DIR_CMD "$ALL_INTERNAL_REPORTS_DIR")
