@@ -15,10 +15,11 @@ use FileUtils;
 use ConfigFile;
 
 
-sub collect_all_reports ( $ $ $ )
+sub collect_all_reports ( $ $ $ $ )
 {
   my $dirname            = shift;
   my $reportExtension    = shift;
+  my $optionalEntries    = shift;  # Reference to an array.
   my $allReportsArrayRef = shift;
 
   my $globPattern = FileUtils::cat_path( $dirname, "*" . $reportExtension );
@@ -41,57 +42,34 @@ sub collect_all_reports ( $ $ $ )
 
     my %allEntries;
 
-    load_report( $filename, \%allEntries );
+    load_report( $filename, $optionalEntries, \%allEntries );
 
     push @$allReportsArrayRef, \%allEntries;
   }
 }
 
 
-sub load_report ( $ $ )
+sub load_report ( $ $ $ )
 {
   my $filename          = shift;
+  my $optionalEntries   = shift;  # Reference to an array.
   my $allEntriesHashRef = shift;
 
   ConfigFile::read_config_file( $filename, $allEntriesHashRef );
 
-  my %allPossibleKeywords = ( UserFriendlyName => 0,
-                              ExitCode         => 0,
-                              LogFile          => 0,
-                              StartTimeLocal   => 0,
-                              StartTimeUTC     => 0,
-                              FinishTimeLocal  => 0,
-                              FinishTimeUTC    => 0,
-                              ElapsedSeconds   => 0 );
+  my @mandatoryEntries = qw( UserFriendlyName
+                             ExitCode        
+                             LogFile         
+                             StartTimeLocal  
+                             StartTimeUTC    
+                             FinishTimeLocal 
+                             FinishTimeUTC   
+                             ElapsedSeconds  );
 
-  # Check that all keywords are present in the report file.
-
-  foreach my $key ( keys %$allEntriesHashRef )
-  {
-    my $val = $allPossibleKeywords{ $key };
-
-    if ( not defined $val )
-    {
-      die "Invalid setting \"$key\" in report file \"$filename\"\n";
-    }
-
-    # Routine ConfigFile::read_config_file() already checks whethere
-    # there are duplicates:
-    #   if ( $val != 0 )
-    #   {
-    #     die "Duplicate setting \"$key\" in report file \"$filename\"\n";
-    #   }
-
-    $allPossibleKeywords{ $key } = 1;
-  }
-
-  foreach my $key ( keys %allPossibleKeywords )
-  {
-    if ( $allPossibleKeywords{ $key } == 0 )
-    {
-      die "Missing setting \"$key\" in report file \"$filename\"\n";
-    }
-  }
+  ConfigFile::check_config_file_contents( $allEntriesHashRef,
+                                          \@mandatoryEntries,
+                                          $optionalEntries,
+                                          $filename );
 }
 
 

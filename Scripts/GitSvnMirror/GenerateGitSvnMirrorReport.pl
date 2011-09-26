@@ -120,7 +120,7 @@ sub main ()
   write_stdout( "Collecting reports...\n" );
 
   my %makefileReportEntries;
-  ReportUtils::load_report( $makefileReportFilename, \%makefileReportEntries );
+  ReportUtils::load_report( $makefileReportFilename, undef, \%makefileReportEntries );
 
   my $makefileUserFriendlyName = $makefileReportEntries{"UserFriendlyName"};
 
@@ -129,7 +129,9 @@ sub main ()
   # so it will be found again later.
   #   push @allReports, \%makefileReportEntries;
 
-  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, \@allReports );
+  my @optionalReportEntries = qw( GitRepositoryDir );
+
+  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, \@optionalReportEntries, \@allReports );
 
   my @sortedReports = ReportUtils::sort_reports( \@allReports, $makefileUserFriendlyName );
 
@@ -139,7 +141,7 @@ sub main ()
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $gitBaseDir, $makefileUserFriendlyName, $gitUrlPrefix );
+    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $gitBaseDir, $gitUrlPrefix );
   }
 
   my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "GitSvnReportTemplate.html" );
@@ -163,9 +165,9 @@ sub main ()
 
 sub process_report ( $ $ $ $ )
 {
-  my $report      = shift;
-  my $gitBaseDir  = shift;
+  my $report       = shift;
   my $makefileUserFriendlyName = shift;
+  my $gitBaseDir   = shift;
   my $gitUrlPrefix = shift;
 
   my $logFilename = $report->{ "LogFile" };
@@ -183,42 +185,43 @@ sub process_report ( $ $ $ $ )
   }
   else
   {
-    # Derive the git directory path from the log filename.
+    my $gitDirname = $report->{ "GitRepositoryDir" };
 
-    if ( not StringUtils::str_ends_with( $logFilenameOnly, LOG_EXTENSION ) )
+    if ( not defined( $gitDirname ) )
     {
-      die "Internal error processing the log filename.\n";
+      $description = "first-time repository creation";
+      $gitCloneUrlCellContents = "-";
     }
+    else
+    {
+      my $descriptionFilename = FileUtils::cat_path( $gitBaseDir, $gitDirname, ".git", "description" );
 
-    my $gitDirname = substr( $logFilenameOnly, 0, length($logFilenameOnly) - length(LOG_EXTENSION) );
+      $description = StringUtils::trim_blanks( FileUtils::read_whole_binary_file( $descriptionFilename ) );
 
-    my $descriptionFilename = FileUtils::cat_path( $gitBaseDir, $gitDirname, ".git", "description" );
+      my $orbuildGitSvnInitFilename = FileUtils::cat_path( $gitBaseDir, $gitDirname, ".git", "OrbuildGitSvnInit" );
 
-    $description = StringUtils::trim_blanks( FileUtils::read_whole_binary_file( $descriptionFilename ) );
+      my $gitSvnInitContents = StringUtils::trim_blanks( FileUtils::read_whole_binary_file( $orbuildGitSvnInitFilename ) );
 
-    my $orbuildGitSvnInitFilename = FileUtils::cat_path( $gitBaseDir, $gitDirname, ".git", "OrbuildGitSvnInit" );
+      my $gitSvnInit  = encode_entities( $gitSvnInitContents );
+      my $gitClone = encode_entities( "git clone $gitUrlPrefix$gitDirname" );
 
-    my $gitSvnInitContents = StringUtils::trim_blanks( FileUtils::read_whole_binary_file( $orbuildGitSvnInitFilename ) );
+      my $sizeInit  = "style=\"width:100%;\"";
+      my $sizeClone = "style=\"width:100%;\"";
 
-    my $gitSvnInit  = encode_entities( $gitSvnInitContents );
-    my $gitClone = encode_entities( "git clone $gitUrlPrefix$gitDirname" );
+      $gitCloneUrlCellContents = "<div style=\"padding-right: 5px;\">";
+      $gitCloneUrlCellContents.= "<input type=\"text\" spellcheck=\"false\" $sizeInit value=\"" .
+                                 $gitSvnInit .
+                                 "\"/>" .
+                                 "\n";
 
-    my $sizeInit  = "style=\"width:100%;\"";
-    my $sizeClone = "style=\"width:100%;\"";
+      $gitCloneUrlCellContents.="<br/>";
 
-    $gitCloneUrlCellContents = "<div style=\"padding-right: 5px;\">";
-    $gitCloneUrlCellContents.= "<input type=\"text\" spellcheck=\"false\" $sizeInit value=\"" .
-                               $gitSvnInit .
-                               "\"/>" .
-                               "\n";
-
-    $gitCloneUrlCellContents.="<br/>";
-
-    $gitCloneUrlCellContents.= "<input type=\"text\" spellcheck=\"false\" $sizeClone value=\"" .
-                               $gitClone .
-                               "\"/>" .
-                               "</div>" .
-                               "\n";
+      $gitCloneUrlCellContents.= "<input type=\"text\" spellcheck=\"false\" $sizeClone value=\"" .
+                                 $gitClone .
+                                 "\"/>" .
+                                 "</div>" .
+                                 "\n";
+    }
   }
 
   my $html = "<tr>\n";
