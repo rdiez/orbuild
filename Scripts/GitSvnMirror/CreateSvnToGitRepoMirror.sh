@@ -5,16 +5,17 @@
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
-if [ $# -ne 6 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git base dir> <git subdir> <git svn init cmd> <description> <init file> <description file>"
+if [ $# -ne 7 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <git base dir> <git subdir> <git svn init cmd> <git svn fetch args> <description> <init file> <description file>"
 fi
 
 GIT_BASE_DIR="$1"
 GIT_SUBDIR="$2"
 GIT_SVN_INIT_CMD="$3"
-DESCRIPTION="$4"
-INIT_FILE="$5"
-DESCRIPTION_FILE="$6"
+GIT_SVN_FETCH_ARGS="$4"
+DESCRIPTION="$5"
+INIT_FILE="$6"
+DESCRIPTION_FILE="$7"
 
 echo "Creating the git repository at \"$GIT_BASE_DIR/$GIT_SUBDIR\"..."
 
@@ -34,7 +35,7 @@ $GIT_SVN_INIT_CMD "$GIT_SUBDIR"
 #  echo "ref: refs/heads/trunk" > "$$GIT_DIR/HEAD"
 #  git update-server-info
 
-"$ORBUILD_SANDBOX/Scripts/GitSvnMirror/UpdateSvnToGitRepoMirror.sh"  "$GIT_BASE_DIR/$GIT_SUBDIR"
+"$ORBUILD_SANDBOX/Scripts/GitSvnMirror/UpdateSvnToGitRepoMirror.sh"  "$GIT_BASE_DIR/$GIT_SUBDIR" "$GIT_SVN_FETCH_ARGS"
 
 echo "$GIT_SVN_INIT_CMD $GIT_SUBDIR" >"$INIT_FILE"
 echo "$DESCRIPTION" >"$DESCRIPTION_FILE"

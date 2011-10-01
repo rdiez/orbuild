@@ -6,11 +6,12 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-if [ $# -ne 1 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git dir>"
+if [ $# -ne 2 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <git dir> <fetch args>"
 fi
 
 GIT_DIR="$1"
+FETCH_ARGS="$2"
 
 ATTEMPT_COUNT=5  # At least one, as the first time also counts.
 
@@ -30,7 +31,7 @@ do
   # you should allegedly not be alarmed by, but it then reliably fails to fetch anything
   # from the or1ksim repository:
   #   git svn fetch --log-window-size=10000
-  git svn fetch
+  git svn fetch $FETCH_ARGS
 
   EXIT_CODE=$?
 

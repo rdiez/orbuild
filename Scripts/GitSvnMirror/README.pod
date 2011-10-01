@@ -29,7 +29,12 @@ whose source code is available at L<< https://svn.apache.org/repos/infra/infrast
 
 =head1 Getting started
 
-To start the mirroring process, run the I<< UpdateAllMirrors.sh >> script from the command line. 
+First of all, you need to decide whether you need the whole revision history, as
+it can take hours to download all of it from the Subversion repositories. If you do need it,
+edit the file 'Makefile' and modify variable 'FIRST_GIT_SVN_FETCH_ARGS' near the top accordingly.
+
+To start the mirroring process, run the I<< UpdateAllMirrors.sh >> script from a Linux or Cygwin command line.
+A default set of OpenRISC repositories will be mirrored.
 The update process assumes that the connection
 to the Subversion server is not reliable and will retry a few times before giving up.
 
@@ -65,6 +70,10 @@ This is so that you can enter your Subversion login and password, if necessary.
 
 Afterwards, no further interaction should be necessary, therefore you can
 continue to run the script in an automated fashion.
+
+If you make a mistake and the repository was not downloaded as expected,
+delete the directory where the mirrored repository lives and it will be recreated
+the next time around.
 
 =back
 
