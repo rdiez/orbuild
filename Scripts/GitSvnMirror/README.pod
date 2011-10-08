@@ -19,6 +19,12 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< GitSvnMirror >> - a git mirror of the OpenRISC Subversion repositories
 
+B<< WARNING: I have not been able to reliably mirror the OpenCores Subversion repositories
+with git, as of ctober 2011. Sometimes files and even complete directories are missing
+in the git repositories, and the warning messages in the log do not help identify the cause.
+I suspect this problem has to do with the server configuration
+at OpenCores, rather than with orbuild or with git itself, but I am not sure. >>
+
 GitSvnMirror is a set of tools to create and maintain a collection of read-only Git mirrors
 of OpenRISC Subversion repositories.
 The scripts are designed to run on a public server, but they can also be run locally
