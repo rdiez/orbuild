@@ -74,7 +74,7 @@ define update_giv_svn_mirror_template
 	"$(ORBUILD_SANDBOX)/Scripts/Tools/RunAndReport.sh"  "$(2)"  \
                                                         "$(value $(1)_CREATE_LOG_FILE)" \
                                                         "$(value $(1)_CREATE_REPORT_FILE)" \
-                                                        report-on-error \
+                                                        report-always \
         "$(MIRROR_TOOLS)/CreateSvnToGitRepoMirror.sh" \
              "$(ORBUILD_GIT_BASE_DIR)" \
              "$(2)" \
