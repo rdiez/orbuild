@@ -27,11 +27,7 @@ do
   # TODO: Option --authors-file may be useful to map the subversion user names to the git ones.
 
   # The Apache Foundation uses parameter --log-window-size to accelerate the download.
-  # However, with this argument 'git svn fetch' prints some error messages
-  # you should allegedly not be alarmed by, but it then reliably fails to fetch anything
-  # from the or1ksim repository:
-  #   git svn fetch --log-window-size=10000
-  git svn fetch $FETCH_ARGS
+  git svn fetch --log-window-size=10000 $FETCH_ARGS
 
   EXIT_CODE=$?
 
