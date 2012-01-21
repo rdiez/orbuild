@@ -24,8 +24,18 @@ define autotool_project_template_variables
     $(1)_EXTRA_MAKE_ARGS :=
   endif
 
+  ifeq ($(origin $(1)_AUTOCONF_PREPEND_PATH), undefined)
+    $(1)_AUTOCONF_PATH_TO_USE := $(PATH)
+  else
+    $(1)_AUTOCONF_PATH_TO_USE := $(value $(1)_AUTOCONF_PREPEND_PATH):$(PATH)
+  endif
+
   ifeq ($(origin $(1)_MAKE_TARGETS), undefined)
     $(1)_MAKE_TARGETS :=
+  endif
+
+  ifeq ($(origin $(1)_INSTALL_TARGETS), undefined)
+    $(1)_INSTALL_TARGETS := install
   endif
 
   ifeq ($(origin $(1)_CHECK_TARGETS), undefined)
@@ -34,7 +44,11 @@ define autotool_project_template_variables
 
   $(1)_SRC_DIR := $(3)
   $(1)_OBJ_DIR := $(ORBUILD_BUILD_DIR)/$(2)-obj
-  $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/$(2)-bin
+
+  # The user can override the bin directory.
+  ifeq ($(origin $(1)_BIN_DIR), undefined)
+    $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/$(2)-bin
+  endif
 
   $(1)_CONFIG_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).ConfigureLog.txt
   $(1)_MAKE_LOG_FILENAME      := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).MakeLog.txt
@@ -62,7 +76,8 @@ define autotool_project_template
 
   $(value $(1)_CONFIGURE_SENTINEL):
 	echo "Configuring $(2)..." && \
-    "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
+      "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) configure" \
                     "$(value $(1)_CONFIG_LOG_FILENAME)" \
                     "$(value $(1)_CONFIG_REPORT_FILENAME)" \
@@ -77,7 +92,8 @@ define autotool_project_template
   $(value $(1)_MAKE_SENTINEL): $(value $(1)_CONFIGURE_SENTINEL)
 	+echo "Making $(2)..." && \
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
-	"$(ORBUILD_TOOLS)/RunAndReport.sh" \
+    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
+	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) make" \
                     "$(value $(1)_MAKE_LOG_FILENAME)" \
                     "$(value $(1)_MAKE_REPORT_FILENAME)" \
@@ -90,21 +106,23 @@ define autotool_project_template
   $(value $(1)_INSTALL_SENTINEL): $(value $(1)_MAKE_SENTINEL)
 	+echo "Installing $(2)..." && \
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
-	"$(ORBUILD_TOOLS)/RunAndReport.sh" \
+    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
+	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) install" \
                     "$(value $(1)_INSTALL_LOG_FILENAME)" \
                     "$(value $(1)_INSTALL_REPORT_FILENAME)" \
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfInstall.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS)" \
+                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_INSTALL_TARGETS)" \
                 "$(value $(1)_INSTALL_SENTINEL)"
 
 
   $(value $(1)_CHECK_SENTINEL): $(value $(1)_MAKE_SENTINEL)
 	+echo "Make check $(2)..." && \
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
-    "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
+      "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) check" \
                     "$(value $(1)_CHECK_LOG_FILENAME)" \
                     "$(value $(1)_CHECK_REPORT_FILENAME)" \
@@ -118,7 +136,8 @@ define autotool_project_template
   $(value $(1)_DISTCHECK_SENTINEL): $(value $(1)_MAKE_SENTINEL)
 	+echo "Distcheck $(2)..." && \
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
-    "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
+      "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) distcheck" \
                     "$(value $(1)_DISTCHECK_LOG_FILENAME)" \
                     "$(value $(1)_DISTCHECK_REPORT_FILENAME)" \
