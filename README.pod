@@ -19,7 +19,7 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< orbuild >> - a build system for OpenRISC
 
------ NOTE THAT THIS PROJECT IS STILL IN THE PLANNING STAGE, THE SOFTWARE DOES NOT EXIST YET! -----
+----- NOTE THAT THIS PROJECT IS STILL IN THE PLANNING STAGE, THE MAIN SOFTWARE DOES NOT EXIST YET! The GitSvnMirror toolset is however available, see below.  -----
 
 I<< orbuild >> is a set of scripts that automatically download, build
 and test a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
@@ -456,7 +456,7 @@ The I<< orbuild >> tools are written so that they can be easily reused or adapte
 =head1 GitSvnMirror
 
 This project contains a set of tools to create and maintain a collection of read-only Git mirrors
-of OpenRISC Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for more information.
+of Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for more information.
 
 =head1 Alternatives to orbuild
 
