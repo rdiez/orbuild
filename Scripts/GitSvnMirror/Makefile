@@ -1,5 +1,5 @@
 
-# Copyright (C) 2011 R. Diez - see the orbuild project for licensing information.
+# Copyright (C) 2012 R. Diez - see the orbuild project for licensing information.
 
 # Fetching the whole version history from Subversion takes a long time.
 # If you don't need the history, starting from the latest version
@@ -13,6 +13,7 @@
 #   http://stackoverflow.com/questions/1554222/git-svn-clone-how-to-defer-fetch-of-revision-history
 
 # Leave this variable empty to fetch the whole history.
+#   FIRST_GIT_SVN_FETCH_ARGS :=
 FIRST_GIT_SVN_FETCH_ARGS := -r HEAD
 
 
@@ -99,10 +100,7 @@ define update_giv_svn_mirror_template
 endef
 
 
-# Add here the repositories like this:
-#
-# $(eval $(call update_giv_svn_mirror_template,REPO1,repo1,git svn init svn://server/repo1,test 1))
-# $(eval $(call update_giv_svn_mirror_template,REPO2,repo2,git svn init svn://server/repo1,test 2))
+# Here is the list of repositories to mirror. You can add other Subversion repositories below.
 
 # OpenCores repositories under http://opencores.org/ocsvn/openrisc/openrisc/
 $(eval $(call update_giv_svn_mirror_template,DOCS,docs,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/docs,Documentation))
@@ -113,7 +111,8 @@ $(eval $(call update_giv_svn_mirror_template,GNU_SRC,gnu-src,git svn init http:/
 
 # Other OpenCores repositories.
 $(eval $(call update_giv_svn_mirror_template,ADV_DEBUG_SYS,adv_debug_sys,git svn init --stdlayout http://opencores.org/ocsvn/adv_debug_sys/adv_debug_sys,advanced debug system))
-$(eval $(call update_giv_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - minsoc))
+$(eval $(call update_giv_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - MinSoC))
+
 
 .PHONY: $(ALL_GIT_DIRS)
 .PHONY: update-all-git-svn-mirrors
