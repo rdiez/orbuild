@@ -38,7 +38,15 @@ else
   TIMESTAMP_ARG="-r{$TIMESTAMP}"
 fi
 
-svn checkout $TIMESTAMP_ARG $LOGIN_ARGS --quiet --non-interactive "$SVN_URL"
+# The stdin redirection trick "</dev/null" does not work with Subversion when it wants to prompt for credentials,
+# therefore pass the --non-interactive when appropriate.
+if [ $ORBUILD_IS_INTERACTIVE_BUILD -eq 0 ]; then
+  NON_INTERACTIVE_FLAG="--non-interactive"
+else
+  NON_INTERACTIVE_FLAG=""
+fi
+
+svn checkout $TIMESTAMP_ARG $LOGIN_ARGS --quiet $NON_INTERACTIVE_FLAG "$SVN_URL"
 
 if ! [ -d "$NAME_ONLY" ]; then
   abort "The subversion repository \"$SVN_URL\" has not created the expected subdirectory \"$NAME_ONLY\" when checking out in directory \"$BASE_DIR\"."
