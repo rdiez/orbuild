@@ -21,8 +21,10 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 ----- NOTE THAT THIS PROJECT IS STILL IN THE PLANNING STAGE, THE MAIN SOFTWARE DOES NOT EXIST YET! The GitSvnMirror toolset is however available, see below.  -----
 
-I<< orbuild >> is a set of scripts that automatically download, build
-and test a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
+I<< orbuild >> is a script framework that automatically downloads, builds
+and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
+
+Note that the framework is sufficiently generic so that it can be easily repurposed to build other projects.
 
 =head1 Motivation
 
@@ -58,9 +60,10 @@ All users end up with the same directory structure.
 
 =item * Generate a daily build.
 
-Output directories are rotated by date, an HTML report is generated at the end.
+Output directories are rotated by date, an HTML report is generated at the end. There is
+a top-level report and one individual report per task performed.
 
-Components are automatically packaged for offline installation.
+Components are automatically packaged for off-line installation.
 
 =back
 
@@ -100,21 +103,23 @@ Used to download the tarballs.
 
 =item * subversion, git
 
-Used to checkout the OpenRISC repositories.
+Used to checkout the source code repositories.
 
 =item * TeX binaries
 
 The or1ksim distcheck needs it.
 
+=item * Perl module XML::Parser
+
+Needed by the perl HTML report generator.
+
 =back
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites in a single sweep:
 
-sudo apt-get install git-core curl texlive
+  sudo apt-get install subversion git-core curl texlive libxml-parser-perl gxmessage
 
-TODO: libhtml-parser-perl  for the git svn mirroring support
-
-TODO: Mention all the packages needed for orbuild and for the OpenRISC components under Cygwin.
+TODO: Mention all the package names needed under Cygwin.
 
 TODO: Could we optionally automate the installation of packages under the most common OSes?
 
@@ -149,7 +154,9 @@ The steps are (with bash):
 
    git clone git://github.com/rdiez/orbuild.git
 
-   < edit the orbuild.config file, there should be little to change >
+   # Edit the orbuild.config file, there should be little to change.
+   # The very first time Subversion may prompt you for a login and password,
+   # so you may want to run the build at least once in interactive mode.
 
    ./orbuild new       # start a new build
    ./orbuild resume    # resume a failed build
@@ -212,7 +219,7 @@ TODO: how to build without Internet access.
 
 The build is designed to be a one-shot process: the OpenRISC components are built just once,
 from beginning to end. However, if the build fails, it is possible to fix the problem
-in the local computer and resume from the point of failure.
+in the local computer and resume from the last point of failure.
 
 I<< orbuild >> only moves forwards: components that were successfully built the last time around
 will never be rebuilt. There is no dependency checking at source-code level, and
@@ -224,7 +231,24 @@ Coping with such dependencies is well beyond the scope of this project.
 Note also that, if the OpenRISC components change in the mean time, the current
 I<< orbuild >> version may no longer be up-to-date enough to build them properly.
 
-=head1 Commands
+Depending on the actual makefile and task, it may be possible to just rebuild one
+component by deleting the output directory it creates. Rebuilding a component
+will trigger a rebuild of anything else that depends on it.
+
+=head1 About interactive builds and Subversion credentials
+
+Normally, a build process should be completely automated, but often some sort of human interaction is needed,
+especially the very first time. For example, the Subversion repositories on the opencores.org web site
+require a login and password, which are manually entered once and then cached for any subsequent runs.
+
+At first, I considered adding login and password configuration entries to F<< orbuild.conf >>, so that
+they can be passed to Subversion on the command line, but then it would be too easy to forget this fact
+and publish a build log which makes your password visible in clear text.
+
+In order to run a build in interactive mode, turn off settings I<< ParallelBuild >> and I<< InteractiveBuild >>, 
+see F<< orbuild.conf >> for details.
+
+=head1 Build Commands
 
 I<< orbuild >> takes the following commands:
 
@@ -233,6 +257,9 @@ I<< orbuild >> takes the following commands:
 =item * new
 
 Start a build in a new subdirectory.
+
+Note that the source code repositories are not fetched from scratch every time,
+but just updated, in order to conserve bandwidth.
 
 =item * resume
 
@@ -290,9 +317,10 @@ This is what the directory structure looks like:
 
 =head2 Why a configuration file is needed
 
-Unfortunately, even the standard user needs to edit the configuration file.
-At the very least, I<< orbuild >> needs a login and password
-for the opencores.org web site.
+Unfortunately, the user often needs to edit the configuration file, if only for the first time.
+For example, the Subversion repositories on the opencores.org web site
+require a login and password and they need to be entered interactively, so it may necessary
+to run the build at least once in interactive mode.
 
 Most users will probably want to set up the visual notification feature,
 in order to start using the build as soon as it is finished.
@@ -327,8 +355,6 @@ A set of options in order to send a notification e-mail at the end of the build 
 =item * visual-notification
 
 Specifies what kind of visual notification is generated at the end of the build process.
-
-TODO: document needed packages under cygwin / linux / etc.
 
 =item * download-cache
 
@@ -365,13 +391,11 @@ Mainly useful for a nightly build server, see the 'rotate' command.
 
 =back
 
-=head2 Specific OpenRISC settings
+=head2 Settings specific to OpenRISC
+
+TODO: these settings are not implemented yet
 
 =over
-
-=item * opencores-login, opencores-password
-
-Needed to access the Subversion repositories.
 
 =item * gnu-src-branch
 
@@ -401,9 +425,14 @@ Whether to build gdb.
 
 =head2 Repository skew
 
-At the beginning of the daily build, all source code repositories are updated in order to downloada the latest file versions. The update itself is not atomic: if a developer checks in changes to one of the repositories during the update process, it's not clear whether the new or the old file versions will be picked up by today's build.
+At the beginning of the daily build, all source code repositories are updated in order
+to downloada the latest file versions. The update itself is not atomic: if a developer
+checks in changes to one of the repositories during the update process, it's not clear
+whether the new or the old file versions will be picked up by today's build.
 
-In order to minimize the risk of such skew across the repositories, the daily build could take the current date/time as today's baseline and check out all repositories at that timestamp. However, the following issues remain unresolved:
+In order to minimize the risk of such skew across the repositories, the daily build
+could take the current date/time as today's baseline and check out all repositories
+at that timestamp. However, the following issues remain unresolved:
 
 =over
 
@@ -411,7 +440,9 @@ In order to minimize the risk of such skew across the repositories, the daily bu
 
 =item * Git may deliver the wrong results for a given timestamp.
 
-If a developer merges a branch into head, and then tries to check out head as of last week, git may go down the merged branch and return a different set of files as it would have been the case had the deloper done a check out last week.
+If a developer merges a branch into head, and then tries to check out head as of last week,
+git may go down the merged branch and return a different set of files as it would
+have been the case had the deloper done a check out last week.
 
 In order to prevent that from happening, git developers must follow this kind of rules:
 
@@ -423,15 +454,18 @@ In order to prevent that from happening, git developers must follow this kind of
 
 =item * Always merge features into master (not the other way around).
 
-Upstream should always merge with --no-ff, which usually means making upstream an automated bot, and not a human being using "git push".
+Upstream should always merge with --no-ff, which usually means making upstream an
+automated process, and not a human being using "git push".
 
-Or maybe never do "git merge", but "git rebase" instead. Rebasing ensures that the commits are always re-applied so that the history stays linear.
+Or maybe never do "git merge", but "git rebase" instead. Rebasing ensures that
+the commits are always re-applied so that the history stays linear.
 
 =item * Always push immediately after committing on master.
 
 =back
 
-Under those conditions, it would be possible to retrieve consistent results with "git log -1 --first-parent --until=...".
+Under those conditions, it would be possible to retrieve consistent results
+with "git log -1 --first-parent --until=...".
 
 =back
 
@@ -441,7 +475,10 @@ Some of the perl scripts use mktime and the like and are not year 2038 compliant
 
 =head1 Why write I<< orbuild >> in perl, bash and make
 
-There are open-source tools like Apache Continuum, CruiseControl or BuildBot that could take on the task of building software components. However, at the time I<< orbuild >> was developed, they seemed overkill. Besides, most OpenRISC users would not be prepared to install such a build system locally in order to get the build running on their machines.
+There are open-source tools like Apache Continuum, CruiseControl or BuildBot that could take on the task
+of building software components. However, at the time I<< orbuild >> was developed, they seemed overkill.
+Besides, most OpenRISC users would not be prepared to install such a build system locally in order to
+get the build running on their machines.
 
 Perl, Bash and Make are very popular and should be easy to install on all systems, if they are not already there.
 
@@ -449,9 +486,15 @@ The original author of I<< orbuild >> was already familiar with Perl and had no 
 
 The dash shell would be faster, but speed is not so important here, and bash has more features.
 
-Makefiles are hard to write, linear scripts would have been much easier to maintain. However, GNU Make has a killer feature: all make subprocesses coordinate with each other in order to limit the amount of concurrent processes and keep the system's load within the given limit (see the documentation for the -j switch for more information). The user can easily set the number of concurrent processes to 1 (sequential processing), in order to keep his PC responsive for other tasks, or set it to 'auto' and use all available CPUs, but without starting so many processes at once that the PC overloads and starts thrashing.
+Makefiles are hard to write, linear scripts would have been much easier to maintain. However, GNU Make has
+a killer feature: all make subprocesses coordinate with each other in order to limit the amount
+of concurrent processes and keep the system's load within the given limit (see the documentation for the -j switch
+for more information). The user can easily set the number of concurrent processes to 1 (sequential processing),
+in order to keep his PC responsive for other tasks, or set it to 'auto' and use all available CPUs, but without
+starting so many processes at once that the PC overloads and starts thrashing.
 
-The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact, most of them have evolved over the years in other unrelated projects.
+The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact,
+most of them have evolved over the years in other unrelated projects.
 
 =head1 GitSvnMirror
 
