@@ -37,12 +37,22 @@ if [ -n "$TIMESTAMP" ]; then
 
   git checkout "$COMMIT_ID"
 
+  abort "TODO: git merge missing here"
+
 elif [ -n "$BRANCH" ]; then
+
   echo "Checking out git repository from URL \"$GIT_URL\" at branch \"origin/$BRANCH\"..."
   git checkout "origin/$BRANCH"
+  abort "TODO: git merge missing here"
+
 else
+
   echo "Checking out git repository from URL \"$GIT_URL\"..."
   git checkout
+
+  echo "Merging any changes from upstream git..."
+  git merge FETCH_HEAD
+
 fi
 
 popd >/dev/null
