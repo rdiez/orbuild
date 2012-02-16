@@ -50,7 +50,7 @@ use File::Glob;
 
 use constant THIS_SCRIPT_DIR => $FindBin::Bin;
 
-use lib THIS_SCRIPT_DIR . "/PerlModules";
+use lib THIS_SCRIPT_DIR . "/../PerlModules";
 use MiscUtils;
 use FileUtils;
 use StringUtils;
