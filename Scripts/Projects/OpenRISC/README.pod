@@ -1,0 +1,43 @@
+
+This is the source file from which the README file is generated.
+
+This file is written in Perl's Plain Old Documentation (POD) format.
+Run the following Perl commands to convert it to text or to HTML
+for easy reading:
+
+  podchecker README.pod  # Optional, check syntax.
+  pod2text README.pod >README.txt
+
+  # pod2html seems buggy, at least in perl v5.10.1, therefore
+  # I'm using this long one-liner instead (with bash):
+  perl -MPod::Simple::HTML  -e "\$p = Pod::Simple::HTML->new; \$p->index( 1 ); \$p->output_fh( *STDOUT{IO} ); \$p->force_title('orbuild OpenRISC project'); \$p->parse_file('README.pod');"  >README.html
+
+This file is best edited with emacs module pod-mode, available in CPAN.
+However, the POD syntax is quite simple and can be edited with a standard text editor.
+
+=pod
+
+=head1 OpenRISC I<< orbuild >> project
+
+This is what the project currently builds:
+
+=over
+
+=item * Verilator
+
+This is taken from git head at http://git.veripool.org/git/verilator , so it may not be as stable as a released version.
+
+=item * TODO
+
+=back
+
+
+=head1 License
+
+Copyright (C) R. Diez 2011,  rdiezmail-openrisc at yahoo.de
+
+The I<< orbuild >> source code is released under the GPL 3 license.
+
+This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
+
+=cut
