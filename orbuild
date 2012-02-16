@@ -1,0 +1,551 @@
+#!/usr/bin/perl
+
+=head1 OVERVIEW
+
+orbuild version 0.10
+
+Build system for OpenRISC - see the README file for more information.
+
+=head1 USAGE
+
+  ./orbuild [options] <command>
+
+=head1 COMMANDS
+
+new, resume, rotate, test-mail, test-visual-notification
+
+=head1 OPTIONS
+
+-h, --help, --version, --license
+
+=head1 EXIT CODE
+
+Exit code: 0 on success, some other value on error.
+
+=head1 FEEDBACK
+
+Please send feedback to rdiezmail-openrisc at yahoo.de
+
+=head1 LICENSE
+
+Copyright (C) 2011 R. Diez
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License version 3 as published by
+the Free Software Foundation.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License version 3 for more details.
+
+You should have received a copy of the GNU Affero General Public License version 3
+along with this program.  If not, see L<http://www.gnu.org/licenses/>.
+
+=cut
+
+use strict;
+use warnings; 
+use integer;  # There is no reason to resort to floating point in this script.
+
+use Getopt::Long;
+use IO::Handle;
+use FindBin;
+use Cwd;
+
+use constant SANDBOX_DIR => File::Spec->rel2abs( $FindBin::Bin );
+
+use lib "@{[SANDBOX_DIR]}/Scripts/PerlModules";
+use MiscUtils;
+use StringUtils;
+use ProcessUtils;
+use ConfigFile;
+use AGPL3;
+
+use constant SCRIPT_NAME => $0;
+
+use constant APP_NAME    => "orbuild";
+use constant APP_VERSION => "0.10";  # If you update it, update also the perldoc text above.
+
+# In case the shebang fails in weird operating systems, use the explicit interpreter names.
+use constant SHELL_INTERPRETER => "bash";
+use constant PERL_INTERPRETER  => "perl";
+
+use constant SCRIPTS_DIR => FileUtils::cat_path( SANDBOX_DIR, "Scripts" );
+use constant TOOLS_DIR   => FileUtils::cat_path( SCRIPTS_DIR, "Tools" );
+
+# If you update these constants, update the Makefile too.
+use constant BUILD_INTERNAL_REPORTS_SUBDIR    => "OrbuildInternalReports";
+use constant BUILD_PUBLIC_REPORTS_SUBDIR      => "OrbuildPublicReports";
+use constant BUILD_SENTINELS_SUBDIR           => "OrbuildSentinels";
+
+use constant BUILD_CHECKOUT_SENTINELS_SUBDIR  => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Checkout" );
+use constant BUILD_UNPACK_SENTINELS_SUBDIR    => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Unpack"   );
+use constant BUILD_BUILD_SENTINELS_SUBDIR     => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Build"    );
+use constant BUILD_COMMAND_SENTINELS_SUBDIR   => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Commands" );
+
+use constant SANDBOX_LAYOUT_VERSION_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.version" );
+use constant SANDBOX_LAYOUT_VERSION_NUMBER   => 1;
+
+use constant STATUS_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.status" );
+use constant CONFIG_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.conf" );
+
+use constant DATE_SEPARATOR => "-";
+use constant TIME_SEPARATOR => ":";
+
+
+# ----------- main routine, the script entry point is at the bottom -----------
+
+sub main ()
+{
+  my $arg_help             = 0;
+  my $arg_h                = 0;
+  my $arg_version          = 0;
+  my $arg_license          = 0;
+
+  my $result = GetOptions(
+                 'help'                =>  \$arg_help,
+                 'h'                   =>  \$arg_h,
+                 'version'             =>  \$arg_version,
+                 'license'             =>  \$arg_license
+                );
+
+  if ( not $result )
+  {
+    # GetOptions has already printed an error message.
+    return MiscUtils::EXIT_CODE_FAILURE_ARGS;
+  }
+
+  if ( $arg_help || $arg_h )
+  {
+    write_stdout( "\n" . MiscUtils::get_cmdline_help_from_pod( SCRIPT_NAME ) );
+    return MiscUtils::EXIT_CODE_SUCCESS;
+  }
+
+  if ( $arg_version )
+  {
+    write_stdout( "@{[APP_NAME]} version @{[APP_VERSION]}\n" );
+    return MiscUtils::EXIT_CODE_SUCCESS;
+  }
+
+  if ( $arg_license )
+  {
+    write_stdout( AGPL3::get_gpl3_license_text() );
+    return MiscUtils::EXIT_CODE_SUCCESS;
+  }
+
+  if ( 1 != scalar @ARGV )
+  {
+    die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
+  }
+
+  if ( SANDBOX_DIR =~ m/\s/ )
+  {
+    die "The orbuild sandbox path \"@{[SANDBOX_DIR]}\" contains whitespace, but GNU make cannot cope with whitespaces.\n";
+  }
+
+
+  my $cmd = shift @ARGV;
+
+  if ( $cmd eq "new" )
+  {
+    command_new();
+  }
+  elsif ( $cmd eq "resume" )
+  {
+    command_resume();
+  }
+  elsif ( $cmd eq "rotate" )
+  {
+    command_rotate();
+  }
+  elsif ( $cmd eq "test-mail" )
+  {
+    die "TODO: not implemented yet\n";
+  }
+  elsif ( $cmd eq "test-visual-notification" )
+  {
+    die "TODO: not implemented yet\n";
+  }
+  else
+  {
+    die qq<Unknown command "$cmd".\n>;
+  }
+
+  return MiscUtils::EXIT_CODE_SUCCESS;
+}
+
+
+sub command_new ()
+{
+  my %configEntries;
+
+  process_config_file_etc( \%configEntries );
+
+  write_stdout( "Creating a new build directory...\n" );
+
+  rotate_build_dir( \%configEntries, MiscUtils::FALSE );
+
+  resume_build( \%configEntries );
+}
+
+
+sub command_resume ()
+{
+  my %configEntries;
+
+  process_config_file_etc( \%configEntries );
+
+  resume_build( \%configEntries );
+}
+
+
+sub command_rotate ()
+{
+  my %configEntries;
+
+  process_config_file_etc( \%configEntries );
+
+  write_stdout( "Rotating the build directory...\n" );
+
+  rotate_build_dir( \%configEntries, MiscUtils::TRUE  );
+
+  resume_build( \%configEntries );
+}
+
+
+sub resume_build ( $ )
+{
+  my $configEntries = shift;
+
+  read_status( $configEntries );
+
+  my $buildDir = $configEntries->{ "CurrentBuildDir" };
+
+  if ( not -d $buildDir )
+  {
+    die "The build directory \"$buildDir\" does not exist. " .
+        "Rerun @{[SCRIPT_NAME]} with the 'new' or 'resume' arguments in order to create a new one.\n";
+  }
+
+
+  write_stdout( "The current build directory is: $buildDir\n" );
+
+  my $downloadCacheDir     = File::Spec->rel2abs( $configEntries->{ "DownloadCacheDir" }, SANDBOX_DIR );
+  my $repositoriesDir      = File::Spec->rel2abs( $configEntries->{ "RepositoriesDir"  }, SANDBOX_DIR );
+
+  my $publicReportsDir   = FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_SUBDIR );
+  my $internalReportsDir = FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR );
+
+  my $makefileLogFile    = FileUtils::cat_path( $publicReportsDir  , "TopLevelMakefileLogFile.txt" );
+  my $makefileReportFile = FileUtils::cat_path( $internalReportsDir, "TopLevelMakefile.report"     );
+
+  FileUtils::create_folder_if_does_not_exist( $downloadCacheDir );
+  FileUtils::create_folder_if_does_not_exist( $repositoriesDir  );
+  FileUtils::create_folder_if_does_not_exist( FileUtils::cat_path( $repositoriesDir, "GitCloneSentinels" )  );
+
+  my $makefileFilename = FileUtils::cat_path( SANDBOX_DIR, $configEntries->{ "Makefile" } );
+
+  # If the makefile is not found, GNU Make's error message is long and confusing,
+  # so check manually here in order to generate a clean error message.
+  if ( not -f $makefileFilename )
+  {
+    die "The makefile specified in the configuration ($makefileFilename) does not exist.\n";
+  }
+
+  # We already have an implementation in bash of how to get the number of CPUs,
+  # so use it here, instead of reimplementing it in perl.
+  my $cmdJParam = SHELL_INTERPRETER . " -c \"set -o errexit && source \"@{[SCRIPTS_DIR]}/ShellModules/MakeJVal.sh\" && get_make_j_val MAKE_J_VAL && echo \\\$MAKE_J_VAL\"";
+  my $makeJParam = ProcessUtils::run_process_capture_single_value_output( $cmdJParam );
+
+  my $makeFlags = "--no-builtin-variables ";  # Accelerates the dependency processing.
+  $makeFlags   .= "--warn-undefined-variables ";
+  $makeFlags   .= "-s ";  # Silent.
+
+  if ( lc($configEntries->{ "StopOnFirstError" }) eq "no" )
+  {
+    $makeFlags   .= "-k ";
+  }
+
+  if ( lc($configEntries->{ "ParallelBuild" }) eq "yes" )
+  {
+    $makeFlags   .= "-j $makeJParam ";
+  }
+  # $makeFlags .= "--debug=v ";  # For make debugging purposes
+
+  my $noStdInput = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "" : "</dev/null";
+
+  # Export some variables for the project Makefile and for other orbuild tools.
+  #
+  # These variables are generic to the build process:
+  $ENV{ ORBUILD_SANDBOX                } = SANDBOX_DIR;
+  $ENV{ ORBUILD_BUILD_DIR              } = $buildDir;
+  $ENV{ ORBUILD_DOWNLOAD_CACHE_DIR     } = $downloadCacheDir;
+  $ENV{ ORBUILD_REPOSITORIES_DIR       } = $repositoriesDir;
+  $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
+  $ENV{ ORBUILD_TOOLS                  } = TOOLS_DIR;
+
+  # These variables are used by some of the tools bundled with orbuild:
+  $ENV{ ORBUILD_INTERNAL_REPORTS_DIR   } = FileUtils::cat_path( $buildDir, "OrbuildInternalReports" );
+  $ENV{ ORBUILD_PUBLIC_REPORTS_DIR     } = FileUtils::cat_path( $buildDir, "OrbuildPublicReports" );
+
+  $ENV{ ORBUILD_CHECKOUT_SENTINELS_DIR } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Checkout" );
+  $ENV{ ORBUILD_UNPACK_SENTINELS_DIR   } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Unpack" );
+  $ENV{ ORBUILD_BUILD_SENTINELS_DIR    } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Build" );
+  $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Commands" );
+
+  $ENV{ ORBUILD_IS_INTERACTIVE_BUILD   } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
+
+
+  my $cmd = "@{[SHELL_INTERPRETER]} @{[TOOLS_DIR]}/RunAndReport.sh " .
+                        "\"top-level makefile\" " .
+                        "$makefileLogFile " . 
+                        "$makefileReportFile " .
+                        "report-always " .
+                "make " .
+                    "-C \"$buildDir\" " .
+                    "$makeFlags " .
+                    "-f \"$makefileFilename\" " .
+                    "all " .
+                    "$noStdInput";
+
+  my $makeExitCode = ProcessUtils::run_process( $cmd );
+
+  my $reportFilename = FileUtils::cat_path( $publicReportsDir, "BuildReport.html" );
+
+  my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
+                  "$internalReportsDir " .
+                  "$makefileReportFile " .
+                  "$reportFilename ";
+
+  my $reportExitCode = ProcessUtils::run_process( $reportCmd );
+
+  if ( $reportExitCode != 0 )
+  {
+    die "Error generating the build report.\n";
+  }
+
+  # write_stdout( "---------------------------------------\n" );
+
+  my $error;
+
+  if ( $makeExitCode != 0 )
+  {
+    $error= "The build failed with exit code $makeExitCode, see the generated report:\n" .
+            "$reportFilename\n" .
+            "Rerun @{[SCRIPT_NAME]} with the 'resume' argument to try again.\n";
+  }
+  else
+  {
+    write_stdout( "The orbuild was completed successfully.\n" );
+    write_stdout( "The generated build report is: $reportFilename\n" );
+    write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
+  }
+
+  $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilename;
+
+  my $visualNotification = $configEntries->{ "VisualNotification" };
+
+  if ( defined ( $visualNotification ) and length( $visualNotification ) > 0 )
+  {
+    write_stdout( "Running the visual notification action...\n" );
+    my $visualNotificationExitCode = ProcessUtils::run_process( $visualNotification );
+
+    if ( $visualNotificationExitCode != 0 )
+    {
+      die "The VisualNotification action failed with exit code $visualNotificationExitCode, the command was:\n" .
+          "$visualNotification\n";
+    }
+  }
+
+
+  if ( defined $error )
+  {
+    die $error;
+  }
+
+
+  my $postBuildAction = $configEntries->{ "PostBuildAction" };
+
+  if ( defined ( $postBuildAction ) and length( $postBuildAction ) > 0 )
+  {
+    write_stdout( "Running post-build action...\n" );
+    my $postBuildActionExitCode = ProcessUtils::run_process( $postBuildAction );
+
+    if ( $postBuildActionExitCode != 0 )
+    {
+      die "The post-build action failed with exit code $postBuildActionExitCode, the command was:\n" .
+          "$postBuildAction\n";
+    }
+  }
+}
+
+
+sub rotate_build_dir ( $ $ )
+{
+  my $configEntries = shift;
+  my $shouldRotate  = shift;
+
+  my $containingDir = File::Spec->rel2abs( $configEntries->{ "BuildsDir" }, SANDBOX_DIR );
+
+  FileUtils::create_folder_if_does_not_exist( $containingDir );
+
+  my ( @capturedStdout, @capturedStderr );
+
+  my $childProcessName = "RotateDir.pl";
+
+  my $slotPrefix = "build-";
+
+  my $cmd = PERL_INTERPRETER . " " . FileUtils::cat_path( TOOLS_DIR, "RotateDir.pl " );
+
+  if ( $shouldRotate )
+  {
+    $cmd .= "--slot-count " . $configEntries->{ RotateSlotCount } . " ";
+  }
+  else
+  {
+    # The user will be manually managing the build directories.
+    $cmd .= "--no-slot-deletion ";
+  }
+
+  $cmd .= "--dir-name-prefix $slotPrefix " .
+          "--dir-naming-scheme date " .
+          "--output-only-new-dir-name " .
+          "$containingDir";
+
+  my $buildDir = ProcessUtils::run_process_capture_single_value_output( $cmd );
+  $buildDir = StringUtils::trim_blanks( $buildDir );
+
+  # Note that mkpath() raises an error if it fails.
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR   ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_SUBDIR     ) );
+
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_CHECKOUT_SENTINELS_SUBDIR ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_UNPACK_SENTINELS_SUBDIR   ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_BUILD_SENTINELS_SUBDIR    ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR  ) );
+
+  write_status( $buildDir );
+}
+
+
+#------------------------------------------------------------------------
+
+sub write_status ( $ $ )
+{
+  my $buildDir  = shift;
+
+  my $absBuildDir = File::Spec->rel2abs( $buildDir, SANDBOX_DIR );
+
+  my $contents = "CurrentBuildDir = $absBuildDir\n";
+
+  FileUtils::write_string_to_new_file( STATUS_FILENAME, $contents );
+}
+
+
+sub read_status ( $ )
+{
+  my $configEntries = shift;
+
+  my %statusEntries;
+
+  ConfigFile::read_config_file( STATUS_FILENAME, \%statusEntries );
+
+  my @mandatoryEntries = qw( CurrentBuildDir
+                           );
+
+  ConfigFile::check_config_file_contents( \%statusEntries, \@mandatoryEntries, undef, STATUS_FILENAME );
+
+  my $buildDir = $statusEntries{ "CurrentBuildDir"    };
+
+  $configEntries->{ "CurrentBuildDir" } = $buildDir;
+}
+
+
+sub check_boolean_option ( $ $ )
+{
+  my $configEntries = shift;
+  my $optionName = shift;
+
+  if ( lc( $configEntries->{ $optionName } ) ne "yes" and
+       lc( $configEntries->{ $optionName } ) ne "no" )
+  {
+    die "The configuration contains an invalid value of \"" . $configEntries->{ $optionName } . "\" for option $optionName, valid values are \"yes\" or \"no\".\n";
+  }
+}
+
+
+sub process_config_file_etc ( $ )
+{
+  my $configEntries = shift;
+
+  check_sandbox_layout_version();
+
+  ConfigFile::read_config_file( CONFIG_FILENAME, $configEntries );
+
+  my @mandatoryEntries = qw( RotateSlotCount
+                             BuildsDir
+                             DownloadCacheDir
+                             RepositoriesDir
+                             Makefile
+                             ParallelBuild
+                             InteractiveBuild
+                             StopOnFirstError
+                           );
+
+  my @optionalEntries = qw( VisualNotification
+                            PostBuildAction
+                          );
+
+  ConfigFile::check_config_file_contents( $configEntries, \@mandatoryEntries, \@optionalEntries, CONFIG_FILENAME );
+
+
+  if ( StringUtils::has_non_digits( $configEntries->{ "RotateSlotCount" } ) )
+  {
+    die "Invalid RotateSlotCount value \"" . $configEntries->{ "RotateSlotCount" } . "\"\n";
+  }
+
+
+  check_boolean_option( $configEntries, "ParallelBuild" );
+  check_boolean_option( $configEntries, "InteractiveBuild" );
+
+  if ( lc( $configEntries->{ "ParallelBuild"    } ) eq "yes" and
+       lc( $configEntries->{ "InteractiveBuild" } ) eq "yes" )
+  {
+    die "The configuration enables both settings ParallelBuild and InteractiveBuild at the same time, which is normally an error.\n";
+  }
+
+  check_boolean_option( $configEntries, "StopOnFirstError" );
+}
+
+
+sub check_sandbox_layout_version ()
+{
+  if ( -e SANDBOX_LAYOUT_VERSION_FILENAME )
+  {
+    my %layoutVersionEntries;
+
+    ConfigFile::read_config_file( SANDBOX_LAYOUT_VERSION_FILENAME, \%layoutVersionEntries );
+
+    my @mandatoryEntries = qw( SandboxLayoutVersion
+                             );
+
+    ConfigFile::check_config_file_contents( \%layoutVersionEntries, \@mandatoryEntries, undef, SANDBOX_LAYOUT_VERSION_FILENAME );
+
+    my $version = $layoutVersionEntries{ "SandboxLayoutVersion" };
+
+    if ( $version != SANDBOX_LAYOUT_VERSION_NUMBER )
+    {
+      die "This version of @{[APP_NAME]} is not compatible with the current sandbox layout. " .
+          "You'll probably need to check out a fresh copy of @{[APP_NAME]} in a new directory.\n";
+    }
+  }
+  else
+  {
+    my $contents = "SandboxLayoutVersion = @{[SANDBOX_LAYOUT_VERSION_NUMBER]}\n";
+    FileUtils::write_string_to_new_file( SANDBOX_LAYOUT_VERSION_FILENAME, $contents );
+  }
+}
+
+
+MiscUtils::entry_point( \&main, SCRIPT_NAME );
