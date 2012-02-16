@@ -4,6 +4,7 @@
 
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -lt 5 ]; then
@@ -41,12 +42,8 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 {
     # Print the executed command with proper quoting, so that the user can
     # copy-and-paste the command from the log file and expect it to work.
-    printf "%s" "$(basename $0): Log from command:"
-    for arg
-    do
-	  printf ' %q' "$arg"
-	done
-    printf "\n"
+    printf "%s" "$(basename $0): Log from command: "
+    print_command "$@"
 
     echo "$(basename $0): Start time,  local: $START_TIME_LOCAL, UTC: $START_TIME_UTC"
     echo "$(basename $0): Current directory: $PWD"

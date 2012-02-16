@@ -4,6 +4,7 @@
 
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -ne 3 ]; then
@@ -20,6 +21,7 @@ fi
 
 pushd "$SRC_DIR" >/dev/null
 
+print_command $AUTOGEN_CMD
 $AUTOGEN_CMD
 
 echo "Done" >"$SENTINEL_FILENAME"

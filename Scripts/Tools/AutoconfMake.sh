@@ -4,6 +4,7 @@
 
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -ne 3 ]; then
@@ -16,7 +17,11 @@ SENTINEL_FILENAME="$3"
 
 pushd "$OBJ_DIR" >/dev/null
 
-make -s $EXTRA_MAKE_ARGS
+# echo "The inherited MAKEFLAGS are: $MAKEFLAGS"
+
+CMD="make -s $EXTRA_MAKE_ARGS"
+print_command $CMD
+$CMD
 
 echo "Done" >"$SENTINEL_FILENAME"
 
