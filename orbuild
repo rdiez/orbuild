@@ -12,7 +12,7 @@ Build system for OpenRISC - see the README file for more information.
 
 =head1 COMMANDS
 
-new, resume, rotate, test-mail, test-visual-notification
+new, resume, test-mail, test-visual-notification
 
 =head1 OPTIONS
 
@@ -149,15 +149,11 @@ sub main ()
 
   if ( $cmd eq "new" )
   {
-    command_new();
+    command_rotate();
   }
   elsif ( $cmd eq "resume" )
   {
     command_resume();
-  }
-  elsif ( $cmd eq "rotate" )
-  {
-    command_rotate();
   }
   elsif ( $cmd eq "test-mail" )
   {
@@ -176,18 +172,19 @@ sub main ()
 }
 
 
-sub command_new ()
-{
-  my %configEntries;
-
-  process_config_file_etc( \%configEntries );
-
-  write_stdout( "Creating a new build directory...\n" );
-
-  rotate_build_dir( \%configEntries, MiscUtils::FALSE );
-
-  resume_build( \%configEntries );
-}
+# The 'new' command was permanently replaced by 'rotate'.
+#sub command_new ()
+#{
+#  my %configEntries;
+#
+#  process_config_file_etc( \%configEntries );
+#
+#  write_stdout( "Creating a new build directory...\n" );
+#
+#  rotate_build_dir( \%configEntries, MiscUtils::FALSE );
+#
+#  resume_build( \%configEntries );
+#}
 
 
 sub command_resume ()
@@ -225,7 +222,7 @@ sub resume_build ( $ )
   if ( not -d $buildDir )
   {
     die "The build directory \"$buildDir\" does not exist. " .
-        "Rerun @{[SCRIPT_NAME]} with the 'new' or 'resume' arguments in order to create a new one.\n";
+        "Rerun @{[SCRIPT_NAME]} with the 'new' command in order to create a new one.\n";
   }
 
 
@@ -381,6 +378,19 @@ sub resume_build ( $ )
 }
 
 
+sub format_timestamp ( $ $ $ ) 
+{
+  my $year  = shift;
+  my $month = shift;
+  my $day   = shift;
+
+  return sprintf( "%04d" . DATE_SEPARATOR . "%02d" . DATE_SEPARATOR . "%02d",
+                  $year,
+                  $month,
+                  $day );
+}
+
+
 sub rotate_build_dir ( $ $ )
 {
   my $configEntries = shift;
@@ -408,8 +418,16 @@ sub rotate_build_dir ( $ $ )
     $cmd .= "--no-slot-deletion ";
   }
 
+  # WARNING: This is not year 2038 compliant on 32-bit Linux systems and on Cygwin.
+  #          See RotateDir.pl for more information about this code.
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime( time() );
+  $mon  += 1;
+  $year += 1900;
+  my $timestampStr = format_timestamp( $year, $mon, $mday );
+
   $cmd .= "--dir-name-prefix $slotPrefix " .
           "--dir-naming-scheme date " .
+          "--timestamp=$timestampStr " .
           "--output-only-new-dir-name " .
           "$containingDir";
 
