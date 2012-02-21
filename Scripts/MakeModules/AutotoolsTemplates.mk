@@ -20,8 +20,13 @@ define autotool_project_template_variables
     $(1)_EXTRA_CONFIG_ARGS :=
   endif
 
+  # TODO: This is also used for the install phase, document it or rename the variable:
   ifeq ($(origin $(1)_EXTRA_MAKE_ARGS), undefined)
     $(1)_EXTRA_MAKE_ARGS :=
+  endif
+
+  ifeq ($(origin $(1)_EXTRA_INSTALL_ARGS), undefined)
+    $(1)_EXTRA_INSTALL_ARGS :=
   endif
 
   ifeq ($(origin $(1)_AUTOCONF_PREPEND_PATH), undefined)
@@ -114,7 +119,7 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfInstall.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_INSTALL_TARGETS)" \
+                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_EXTRA_INSTALL_ARGS) $(value $(1)_INSTALL_TARGETS)" \
                 "$(value $(1)_INSTALL_SENTINEL)"
 
 
@@ -152,6 +157,7 @@ endef
 # -----------------------------------------------------
 #
 # Triggers the autogen step on a standard autotools-based project.
+# Note that the autogen step slightly pollutes the sourece-control repository its run on.
 #
 #  $(1) is the variable name prefix, like "NEWLIB"
 #       Variables named in the form NEWLIB_xxx will be defined.
