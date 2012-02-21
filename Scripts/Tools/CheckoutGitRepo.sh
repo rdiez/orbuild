@@ -6,8 +6,8 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-if [ $# -ne 6 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename> <branch> <timestamp>"
+if [ $# -ne 8 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename> <branch> <timestamp> <extra git checkout args> <extra git merge args>"
 fi
 
 GIT_URL="$1"
@@ -16,6 +16,8 @@ BASE_DIR="$3"
 SENTINEL_FILENAME="$4"
 BRANCH="$5"
 TIMESTAMP="$6"
+EXTRA_GIT_CHECKOUT_ARGS="$7"
+EXTRA_GIT_MERGE_ARGS="$8"
 
 REPO_DIR="$BASE_DIR/$DEST_DIR"
 
@@ -35,23 +37,23 @@ if [ -n "$TIMESTAMP" ]; then
 
   echo "Checking out git repository from URL \"$GIT_URL\" at timestamp \"$TIMESTAMP\"..."
 
-  git checkout "$COMMIT_ID"
+  git checkout $EXTRA_GIT_CHECKOUT_ARGS "$COMMIT_ID"
 
   abort "TODO: git merge missing here"
 
 elif [ -n "$BRANCH" ]; then
 
   echo "Checking out git repository from URL \"$GIT_URL\" at branch \"origin/$BRANCH\"..."
-  git checkout "origin/$BRANCH"
+  git checkout $EXTRA_GIT_CHECKOUT_ARGS "origin/$BRANCH"
   abort "TODO: git merge missing here"
 
 else
 
   echo "Checking out git repository from URL \"$GIT_URL\"..."
-  git checkout
+  git checkout $EXTRA_GIT_CHECKOUT_ARGS
 
   echo "Merging any changes from upstream git..."
-  git merge FETCH_HEAD
+  git merge $EXTRA_GIT_MERGE_ARGS
 
 fi
 
