@@ -73,7 +73,7 @@ Components are automatically packaged for off-line installation.
 
 =item * Users who wish to install OpenRISC components
 
-=item * Developers who wish to test OpenRISC components together
+=item * Developers who wish to test several OpenRISC components together
 
 =item * Daily build managers
 
@@ -105,19 +105,19 @@ Used to download the tarballs.
 
 Used to checkout the source code repositories.
 
-=item * TeX binaries
-
-The or1ksim distcheck needs it.
-
 =item * Perl module XML::Parser
 
 Needed by the perl HTML report generator.
 
 =back
 
-Under Ubuntu/Debian systems, the following command installs all prerequisites in a single sweep:
+Under Ubuntu/Debian systems, the following commands install all prerequisites at once:
 
-  sudo apt-get install subversion git-core curl texlive libxml-parser-perl gxmessage
+  sudo apt-get install autoconf build-essential make gcc g++ patch subversion git-core curl libxml-parser-perl gxmessage
+
+Other tools needed by the OpenRISC components:
+
+  sudo apt-get install libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf
 
 TODO: Mention all the package names needed under Cygwin.
 
@@ -205,8 +205,6 @@ of all repositories. The steps are:
 The server administrator will have to edit the F<< orbuild.conf >> file extensively
 in order to generate non-standard builds.
 
-Instead of the 'new' command, a daily build server should probably use the 'rotate' command.
-
 In addition to generating HTML report files, the server will probably want to send
 a notification e-mail to some mailing list at the end of the build. See file
 F<< orbuild.conf >> for details.
@@ -217,23 +215,36 @@ TODO: how to build without Internet access.
 
 =head2 Resuming a failed build
 
-The build is designed to be a one-shot process: the OpenRISC components are built just once,
+The build is designed to be a one-shot process: components are built just once,
 from beginning to end. However, if the build fails, it is possible to fix the problem
 in the local computer and resume from the last point of failure.
 
 I<< orbuild >> only moves forwards: components that were successfully built the last time around
 will never be rebuilt. There is no dependency checking at source-code level, and
-the tool versions are not checked either. Therefore, it is not safe to change
+the installed tool versions are not checked either. Therefore, it is not safe to change
 any local build tools or update I<< orbuild >> itself before
 resuming a build, as not all components will then be built with the same tool versions.
 Coping with such dependencies is well beyond the scope of this project.
 
-Note also that, if the OpenRISC components change in the mean time, the current
+Note also that, if the components to build change in the mean time, the current
 I<< orbuild >> version may no longer be up-to-date enough to build them properly.
 
-Depending on the actual makefile and task, it may be possible to just rebuild one
-component by deleting the output directory it creates. Rebuilding a component
-will trigger a rebuild of anything else that depends on it.
+=head3 Manually rebuilding a single component
+
+Depending on the project makefile and the specific component, it may be possible to rebuild just one
+component by deleting the output directory and/or the sentinel file it creates. This may be useful
+while developing a component.
+
+Rebuilding a component will trigger a rebuild of anything else that depends on it, but only if the build succeeds.
+If a component fails to build, dependent components will not be rebuilt, but may still be flagged
+as successfully built in the final report, as the individual report files from previously successful builds
+will still be around on disk.
+
+I<< orbuild >> cannot automatically delete outdated reports files, as it
+does not keep track of each single component itself, but relies instead on GNU Make
+to handle components and its dependencies. That's also the reason why, when the build fails,
+I<< orbuild >> will report all succeeded and failed components, but not
+those that were not even tried because some of their dependencies had already failed to build.
 
 =head1 About interactive builds and Subversion credentials
 
@@ -256,7 +267,8 @@ I<< orbuild >> takes the following commands:
 
 =item * new
 
-Start a build in a new subdirectory.
+Start a build in a new subdirectory. Possibly delete some of the older builds,
+in order to limit the amount of builds kept on disk.
 
 Note that the source code repositories are not fetched from scratch every time,
 but just updated, in order to conserve bandwidth.
@@ -264,11 +276,6 @@ but just updated, in order to conserve bandwidth.
 =item * resume
 
 Resume a failed build.
-
-=item * rotate
-
-Like the 'new' command, only possibly delete some of the older builds,
-in order to limit the amount of builds kept on disk.
 
 =item * test-email
 
@@ -387,7 +394,7 @@ stay unchanged.
 
 =item * rotate-slot-count
 
-Mainly useful for a nightly build server, see the 'rotate' command.
+How many old build directories to keep on disk.
 
 =back
 
@@ -505,9 +512,12 @@ of Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for mor
 
 =over
 
-=item * Create a main git repository where each component is a git submodule.
-
 =item * Use a fully-fledged continuous integration server like Apache Continuum, CruiseControl or BuildBot.
+
+=item * Create a top-level Git or Subversion repository where each component is a git submodule or a Subversion external reference.
+
+This is only a partial solution, as it would allow the user to easily fecht or update all source code repositories,
+but without any further build steps.
 
 =back
 
