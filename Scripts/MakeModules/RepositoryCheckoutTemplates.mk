@@ -80,6 +80,15 @@ define git_checkout_template_variables
 
   $(1)_CHECKOUT_DIR := $(ORBUILD_REPOSITORIES_DIR)/$(2)
 
+  ifeq ($(origin $(1)_EXTRA_GIT_CHECKOUT_ARGS), undefined)
+    $(1)_EXTRA_GIT_CHECKOUT_ARGS :=
+  endif
+
+  ifeq ($(origin $(1)_EXTRA_GIT_MERGE_ARGS), undefined)
+    # TODO: default value does not match the meaning of "extra args"
+    $(1)_EXTRA_GIT_MERGE_ARGS := FETCH_HEAD
+  endif
+
 endef
 
 define git_checkout_template
@@ -112,7 +121,7 @@ define git_checkout_template
 
   $(value $(1)_CHECKOUT_SENTINEL): $(value $(1)_FETCH_SENTINEL)
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
-                   "$(2) git checkout" \
+                   "$(2) git merge" \
                    "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                    "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                    report-always \
@@ -122,6 +131,7 @@ define git_checkout_template
               "$(ORBUILD_REPOSITORIES_DIR)" \
               "$(value $(1)_CHECKOUT_SENTINEL)" \
               "$(4)" \
-              "$(5)"
-
+              "$(5)" \
+              "$(value $(1)_EXTRA_GIT_CHECKOUT_ARGS)" \
+              "$(value $(1)_EXTRA_GIT_MERGE_ARGS)"
 endef
