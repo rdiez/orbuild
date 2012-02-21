@@ -11,6 +11,7 @@ get_make_j_val ()
   local -i GET_MAKE_J_VAL_PROCESSOR_COUNT
 
   # Environment variable NUMBER_OF_PROCESSORS is always set under Windows.
+  # Later note: Cygwin seems to support getconf _NPROCESSORS_ONLN too (as of Feb 2012).
   if [ "${NUMBER_OF_PROCESSORS:-first}" == "${NUMBER_OF_PROCESSORS:-second}" ]
   then
 
