@@ -6,26 +6,20 @@ set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
-if [ $# -ne 8 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename> <branch> <timestamp> <extra git checkout args> <extra git merge args>"
+if [ $# -ne 6 ]; then
+  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename> <timestamp> <extra git checkout args>"
 fi
 
 GIT_URL="$1"
 DEST_DIR="$2"
 BASE_DIR="$3"
 SENTINEL_FILENAME="$4"
-BRANCH="$5"
-TIMESTAMP="$6"
-EXTRA_GIT_CHECKOUT_ARGS="$7"
-EXTRA_GIT_MERGE_ARGS="$8"
+TIMESTAMP="$5"
+EXTRA_GIT_CHECKOUT_ARGS="$6"
 
 REPO_DIR="$BASE_DIR/$DEST_DIR"
 
 pushd "$REPO_DIR" >/dev/null
-
-if [ -n "$TIMESTAMP" ] && [ -n "$BRANCH" ]; then
-  abort "This script does not support both a branch and a timestamp argument at the same time."
-fi
 
 if [ -n "$TIMESTAMP" ]; then
 
@@ -41,19 +35,14 @@ if [ -n "$TIMESTAMP" ]; then
 
   abort "TODO: git merge missing here"
 
-elif [ -n "$BRANCH" ]; then
-
-  echo "Checking out git repository from URL \"$GIT_URL\" at branch \"origin/$BRANCH\"..."
-  git checkout $EXTRA_GIT_CHECKOUT_ARGS "origin/$BRANCH"
-  abort "TODO: git merge missing here"
-
 else
 
   echo "Checking out git repository from URL \"$GIT_URL\"..."
   git checkout $EXTRA_GIT_CHECKOUT_ARGS
 
   echo "Merging any changes from upstream git..."
-  git merge $EXTRA_GIT_MERGE_ARGS
+  CURRENT_BRANCH="$(git name-rev --name-only HEAD)"
+  git merge "$CURRENT_BRANCH"
 
 fi
 

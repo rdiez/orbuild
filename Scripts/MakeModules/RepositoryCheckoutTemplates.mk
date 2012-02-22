@@ -47,13 +47,12 @@ endef
 #
 # Git repository checkout.
 #
-#  $(1) is the variable name prefix, like "NEWLIB"
-#       Variable NEWLIB_CHECKOUT_SENTINEL and so on will be defined.
+#  $(1) is the name prefix for the related mafile variables. For example, for prefix "NEWLIB"
+#       variable NEWLIB_CHECKOUT_SENTINEL and so on will be defined.
 #  $(2) is the repository name, like "myrepo", which will also be used
 #       as the checkout subdir name.
 #  $(3) is the git clone URL like "git://localhost/myrepo".
-#  $(4) is the branch to check out
-#  $(5) is the timestamp to check out at
+#  $(4) is the timestamp to check out at
 #
 # There are several steps to checking out and updating a git repository:
 #   1) The first time, a clone is performed. A clone operation cannot be resumed.
@@ -82,11 +81,6 @@ define git_checkout_template_variables
 
   ifeq ($(origin $(1)_EXTRA_GIT_CHECKOUT_ARGS), undefined)
     $(1)_EXTRA_GIT_CHECKOUT_ARGS :=
-  endif
-
-  ifeq ($(origin $(1)_EXTRA_GIT_MERGE_ARGS), undefined)
-    # TODO: default value does not match the meaning of "extra args"
-    $(1)_EXTRA_GIT_MERGE_ARGS := FETCH_HEAD
   endif
 
 endef
@@ -131,7 +125,5 @@ define git_checkout_template
               "$(ORBUILD_REPOSITORIES_DIR)" \
               "$(value $(1)_CHECKOUT_SENTINEL)" \
               "$(4)" \
-              "$(5)" \
-              "$(value $(1)_EXTRA_GIT_CHECKOUT_ARGS)" \
-              "$(value $(1)_EXTRA_GIT_MERGE_ARGS)"
+              "$(value $(1)_EXTRA_GIT_CHECKOUT_ARGS)"
 endef
