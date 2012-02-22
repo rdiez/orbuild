@@ -9,6 +9,8 @@ use warnings;
 use XML::Parser;
 use HTML::Entities;
 use File::Spec;
+use I18N::Langinfo;
+use Encode;
 
 use StringUtils;
 use FileUtils;
@@ -169,7 +171,16 @@ sub convert_text_file_to_html ( $ $ )
   open( my $srcFile, "<$srcFilename" )
     or die "Cannot open file \"$srcFilename\": $!\n";
 
-  binmode( $srcFile );  # Avoids CRLF conversion.
+  # The build log outputs are redirected to files, which are normally encoded in UTF-8,
+  # but could be encoded in some other system default encoding.
+  # If we don't specify anything here, the UTF-8 characters are garbled in the resulting HTML page.
+  # Here we are attempting to find out the system's default text encoding.
+  # Alternatively, we could use module Encode::Locale and then binmode( ':encoding(locale)' ),
+  # but that module is not usually installed.
+  my $defaultCodeset = I18N::Langinfo::langinfo( I18N::Langinfo::CODESET() );
+  my $defaultEncoding = Encode::find_encoding( $defaultCodeset )->name;
+  # print "---> defaultEncoding: $defaultEncoding\n";
+  binmode( $srcFile, ":encoding($defaultEncoding)" );  # Also avoids CRLF conversion.
 
   open( my $destFile, ">$destFilename" )
     or die "Cannot open for writing file \"$destFilename\": $!\n";
