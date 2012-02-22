@@ -42,11 +42,13 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 {
     # Print the executed command with proper quoting, so that the user can
     # copy-and-paste the command from the log file and expect it to work.
-    printf "%s" "$(basename $0): Log from command: "
+    echo "Log file for task \"$USER_FRIENDLY_NAME\""
+    printf "%s" "Command: "
     print_command "$@"
 
-    echo "$(basename $0): Start time,  local: $START_TIME_LOCAL, UTC: $START_TIME_UTC"
-    echo "$(basename $0): Current directory: $PWD"
+    echo "Current directory: $PWD"
+    echo "This file's character encoding: ${LANG:-(unknown)}"
+    echo "Start time:  Local: $START_TIME_LOCAL, UTC: $START_TIME_UTC"
     echo
 } >"$LOG_FILENAME"
 
@@ -76,17 +78,18 @@ ELAPSED_SECONDS="$(($FINISH_UPTIME - $START_UPTIME))"
 
 {
     echo
-    echo "$(basename $0): Finish time, local: $FINISH_TIME_LOCAL, UTC: $FINISH_TIME_UTC"
+    echo "End of log file for task \"$USER_FRIENDLY_NAME\""
+    echo "Finish time: Local: $FINISH_TIME_LOCAL, UTC: $FINISH_TIME_UTC"
 
     seconds=$(( $ELAPSED_SECONDS%60 ))
     minutes=$(( $ELAPSED_SECONDS/60%60 ))
     hours=$(( $ELAPSED_SECONDS/60/60 ))
-    echo "$(basename $0): Elapsed time: $hours hours, $minutes minutes and $seconds seconds"
+    echo "Elapsed time: $hours hours, $minutes minutes and $seconds seconds"
 
     if [ $EXIT_CODE -eq 0 ]; then
-      echo "$(basename $0): Command succeeded"
+      echo "Command succeeded (exit code 0)"
     else
-      echo "$(basename $0): Command failed with exit code $EXIT_CODE"
+      echo "Command failed with exit code $EXIT_CODE"
     fi
 
 } >>"$LOG_FILENAME"
@@ -101,7 +104,7 @@ if [ $EXIT_CODE -eq 0 ]; then
     fi
 
 else
-    echo "$(basename $0): Command failed, you can inspect the log file at: $LOG_FILENAME" >&2
+    echo "Command failed, you can inspect the log file at: $LOG_FILENAME" >&2
     GENERATE_REPORT=1
 fi
 
