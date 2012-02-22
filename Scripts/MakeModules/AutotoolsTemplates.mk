@@ -20,9 +20,9 @@ define autotool_project_template_variables
     $(1)_EXTRA_CONFIG_ARGS :=
   endif
 
-  # TODO: This is also used for the install phase, document it or rename the variable:
-  ifeq ($(origin $(1)_EXTRA_MAKE_ARGS), undefined)
-    $(1)_EXTRA_MAKE_ARGS :=
+  # Extra arguments passed to the 'make', 'make install' and 'make check' and 'make distcheck' phases.
+  ifeq ($(origin $(1)_EXTRA_GLOBAL_MAKE_ARGS), undefined)
+    $(1)_EXTRA_GLOBAL_MAKE_ARGS :=
   endif
 
   ifeq ($(origin $(1)_EXTRA_INSTALL_ARGS), undefined)
@@ -105,7 +105,7 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_MAKE_TARGETS)" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_MAKE_TARGETS)" \
                 "$(value $(1)_MAKE_SENTINEL)"
 
   $(value $(1)_INSTALL_SENTINEL): $(value $(1)_MAKE_SENTINEL)
@@ -119,7 +119,7 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfInstall.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_EXTRA_INSTALL_ARGS) $(value $(1)_INSTALL_TARGETS)" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_EXTRA_INSTALL_ARGS) $(value $(1)_INSTALL_TARGETS)" \
                 "$(value $(1)_INSTALL_SENTINEL)"
 
 
@@ -134,7 +134,7 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS) $(value $(1)_CHECK_TARGETS)" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_CHECK_TARGETS)" \
                 "$(value $(1)_CHECK_SENTINEL)"
 
 
@@ -149,7 +149,7 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_MAKE_ARGS) distcheck" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) distcheck" \
                 "$(value $(1)_DISTCHECK_SENTINEL)"
 endef
 
