@@ -25,7 +25,8 @@ This is what the project currently downloads, builds and tests:
 
 =item * OpenRISC repositories
 
-A collection of repositories often used together with OpenRISC designs.
+A collection of repositories often used together with OpenRISC designs,
+they are mostly Subversion repositories from L<< OpenCores.org >>
 
 =item * Icarus Verilog
 
@@ -37,10 +38,13 @@ so it may not be as stable as an officially-released version.
 Taken from git L<< head at http://git.veripool.org/git/verilator >> , so it may not be as stable
 as an officially-released version.
 
+=item * OpenRISC Toolchain
+
+This includes I<< or1ksim >> simulator, binutils, gcc and so on. Some of the self-tests are also run after building.
+
 =item * TODO
 
 =back
-
 
 =head1 License
 
