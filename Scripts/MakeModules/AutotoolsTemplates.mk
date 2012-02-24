@@ -3,9 +3,10 @@
 #
 # Configure and build a standard autotools-based project.
 #
-#  $(1) is the variable name prefix, like "NEWLIB"
-#       Variables named in the form NEWLIB_xxx will be defined.
-#  $(2) is the subdir name, which also acts as the build step name.
+#  $(1) is: - The name prefix for the related makefile variables. For example, for prefix "NEWLIB"
+#              variables named in the form NEWLIB_xxx will be defined.
+#           - Part of the name in all files and directories created for this component.
+#  $(2) is the user-friendly name.
 #  $(3) is the path to the src directory.
 #
 # Add these targets to your makefile to trigger the actions:
@@ -47,37 +48,36 @@ define autotool_project_template_variables
     $(1)_CHECK_TARGETS := check
   endif
 
-  $(1)_SRC_DIR := $(3)
-  $(1)_OBJ_DIR := $(ORBUILD_BUILD_DIR)/$(2)-obj
+  $(1)_SRC_DIR := $(2)
+  $(1)_OBJ_DIR := $(ORBUILD_BUILD_DIR)/$(1)-obj
 
   # The user can override the bin directory.
   ifeq ($(origin $(1)_BIN_DIR), undefined)
-    $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/$(2)-bin
+    $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/$(1)-bin
   endif
 
-  $(1)_CONFIG_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).ConfigureLog.txt
-  $(1)_MAKE_LOG_FILENAME      := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).MakeLog.txt
-  $(1)_INSTALL_LOG_FILENAME   := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).InstallLog.txt
-  $(1)_CHECK_LOG_FILENAME     := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).CheckLog.txt
-  $(1)_DISTCHECK_LOG_FILENAME := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).DistcheckLog.txt
+  $(1)_CONFIG_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).ConfigureLog.txt
+  $(1)_MAKE_LOG_FILENAME      := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).MakeLog.txt
+  $(1)_INSTALL_LOG_FILENAME   := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).InstallLog.txt
+  $(1)_CHECK_LOG_FILENAME     := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).CheckLog.txt
+  $(1)_DISTCHECK_LOG_FILENAME := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).DistcheckLog.txt
 
-  $(1)_CONFIG_REPORT_FILENAME    := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Configure.report
-  $(1)_MAKE_REPORT_FILENAME      := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Make.report
-  $(1)_INSTALL_REPORT_FILENAME   := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Install.report
-  $(1)_CHECK_REPORT_FILENAME     := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Check.report
-  $(1)_DISTCHECK_REPORT_FILENAME     := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Distcheck.report
+  $(1)_CONFIG_REPORT_FILENAME    := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Configure.report
+  $(1)_MAKE_REPORT_FILENAME      := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Make.report
+  $(1)_INSTALL_REPORT_FILENAME   := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Install.report
+  $(1)_CHECK_REPORT_FILENAME     := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Check.report
+  $(1)_DISTCHECK_REPORT_FILENAME := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Distcheck.report
 
-  $(1)_CONFIGURE_SENTINEL   := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).ConfigureSentinel
-  $(1)_MAKE_SENTINEL        := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).MakeSentinel
-  $(1)_INSTALL_SENTINEL     := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).InstallSentinel
-  $(1)_CHECK_SENTINEL       := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).CheckSentinel
-  $(1)_DISTCHECK_SENTINEL       := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).DistcheckSentinel
+  $(1)_CONFIGURE_SENTINEL   := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).ConfigureSentinel
+  $(1)_MAKE_SENTINEL        := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).MakeSentinel
+  $(1)_INSTALL_SENTINEL     := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).InstallSentinel
+  $(1)_CHECK_SENTINEL       := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).CheckSentinel
+  $(1)_DISTCHECK_SENTINEL   := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).DistcheckSentinel
 
 endef
 
 define autotool_project_template
-
-  $(eval $(call autotool_project_template_variables,$(1),$(2),$(3)))
+  $(eval $(call autotool_project_template_variables,$(1),$(3)))
 
   $(value $(1)_CONFIGURE_SENTINEL):
 	echo "Configuring $(2)..." && \
@@ -157,23 +157,23 @@ endef
 # -----------------------------------------------------
 #
 # Triggers the autogen step on a standard autotools-based project.
-# Note that the autogen step slightly pollutes the sourece-control repository its run on.
+# Note that the autogen step slightly pollutes the source repository its run upon.
 #
-#  $(1) is the variable name prefix, like "NEWLIB"
-#       Variables named in the form NEWLIB_xxx will be defined.
-#  $(2) is the subdir name, which also acts as the build step name.
+#  $(1) is: - The name prefix for the related makefile variables. For example, for prefix "NEWLIB"
+#              variables named in the form NEWLIB_xxx will be defined.
+#           - Part of the name in all files and directories created for this component.
+#  $(2) is the user-friendly name.
 
 define autogen_template_variables
 
-  $(1)_AUTOGEN_LOG_FILENAME     := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).AutogenLog.txt
-  $(1)_AUTOGEN_REPORT_FILENAME  := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).Autogen.report
-  $(1)_AUTOGEN_SENTINEL         := $(ORBUILD_BUILD_SENTINELS_DIR)/$(2).AutogenSentinel
+  $(1)_AUTOGEN_LOG_FILENAME     := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).AutogenLog.txt
+  $(1)_AUTOGEN_REPORT_FILENAME  := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Autogen.report
+  $(1)_AUTOGEN_SENTINEL         := $(ORBUILD_BUILD_SENTINELS_DIR)/$(1).AutogenSentinel
 
 endef
 
 define autogen_project_template
-
-  $(eval $(call autogen_template_variables,$(1),$(2)))
+  $(eval $(call autogen_template_variables,$(1)))
 
   ifeq ($$(origin $(1)_AUTOGEN_CMD), undefined)
     $$(error "Variable $(1)_AUTOGEN_CMD not defined.")
