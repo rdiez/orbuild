@@ -17,12 +17,13 @@ use FileUtils;
 use ConfigFile;
 
 
-sub collect_all_reports ( $ $ $ $ )
+sub collect_all_reports ( $ $ $ $ $ )
 {
   my $dirname            = shift;
   my $reportExtension    = shift;
   my $optionalEntries    = shift;  # Reference to an array.
   my $allReportsArrayRef = shift;
+  my $failedCount        = shift;
 
   my $globPattern = FileUtils::cat_path( $dirname, "*" . $reportExtension );
 
@@ -32,6 +33,8 @@ sub collect_all_reports ( $ $ $ $ )
   {
     die "Error listing existing directories: $!\n";
   }
+
+  $$failedCount = 0;
 
   foreach my $filename ( @matchedFiles )
   {
@@ -45,6 +48,11 @@ sub collect_all_reports ( $ $ $ $ )
     my %allEntries;
 
     load_report( $filename, $optionalEntries, \%allEntries );
+
+    if ( $allEntries{ "ExitCode" } != 0 )
+    {
+        ++$$failedCount;
+    }
 
     push @$allReportsArrayRef, \%allEntries;
   }
@@ -123,7 +131,7 @@ sub sort_reports ( $ $ )
     my $rightExitCodeSuccess =  0 == $right->{ "ExitCode" };
 
 
-    # Failed tasks have priority.
+    # Failed components have priority.
 
     if ( $leftExitCodeSuccess )
     {
@@ -148,7 +156,7 @@ sub sort_reports ( $ $ )
       }
     }
 
-    # We could sort all failed tasks by their timestamp, as it's roughly
+    # We could sort all failed components by their timestamp, as it's roughly
     # the dependency order, that is, the order in which they were executed.
     # However, I'm not certain that sorting by name is not actually better,
     # as it allows the user to skip at once groups of uninteresting failures.

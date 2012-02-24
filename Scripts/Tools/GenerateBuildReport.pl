@@ -127,7 +127,8 @@ sub main ()
   # so it will be found again later.
   #   push @allReports, \%makefileReportEntries;
 
-  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, undef, \@allReports );
+  my $failedCount;
+  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, undef, \@allReports, \$failedCount );
 
   my @sortedReports = ReportUtils::sort_reports( \@allReports, $makefileUserFriendlyName );
 
@@ -148,6 +149,22 @@ sub main ()
 
   ReportUtils::replace_marker( \$htmlText, "REPORT_START_TIME", $makefileReportEntries{"StartTimeUTC"} );
   ReportUtils::replace_marker( \$htmlText, "REPORT_TABLE"     , $injectedHtml );
+
+  my $componentCount = scalar @sortedReports;
+
+  my $statusMsg;
+  if ( $failedCount == 0 )
+  {
+    $statusMsg = "All $componentCount components built successfully.";
+  }
+  else
+  {
+    $statusMsg = "$failedCount components of the $componentCount attempted failed to build. Note that some components may have been skipped, as any which depend on the failed ones would also fail.";
+    $statusMsg .= " "; # "<br/>";
+    $statusMsg .= "Failed components are always displayed at the top.";
+  }
+
+  ReportUtils::replace_marker( \$htmlText, "REPORT_STATUS_MESSAGE", $statusMsg );
 
   ReportUtils::check_valid_html( $htmlText );
 

@@ -131,7 +131,8 @@ sub main ()
 
   my @optionalReportEntries = qw( GitRepositoryDir );
 
-  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, \@optionalReportEntries, \@allReports );
+  my $failedCount;
+  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, \@optionalReportEntries, \@allReports, \$failedCount );
 
   my @sortedReports = ReportUtils::sort_reports( \@allReports, $makefileUserFriendlyName );
 
