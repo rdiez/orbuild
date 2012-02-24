@@ -40,7 +40,7 @@ define subversion_checkout_template
                   "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                   report-always \
 	      "$(ORBUILD_TOOLS)/CheckoutSvnRepo.sh" \
-              "$(3)/$(1)" \
+              "$(3)" \
               "$(ORBUILD_REPOSITORIES_DIR)" \
               "$(value $(1)_CHECKOUT_SENTINEL)" \
               "$(4)" \
@@ -52,7 +52,7 @@ define subversion_checkout_template
                   "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                   "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                   report-always \
-	      echo "(svn checkout skipped)" && touch --no-create "$(value $(1)_CHECKOUT_SENTINEL)"
+	      echo "(svn checkout skipped - $(2))" && touch --no-create "$(value $(1)_CHECKOUT_SENTINEL)"
     endif
 
 endef
