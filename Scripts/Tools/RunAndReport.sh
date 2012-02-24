@@ -42,7 +42,7 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 {
     # Print the executed command with proper quoting, so that the user can
     # copy-and-paste the command from the log file and expect it to work.
-    echo "Log file for task \"$USER_FRIENDLY_NAME\""
+    echo "Log file for component \"$USER_FRIENDLY_NAME\""
     printf "%s" "Command: "
     print_command "$@"
 
@@ -78,7 +78,7 @@ ELAPSED_SECONDS="$(($FINISH_UPTIME - $START_UPTIME))"
 
 {
     echo
-    echo "End of log file for task \"$USER_FRIENDLY_NAME\""
+    echo "End of log file for component \"$USER_FRIENDLY_NAME\""
     echo "Finish time: Local: $FINISH_TIME_LOCAL, UTC: $FINISH_TIME_UTC"
 
     seconds=$(( $ELAPSED_SECONDS%60 ))
