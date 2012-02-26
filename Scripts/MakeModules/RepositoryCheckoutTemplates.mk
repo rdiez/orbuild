@@ -21,6 +21,7 @@ define subversion_checkout_template_variables
   $(1)_CHECKOUT_SENTINEL        := $(ORBUILD_CHECKOUT_SENTINELS_DIR)/$(1).SvnCheckoutSentinel
   $(1)_CHECKOUT_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).SvnCheckoutLog.txt
   $(1)_CHECKOUT_REPORT_FILENAME := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).SvnCheckout.report
+  $(1)_CHECKOUT_DIR             := $(ORBUILD_REPOSITORIES_DIR)/$(1)
 
   ifeq ($(origin DISABLE_SUBVERSION_CHECKOUT), undefined)
     DISABLE_SUBVERSION_CHECKOUT := 0
@@ -41,7 +42,7 @@ define subversion_checkout_template
                   report-always \
 	      "$(ORBUILD_TOOLS)/CheckoutSvnRepo.sh" \
               "$(3)" \
-              "$(ORBUILD_REPOSITORIES_DIR)" \
+              "$(value $(1)_CHECKOUT_DIR)" \
               "$(value $(1)_CHECKOUT_SENTINEL)" \
               "$(4)" \
               "" \

@@ -11,7 +11,7 @@ if [ $# -ne 6 ]; then
 fi
 
 SVN_URL="$1"
-BASE_DIR="$2"
+OUTPUT_DIR="$2"
 SENTINEL_FILENAME="$3"
 TIMESTAMP="$4"
 USER_LOGIN="$5"
@@ -21,8 +21,6 @@ NAME_ONLY="${SVN_URL##*/}"
 
 START_LOCALTIME="$(date +"%Y-%m-%d %T %z")"
 START_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
-
-pushd "$BASE_DIR" >/dev/null
 
 if [ -z "$USER_LOGIN" ]; then
   LOGIN_ARGS=""
@@ -46,14 +44,13 @@ else
   NON_INTERACTIVE_FLAG=""
 fi
 
-svn checkout $TIMESTAMP_ARG $LOGIN_ARGS --quiet $NON_INTERACTIVE_FLAG "$SVN_URL"
+svn checkout $TIMESTAMP_ARG $LOGIN_ARGS --quiet $NON_INTERACTIVE_FLAG "$SVN_URL" "$OUTPUT_DIR"
 
-if ! [ -d "$NAME_ONLY" ]; then
-  abort "The subversion repository \"$SVN_URL\" has not created the expected subdirectory \"$NAME_ONLY\" when checking out in directory \"$BASE_DIR\"."
-fi
-
-popd >/dev/null
+# Now that we specify the output directory, we don't need this check any more:
+#   if ! [ -d "$OUTPUT_DIR" ]; then
+#     abort "The subversion repository \"$SVN_URL\" has not created the expected subdirectory \"$NAME_ONLY\" when checking out in directory \"$OUTPUT_DIR\"."
+#   fi
 
 printf "This file acts as a flag that subversion repository:\n  %s\nwas successfully checked out at location:\n  %s\nThe checkout started at local time %s, UTC %s.\n" \
-       "$SVN_URL" "$BASE_DIR" "$START_LOCALTIME" "$START_UTC" \
+       "$SVN_URL" "$OUTPUT_DIR" "$START_LOCALTIME" "$START_UTC" \
        >"$SENTINEL_FILENAME"
