@@ -40,7 +40,11 @@ as an officially-released version.
 
 =item * OpenRISC Toolchain
 
-This includes I<< or1ksim >> simulator, binutils, gcc and so on. Some of the self-tests are also run after building.
+This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. Some of the self-tests are also run after building.
+
+Most of those components are installed in a combined I<< ToolchainOr32 >> subdirectory.
+
+The ORPSoC v2 documentation is also built.
 
 =item * TODO
 
