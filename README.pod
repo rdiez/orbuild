@@ -215,12 +215,13 @@ TODO: how to build without Internet access.
 
 =head2 Resuming a failed build
 
-The build is designed to be a one-shot process: components are built just once,
-from beginning to end. However, if the build fails, it is possible to fix the problem
-in the local computer and resume from the last point of failure.
+The build is designed to be a one-shot process: for every I<< orbuild new >> command,
+components are built just once, from beginning to end. However, if the build fails,
+it is possible to fix the problem in the local computer and resume from the last point of failure
+by issuing an I<< orbuild resume >> command.
 
-I<< orbuild >> only moves forwards: components that were successfully built the last time around
-will never be rebuilt. There is no dependency checking at source-code level, and
+When resuming a build, I<< orbuild >> only moves forwards: components that were successfully built
+the last time around will never be rebuilt. There is no dependency checking at source-code level, and
 the installed tool versions are not checked either. Therefore, it is not safe to change
 any local build tools or update I<< orbuild >> itself before
 resuming a build, as not all components will then be built with the same tool versions.
@@ -229,11 +230,22 @@ Coping with such dependencies is well beyond the scope of this project.
 Note also that, if the components to build change in the mean time, the current
 I<< orbuild >> version may no longer be up-to-date enough to build them properly.
 
-=head3 Manually rebuilding a single component
+=head3 Resuming a build while developing I<< orbuid >> itself
 
-Depending on the project makefile and the specific component, it may be possible to rebuild just one
-component by deleting the output directory and/or the sentinel file it creates. This may be useful
-while developing a component.
+During development of the I<< orbuild >> makefiles themselves, keep also in mind that
+a change in an I<< orbuild >> makefile will not trigger a rebuild of any affected components.
+
+For example, adding a compiler flag to an application's makefile will not rebuild the related application.
+
+=head4 Manually rebuilding a single component
+
+After changing a component or an I<< orbuild >> makefile, the safest way to test the changes
+is to rebuild all components with an I<< orbuild new >> command. However, this can be time consuming,
+so rebuilding a single component may be desirable.
+
+Depending on the I<< orbuild >> project makefile and the specific component, it may be possible to rebuild just one
+component by deleting its output directory and/or the sentinel file it creates. Sentinel files
+are easy to find, all their names end in ".OrbuildSentinel".
 
 Rebuilding a component will trigger a rebuild of anything else that depends on it, but only if the build succeeds.
 If a component fails to build, dependent components will not be rebuilt, but may still be flagged
