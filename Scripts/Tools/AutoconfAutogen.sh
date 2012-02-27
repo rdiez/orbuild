@@ -8,7 +8,7 @@ source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -ne 3 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <src dir> <autogen cmd> <sentinel filename>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 SRC_DIR="$1"

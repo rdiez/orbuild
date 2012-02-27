@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 4 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <compressed filename> <destination dir> <sentinel filename> <created destination subdirectory>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 COMPRESSED_FILENAME="$1"

@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 3 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <obj dir> <extra make args> <sentinel filename>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 OBJ_DIR="$1"

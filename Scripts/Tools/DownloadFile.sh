@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 2 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <url> <download cache dir>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 URL="$1"

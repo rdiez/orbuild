@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 4 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <git url> <dest subdir> <base dir> <sentinel filename>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 GIT_URL="$1"

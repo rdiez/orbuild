@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 6 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <svn url> <base dir> <sentinel filename> <login> <password>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 SVN_URL="$1"

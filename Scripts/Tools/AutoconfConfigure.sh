@@ -7,7 +7,7 @@ source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 5 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <src dir> <obj dir> <prefix dir> <extra configure flags> <sentinel filename>"
+  abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 SRC_DIR="$1"
