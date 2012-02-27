@@ -113,6 +113,8 @@ Needed by the perl HTML report generator.
 
 Under Ubuntu/Debian systems, the following commands install all prerequisites at once:
 
+I<< orbuild >> prerequisites:
+
   sudo apt-get install autoconf build-essential make gcc g++ patch subversion git-core curl libxml-parser-perl gxmessage
 
 Other tools needed by the OpenRISC components:
@@ -120,6 +122,7 @@ Other tools needed by the OpenRISC components:
   sudo apt-get install libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf
 
 TODO: Mention all the package names needed under Cygwin.
+TeX: tetex    libgmp-devel   libmpfr-devel   libmpc-devel
 
 TODO: Could we optionally automate the installation of packages under the most common OSes?
 
