@@ -15,7 +15,7 @@ define run_and_report_template_variables
 
   $(1)_LOG_FILENAME       := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).CmdLog.txt
   $(1)_REPORT_FILENAME    := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(1).Cmd.report
-  $(1)_SENTINEL           := $(ORBUILD_COMMAND_SENTINELS_DIR)/$(1).orbuild-command-sentinel
+  $(1)_SENTINEL           := $(ORBUILD_COMMAND_SENTINELS_DIR)/$(1).Cmd.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
 
 endef
 

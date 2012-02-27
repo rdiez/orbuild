@@ -51,7 +51,7 @@ endef
 define url_download_and_unpack_template_variables
 
   $(1)_UNPACK_DIR      := $(ORBUILD_BUILD_DIR)/$(2)
-  $(1)_UNPACK_SENTINEL := $(ORBUILD_UNPACK_SENTINELS_DIR)/$(2).orbuild-unpack-sentinel
+  $(1)_UNPACK_SENTINEL := $(ORBUILD_UNPACK_SENTINELS_DIR)/$(2).Unpack.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
   $(1)_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(2).$(3).UnpackLog.txt
   $(1)_REPORT_FILENAME := $(ORBUILD_INTERNAL_REPORTS_DIR)/$(2).$(3).Unpack.report
 
