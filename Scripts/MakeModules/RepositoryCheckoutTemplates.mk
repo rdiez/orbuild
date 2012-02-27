@@ -42,7 +42,7 @@ define subversion_checkout_template
                   "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                   "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                   report-always \
-	      "$(ORBUILD_TOOLS)/CheckoutSvnRepo.sh" \
+	      "$(ORBUILD_TOOLS)/SvnCheckout.sh" \
               "$(3)" \
               "$(value $(1)_CHECKOUT_DIR)" \
               "$(value $(1)_CHECKOUT_SENTINEL)" \
@@ -133,7 +133,7 @@ define git_checkout_template
                    "$(value $(1)_CLONE_LOG_FILENAME)" \
                    "$(value $(1)_CLONE_REPORT_FILENAME)" \
                    report-always \
-	      "$(ORBUILD_TOOLS)/CloneGitRepo.sh" \
+	      "$(ORBUILD_TOOLS)/GitClone.sh" \
               "$(3)" \
               "$(1)" \
               "$(ORBUILD_REPOSITORIES_DIR)" \
@@ -146,7 +146,7 @@ define git_checkout_template
                    "$(value $(1)_FETCH_LOG_FILENAME)" \
                    "$(value $(1)_FETCH_REPORT_FILENAME)" \
                    report-always \
-	      "$(ORBUILD_TOOLS)/FetchGitRepo.sh" \
+	      "$(ORBUILD_TOOLS)/GitFetch.sh" \
               "$(3)" \
               "$(1)" \
               "$(ORBUILD_REPOSITORIES_DIR)" \
@@ -167,7 +167,7 @@ define git_checkout_template
                    "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                    "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                    report-always \
-	      "$(ORBUILD_TOOLS)/CheckoutGitRepo.sh" \
+	      "$(ORBUILD_TOOLS)/GitCheckout.sh" \
               "$(3)" \
               "$(1)" \
               "$(ORBUILD_REPOSITORIES_DIR)" \
@@ -194,7 +194,7 @@ define git_branch_template
                    "$(value $(1)_BRANCH_LOG_FILENAME)" \
                    "$(value $(1)_BRANCH_REPORT_FILENAME)" \
                    report-always \
-	      "$(ORBUILD_TOOLS)/BranchGitRepo.sh" \
+	      "$(ORBUILD_TOOLS)/GitBranch.sh" \
               "$(value $(1)_CHECKOUT_DIR)" \
               "$(value $(1)_BRANCH_SENTINEL)" \
               "$(2)"
