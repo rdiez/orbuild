@@ -16,7 +16,7 @@ new, resume, test-mail, test-visual-notification
 
 =head1 OPTIONS
 
--h, --help, --version, --license
+-h, --help, --version, --license, --interactive
 
 =head1 EXIT CODE
 
@@ -78,10 +78,11 @@ use constant TOOLS_DIR   => FileUtils::cat_path( SCRIPTS_DIR, "Tools" );
 use constant BUILD_INTERNAL_REPORTS_SUBDIR    => "OrbuildInternalReports";
 use constant BUILD_PUBLIC_REPORTS_SUBDIR      => "OrbuildPublicReports";
 use constant BUILD_SENTINELS_SUBDIR           => "OrbuildSentinels";
+use constant SENTINELS_FILENAME_SUFFIX        => "OrbuildSentinel";
 
 use constant BUILD_CHECKOUT_SENTINELS_SUBDIR  => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Checkout" );
 use constant BUILD_UNPACK_SENTINELS_SUBDIR    => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Unpack"   );
-use constant BUILD_BUILD_SENTINELS_SUBDIR     => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Build"    );
+use constant BUILD_AUTOCONF_SENTINELS_SUBDIR  => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Autoconf" );
 use constant BUILD_COMMAND_SENTINELS_SUBDIR   => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Commands" );
 
 use constant SANDBOX_LAYOUT_VERSION_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.version" );
@@ -102,12 +103,14 @@ sub main ()
   my $arg_h                = 0;
   my $arg_version          = 0;
   my $arg_license          = 0;
+  my $arg_interactive      = 0;
 
   my $result = GetOptions(
                  'help'                =>  \$arg_help,
                  'h'                   =>  \$arg_h,
                  'version'             =>  \$arg_version,
-                 'license'             =>  \$arg_license
+                 'license'             =>  \$arg_license,
+                 'interactive'         =>  \$arg_interactive
                 );
 
   if ( not $result )
@@ -149,11 +152,11 @@ sub main ()
 
   if ( $cmd eq "new" )
   {
-    command_rotate();
+    build_command( MiscUtils::TRUE, $arg_interactive );
   }
   elsif ( $cmd eq "resume" )
   {
-    command_resume();
+    build_command( MiscUtils::FALSE, $arg_interactive );
   }
   elsif ( $cmd eq "test-mail" )
   {
@@ -172,40 +175,23 @@ sub main ()
 }
 
 
-# The 'new' command was permanently replaced by 'rotate'.
-#sub command_new ()
-#{
-#  my %configEntries;
-#
-#  process_config_file_etc( \%configEntries );
-#
-#  write_stdout( "Creating a new build directory...\n" );
-#
-#  rotate_build_dir( \%configEntries, MiscUtils::FALSE );
-#
-#  resume_build( \%configEntries );
-#}
-
-
-sub command_resume ()
+sub build_command ( $ $ )
 {
+  my $rotate      = shift;
+  my $interactive = shift;
+
   my %configEntries;
 
-  process_config_file_etc( \%configEntries );
+  process_config_file_etc( \%configEntries, $interactive );
 
-  resume_build( \%configEntries );
-}
+  if ( $rotate )
+  {
+    write_stdout( "Rotating the build directory...\n" );
 
-
-sub command_rotate ()
-{
-  my %configEntries;
-
-  process_config_file_etc( \%configEntries );
-
-  write_stdout( "Rotating the build directory...\n" );
-
-  rotate_build_dir( \%configEntries, MiscUtils::TRUE  );
+    # The 'new' command was permanently replaced by 'rotate'. The old 'new' command
+    # used to pass MiscUtils::FALSE here:
+    rotate_build_dir( \%configEntries, MiscUtils::TRUE );
+  }
 
   resume_build( \%configEntries );
 }
@@ -239,7 +225,8 @@ sub resume_build ( $ )
 
   FileUtils::create_folder_if_does_not_exist( $downloadCacheDir );
   FileUtils::create_folder_if_does_not_exist( $repositoriesDir  );
-  FileUtils::create_folder_if_does_not_exist( FileUtils::cat_path( $repositoriesDir, "GitCloneSentinels" )  );
+  # The git clone sentinel files no longer live in a separate directory:
+  #   FileUtils::create_folder_if_does_not_exist( FileUtils::cat_path( $repositoriesDir, "GitCloneSentinels" )  );
 
   my $makefileFilename = FileUtils::cat_path( SANDBOX_DIR, $configEntries->{ "Makefile" } );
 
@@ -275,21 +262,22 @@ sub resume_build ( $ )
   # Export some variables for the project Makefile and for other orbuild tools.
   #
   # These variables are generic to the build process:
-  $ENV{ ORBUILD_SANDBOX                } = SANDBOX_DIR;
-  $ENV{ ORBUILD_BUILD_DIR              } = $buildDir;
-  $ENV{ ORBUILD_DOWNLOAD_CACHE_DIR     } = $downloadCacheDir;
-  $ENV{ ORBUILD_REPOSITORIES_DIR       } = $repositoriesDir;
-  $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
-  $ENV{ ORBUILD_TOOLS                  } = TOOLS_DIR;
+  $ENV{ ORBUILD_SANDBOX                  } = SANDBOX_DIR;
+  $ENV{ ORBUILD_BUILD_DIR                } = $buildDir;
+  $ENV{ ORBUILD_DOWNLOAD_CACHE_DIR       } = $downloadCacheDir;
+  $ENV{ ORBUILD_REPOSITORIES_DIR         } = $repositoriesDir;
+  $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP   } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
+  $ENV{ ORBUILD_TOOLS                    } = TOOLS_DIR;
+  $ENV{ ORBUILD_SENTINEL_FILENAME_SUFFIX } = SENTINELS_FILENAME_SUFFIX;
 
   # These variables are used by some of the tools bundled with orbuild:
   $ENV{ ORBUILD_INTERNAL_REPORTS_DIR   } = FileUtils::cat_path( $buildDir, "OrbuildInternalReports" );
   $ENV{ ORBUILD_PUBLIC_REPORTS_DIR     } = FileUtils::cat_path( $buildDir, "OrbuildPublicReports" );
 
-  $ENV{ ORBUILD_CHECKOUT_SENTINELS_DIR } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Checkout" );
-  $ENV{ ORBUILD_UNPACK_SENTINELS_DIR   } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Unpack" );
-  $ENV{ ORBUILD_BUILD_SENTINELS_DIR    } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Build" );
-  $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, "OrbuildSentinels/Commands" );
+  $ENV{ ORBUILD_CHECKOUT_SENTINELS_DIR } = FileUtils::cat_path( $buildDir, BUILD_CHECKOUT_SENTINELS_SUBDIR );
+  $ENV{ ORBUILD_UNPACK_SENTINELS_DIR   } = FileUtils::cat_path( $buildDir, BUILD_UNPACK_SENTINELS_SUBDIR );
+  $ENV{ ORBUILD_BUILD_SENTINELS_DIR    } = FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR );
+  $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR );
 
   $ENV{ ORBUILD_IS_INTERACTIVE_BUILD   } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
 
@@ -308,12 +296,14 @@ sub resume_build ( $ )
 
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
-  my $reportFilename = FileUtils::cat_path( $publicReportsDir, "BuildReport.html" );
+  my $reportFilename = "BuildReport.html";
+
+  my $reportFilePath = FileUtils::cat_path( $publicReportsDir, $reportFilename );
 
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
                   "$internalReportsDir " .
                   "$makefileReportFile " .
-                  "$reportFilename ";
+                  "$reportFilePath ";
 
   my $reportExitCode = ProcessUtils::run_process( $reportCmd );
 
@@ -329,17 +319,24 @@ sub resume_build ( $ )
   if ( $makeExitCode != 0 )
   {
     $error= "The build failed with exit code $makeExitCode, see the generated report:\n" .
-            "$reportFilename\n" .
+            "$reportFilePath\n" .
             "Rerun @{[SCRIPT_NAME]} with the 'resume' argument to try again.\n";
   }
   else
   {
     write_stdout( "The orbuild was completed successfully.\n" );
-    write_stdout( "The generated build report is: $reportFilename\n" );
+
+    my $latestBuildDirLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildDir" ) );
+    my $latestReportLinkPath   = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildReport.html" ) );
+
+    create_symbolic_link( $latestReportLinkPath  , $reportFilePath );
+    create_symbolic_link( $latestBuildDirLinkPath, $buildDir       );
+
+    write_stdout( "The generated build report is: $latestReportLinkPath\n" );
     write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
   }
 
-  $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilename;
+  $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilePath;
 
   my $visualNotification = $configEntries->{ "VisualNotification" };
 
@@ -374,6 +371,22 @@ sub resume_build ( $ )
       die "The post-build action failed with exit code $postBuildActionExitCode, the command was:\n" .
           "$postBuildAction\n";
     }
+  }
+}
+
+
+sub create_symbolic_link ( $ $ )
+{
+  my $linkFilename   = shift;
+  my $targetFilename = shift;
+
+  my $linkCmd = qq<ln --symbolic --no-dereference --force "$targetFilename" "$linkFilename">;
+
+  my $linkExitCode = ProcessUtils::run_process( $linkCmd );
+
+  if ( $linkExitCode != 0 )
+  {
+     die qq{Error creating symbolic link "$linkFilename" -> "$targetFilename".\n};
   }
 }
 
@@ -440,7 +453,7 @@ sub rotate_build_dir ( $ $ )
 
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_CHECKOUT_SENTINELS_SUBDIR ) );
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_UNPACK_SENTINELS_SUBDIR   ) );
-  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_BUILD_SENTINELS_SUBDIR    ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR ) );
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR  ) );
 
   write_status( $buildDir );
@@ -493,9 +506,10 @@ sub check_boolean_option ( $ $ )
 }
 
 
-sub process_config_file_etc ( $ )
+sub process_config_file_etc ( $ $ )
 {
   my $configEntries = shift;
+  my $interactive   = shift;
 
   check_sandbox_layout_version();
 
@@ -534,6 +548,12 @@ sub process_config_file_etc ( $ )
   }
 
   check_boolean_option( $configEntries, "StopOnFirstError" );
+
+  if ( $interactive )
+  {
+    $configEntries->{ "ParallelBuild"    } = "no";
+    $configEntries->{ "InteractiveBuild" } = "yes";
+  }
 }
 
 
