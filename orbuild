@@ -237,6 +237,13 @@ sub resume_build ( $ )
     die "The makefile specified in the configuration ($makefileFilename) does not exist.\n";
   }
 
+  my ( $makefileVolume, $makefileDirectories, $makefileFilenameOnly ) = File::Spec->splitpath( $makefileFilename );
+  my $makefileDir = FileUtils::cat_path( $makefileVolume, $makefileDirectories );
+  if ( StringUtils::str_ends_with( $makefileDir, "/" ) )
+  {
+    $makefileDir = substr( $makefileDir, 0, length( $makefileDir ) - length( "/" ) );
+  }
+
   # We already have an implementation in bash of how to get the number of CPUs,
   # so use it here, instead of reimplementing it in perl.
   my $cmdJParam = SHELL_INTERPRETER . " -c \"set -o errexit && source \"@{[SCRIPTS_DIR]}/ShellModules/MakeJVal.sh\" && get_make_j_val MAKE_J_VAL && echo \\\$MAKE_J_VAL\"";
@@ -269,6 +276,7 @@ sub resume_build ( $ )
   $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP   } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
   $ENV{ ORBUILD_TOOLS                    } = TOOLS_DIR;
   $ENV{ ORBUILD_SENTINEL_FILENAME_SUFFIX } = SENTINELS_FILENAME_SUFFIX;
+  $ENV{ ORBUILD_PROJECT_DIR              } = $makefileDir;
 
   # These variables are used by some of the tools bundled with orbuild:
   $ENV{ ORBUILD_INTERNAL_REPORTS_DIR   } = FileUtils::cat_path( $buildDir, "OrbuildInternalReports" );
