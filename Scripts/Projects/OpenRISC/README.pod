@@ -26,27 +26,31 @@ This is what the project currently downloads, builds and tests:
 =item * OpenRISC repositories
 
 A collection of repositories often used together with OpenRISC designs,
-they are mostly Subversion repositories from L<< OpenCores.org >>
+they are mostly Subversion repositories from L<< http://OpenCores.org/ >> .
 
 =item * Icarus Verilog
 
 Taken from git L<< git://github.com/steveicarus/iverilog.git >> , stable branch I<< v0_9-branch >> ,
 so it may not be as stable as an officially-released version.
 
+This step is not strictly necessary, an officially-released version will also do.
+
 =item * Verilator
 
-Taken from git L<< head at http://git.veripool.org/git/verilator >> , so it may not be as stable
+Taken from git head at L<< http://git.veripool.org/git/verilator >> , so it may not be as stable
 as an officially-released version.
+
+This step is not strictly necessary, an officially-released version will also do.
 
 =item * OpenRISC Toolchain
 
 This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. Some of the self-tests are also run after building.
 
-Most of those components are installed in a combined I<< ToolchainOr32 >> subdirectory.
+Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
 
-The ORPSoC v2 documentation is also built.
+=item * ORPSoC v2
 
-=item * TODO
+The I<< rtl-tests >> are run. The PDF documentation is also built.
 
 =back
 
