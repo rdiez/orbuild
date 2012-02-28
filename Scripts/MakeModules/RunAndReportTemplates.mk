@@ -1,7 +1,8 @@
 
 # -----------------------------------------------------
 #
-# Runs an arbitrary command with the RunAndReport.sh script.
+# Runs an arbitrary command with the RunAndReport.sh script. If successful,
+# create or update the sentinel file automatically.
 #
 #  $(1) is: - The name prefix for the related makefile variables. For example, for prefix "NEWLIB"
 #              variables named in the form NEWLIB_xxx will be defined.
