@@ -82,34 +82,15 @@ Components are automatically packaged for off-line installation.
 =head1 Prerequisites
 
 I<< orbuild >> runs on Unix-like systems as well as in the Cygwin environment on Microsoft Windows.
+However, the most thoroughly tested platform is Linux.
 
-Reasonably up-to-date versions of the following software is required:
+Reasonably up-to-date versions of the following software are required: perl, bash, curl, subversion, git,
+GNU make (tested with version 3.81).
 
-=over
+Perl module XML::Parser is also required by the HTML report generator perl script.
 
-=item * GNU make
 
-Tested with version 3.81.
-
-=item * perl
-
-=item * bash
-
-Some of the scripts use regular expressions, so bash versions older than 3.2 may not work.
-
-=item * curl
-
-Used to download the tarballs.
-
-=item * subversion, git
-
-Used to checkout the source code repositories.
-
-=item * Perl module XML::Parser
-
-Needed by the perl HTML report generator.
-
-=back
+=head2 Ubuntu/Debian Linux
 
 Under Ubuntu/Debian systems, the following commands install all prerequisites at once:
 
@@ -119,12 +100,30 @@ I<< orbuild >> prerequisites:
 
 Other tools needed by the OpenRISC components:
 
-  sudo apt-get install libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf
+  sudo apt-get install libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu
 
-TODO: Mention all the package names needed under Cygwin.
-TeX: tetex    libgmp-devel   libmpfr-devel   libmpc-devel
+=head2 Cygwin
 
-TODO: Could we optionally automate the installation of packages under the most common OSes?
+Unfortunately, there does not seem to be a standard way to automatically install all Cygwin packages at once
+from the command line. There is a third-party project called L<< apt-cyg|http://apt-cyg.googlecode.com >> that may be worth investigating though.
+
+Some of the required package names are:
+
+  tetex
+  libgmp-devel
+  libmpfr-devel
+  libmpc-devel
+  util-linux
+  wget
+  subversion
+  patch
+  gcc
+  make
+  libncurses-devel
+  ioperm
+  libusb-win32
+  flex
+  bison
 
 =head1 Usage
 
@@ -158,8 +157,9 @@ The steps are (with bash):
    git clone git://github.com/rdiez/orbuild.git
 
    # Edit the orbuild.config file, there should be little to change.
+
    # The very first time Subversion may prompt you for a login and password,
-   # so you may want to run the build at least once in interactive mode.
+   # so you may want to run the 'new' command at least once in interactive mode (with the --interactive switch).
 
    ./orbuild new       # start a new build
    ./orbuild resume    # resume a failed build
