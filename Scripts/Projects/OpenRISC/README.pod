@@ -19,14 +19,62 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 OpenRISC I<< orbuild >> project
 
+
+=head2 Prerequisites
+
+=head3 Ubuntu/Debian Linux
+
+Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
+
+  sudo apt-get install gcc g++ libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu
+
+=head3 Cygwin
+
+Some of the required package names are:
+
+  tetex
+  libgmp-devel
+  libmpfr-devel
+  libmpc-devel
+  wget
+  gcc
+  libncurses-devel
+  ioperm
+  libusb-win32
+  flex
+  bison
+
+=head2 Components built
+
 This is what the project currently downloads, builds and tests:
 
 =over
 
-=item * OpenRISC repositories
+=item * OpenCores' OpenRISC repositories
 
 A collection of repositories often used together with OpenRISC designs,
 they are mostly Subversion repositories from L<< http://OpenCores.org/ >> .
+
+=item * OpenCores' OpenRISC Toolchain
+
+This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. Some of the self-tests are also run after building.
+
+At the moment only the bare-metal version (without Linux support) is built.
+
+Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
+
+The F<< bld-all.sh >> script, which automatically builds most of the components together, is also run separately.
+
+=item * ORPSoC v2
+
+The I<< rtl-tests >> are run. The PDF documentation is also built.
+
+=item * Peter Gavin's OpenRISC toolchain
+
+=item * MinSoC
+
+The MinSoC repository is downloaded. MinSoC's automatic installation script is run, which downloads
+the same MinSoC repository again (among many other tools).
 
 =item * Icarus Verilog
 
@@ -41,16 +89,6 @@ Taken from git head at L<< http://git.veripool.org/git/verilator >> , so it may 
 as an officially-released version.
 
 This step is not strictly necessary, an officially-released version will also do.
-
-=item * OpenRISC Toolchain
-
-This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. Some of the self-tests are also run after building.
-
-Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
-
-=item * ORPSoC v2
-
-The I<< rtl-tests >> are run. The PDF documentation is also built.
 
 =back
 

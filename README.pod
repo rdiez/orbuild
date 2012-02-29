@@ -19,7 +19,7 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< orbuild >> - a build system for OpenRISC
 
------ NOTE THAT THIS PROJECT IS STILL IN THE PLANNING STAGE, THE MAIN SOFTWARE DOES NOT EXIST YET! The GitSvnMirror toolset is however available, see below.  -----
+----- NOTE THAT THIS PROJECT IS STILL IN AN EARLY DEVELOPMENT STAGE, THE MAIN SOFTWARE HAS NOT BEEN RELEASED YET! The GitSvnMirror toolset is however available, see below.  -----
 
 I<< orbuild >> is a script framework that automatically downloads, builds
 and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
@@ -89,18 +89,13 @@ GNU make (tested with version 3.81).
 
 Perl module XML::Parser is also required by the HTML report generator perl script.
 
-
 =head2 Ubuntu/Debian Linux
 
-Under Ubuntu/Debian systems, the following commands install all prerequisites at once:
+Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
 
-I<< orbuild >> prerequisites:
+  sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl gxmessage
 
-  sudo apt-get install autoconf build-essential make gcc g++ patch subversion git-core curl libxml-parser-perl gxmessage
-
-Other tools needed by the OpenRISC components:
-
-  sudo apt-get install libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu
+Each project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
 =head2 Cygwin
 
@@ -109,21 +104,10 @@ from the command line. There is a third-party project called L<< apt-cyg|http://
 
 Some of the required package names are:
 
-  tetex
-  libgmp-devel
-  libmpfr-devel
-  libmpc-devel
-  util-linux
-  wget
   subversion
-  patch
-  gcc
   make
-  libncurses-devel
-  ioperm
-  libusb-win32
-  flex
-  bison
+  util-linux
+  patch
 
 =head1 Usage
 
@@ -214,8 +198,6 @@ F<< orbuild.conf >> for details.
 
 =back
 
-TODO: how to build without Internet access.
-
 =head2 Resuming a failed build
 
 The build is designed to be a one-shot process: for every I<< orbuild new >> command,
@@ -274,7 +256,7 @@ and publish a build log which makes your password visible in clear text.
 In order to run a build in interactive mode, turn off settings I<< ParallelBuild >> and I<< InteractiveBuild >>, 
 see F<< orbuild.conf >> for details.
 
-=head1 Build Commands
+=head1 I<< orbuild >> Commands
 
 I<< orbuild >> takes the following commands:
 
@@ -342,13 +324,12 @@ This is what the directory structure looks like:
 Unfortunately, the user often needs to edit the configuration file, if only for the first time.
 For example, the Subversion repositories on the opencores.org web site
 require a login and password and they need to be entered interactively, so it may necessary
-to run the build at least once in interactive mode.
+to run the build at least once in interactive mode (but see command-line switch --interactive).
 
 Most users will probably want to set up the visual notification feature,
 in order to start using the build as soon as it is finished.
 
-OpenRISC developers will want to specify which repository branch
-should be checked out.
+OpenRISC developers may want to specify which repository branch should be checked out. (not implemeted yet)
 
 Daily build administrators may want to temporarily build a specific component
 version if the latest one is known to be broken.
@@ -360,88 +341,6 @@ a nice addition to this project.
 
 F<< orbuild.conf >> is a text file in simplified .INI file format. There are no [sections],
 all entries have the form "key = value", and lines starting with # are considered comments.
-
-=head2 Generic build system settings
-
-=over
-
-=item * parallel-process-count
-
-This is the -j argument to GNU make. You would normally specify value 1 for
-sequential processing or 'auto' to use all available processors.
-
-=item * notification-email-xxx
-
-A set of options in order to send a notification e-mail at the end of the build process.
-
-=item * visual-notification
-
-Specifies what kind of visual notification is generated at the end of the build process.
-
-=item * download-cache
-
-Specifies the location of the shared file cache. All downloaded tarballs
-can be then shared between several I<< orbuild >> sandboxes.
-
-It's best to use absolute paths.
-
-=item * repository-timestamp
-
-Freeze the timestamp to a specific point in time, in local time (not UTC).
-Only has an effect when creating new build directories, existing builds keep the timestamp they had when created.
-
-Examples:
-
-=over
-
-=item * 2011-02-20
-
-Translates to "2011-02-20 00:00:00".
-
-=item * 2011-02-20 08:10
-
-=item * 2011-02-20 08:10:05
-
-=back
-
-This is useful when developing a component, so that all other components
-stay unchanged.
-
-=item * rotate-slot-count
-
-How many old build directories to keep on disk.
-
-=back
-
-=head2 Settings specific to OpenRISC
-
-TODO: these settings are not implemented yet
-
-=over
-
-=item * gnu-src-branch
-
-Which branch should be checked out for the gnu-src repository.
-
-=item * gnu-src-url
-
-The address where the gnu-src repository should be downloaded from.
-
-=item * build-linux-toolchain
-
-Whether to build the linux-based toolchain.
-
-=item * build-bare-metal-toolchain
-
-Whether to build the bare-metal toolchain.
-
-=item * build-gdb
-
-Whether to build gdb.
-
-=item * TODO
-
-=back
 
 =head1 Caveats
 
