@@ -109,7 +109,7 @@ define git_checkout_template_variables
   $(1)_CLONE_SENTINEL           := $(ORBUILD_REPOSITORIES_DIR)/$(1)/.git/$(1).GitClone.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
   $(1)_BRANCH_SENTINEL          := $(ORBUILD_REPOSITORIES_DIR)/$(1)/.git/$(1).GitBranch.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
   $(1)_FETCH_SENTINEL           := $(ORBUILD_CHECKOUT_SENTINELS_DIR)/$(1).GitFetch.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
-  $(1)_CHECKOUT_SENTINEL        := $(ORBUILD_CHECKOUT_SENTINELS_DIR)/$(1).GitCheck.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
+  $(1)_CHECKOUT_SENTINEL        := $(ORBUILD_CHECKOUT_SENTINELS_DIR)/$(1).GitCheckOut.$(ORBUILD_SENTINEL_FILENAME_SUFFIX)
 
   $(1)_CLONE_LOG_FILENAME       := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).GitCloneLog.txt
   $(1)_FETCH_LOG_FILENAME       := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).GitFetchLog.txt
@@ -198,4 +198,15 @@ define git_branch_template
               "$(value $(1)_CHECKOUT_DIR)" \
               "$(value $(1)_BRANCH_SENTINEL)" \
               "$(2)"
+endef
+
+# This template helps make each git repository depend on the previous one,
+# so that they are cloned/fetched sequentially instead of in parallel.
+# Otherwise, we could overload the remote server with many parallel requests.
+#
+#  $(1) is the first git repository to download.
+#  $(2) is the second git repository to download when the first one is finished.
+
+define git_download_serializer_template
+  $(value $(2)_CLONE_SENTINEL): $(value $(1)_FETCH_SENTINEL)
 endef
