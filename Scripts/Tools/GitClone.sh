@@ -4,6 +4,7 @@
 
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -ne 4 ]; then
@@ -28,7 +29,9 @@ fi
 
 echo "Cloning git repository at URL \"$GIT_URL\"..."
 
-git clone --no-checkout "$GIT_URL" "$DEST_DIR"
+CMD="git clone --no-checkout $GIT_URL $DEST_DIR"
+print_command $CMD
+$CMD
 
 if ! [ -d "$REPO_DIR" ]; then
   abort "The git repository \"$GIT_URL\" has not created the expected subdirectory \"$DEST_DIR\" when checking out in directory \"$BASE_DIR\"."
