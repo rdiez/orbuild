@@ -13,7 +13,7 @@
 #  
 #  $(prefix_INSTALL_SENTINEL)   # Triggers configure, make, make install.
 #  $(prefix_CHECK_SENTINEL)     # Optional, triggers "make check".
-#  $(prefix_DISTCHECK_SENTINEL) # Triggers configure, make, make install.
+#  $(prefix_DISTCHECK_SENTINEL) # Optional, triggers "make distcheck".
 
 define autotool_project_template_variables
 
