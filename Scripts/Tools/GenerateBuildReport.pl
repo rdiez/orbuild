@@ -6,7 +6,7 @@ Generates an HTML report of the last orbuild run.
 
 =head1 USAGE
 
-perl GenerateBuildReport.pl <reports dir> <makefile report filename> <html output filename>
+perl GenerateBuildReport.pl <internal reports dir> <makefile report filename> <public reports dir> <html output filename>
 
 =head1 OPTIONS
 
@@ -55,6 +55,7 @@ use MiscUtils;
 use FileUtils;
 use StringUtils;
 use ReportUtils;
+use ProcessUtils;
 use AGPL3;
 
 use constant SCRIPT_NAME => $0;
@@ -106,14 +107,15 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( scalar( @ARGV ) != 3 )
+  if ( scalar( @ARGV ) != 4 )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
-  my $reportsDir = shift @ARGV;
+  my $reportsDir             = shift @ARGV;
   my $makefileReportFilename = shift @ARGV;
-  my $htmlOutputFilename = shift @ARGV;
+  my $outputDir              = shift @ARGV;
+  my $htmlOutputFilename     = shift @ARGV;
 
   write_stdout( "Collecting reports...\n" );
 
@@ -166,10 +168,17 @@ sub main ()
 
   ReportUtils::replace_marker( \$htmlText, "REPORT_STATUS_MESSAGE", $statusMsg );
 
+  my $tarballFilename = "OrbuildReport.tgz";
+  ReportUtils::replace_marker( \$htmlText, "TARBALL_FILENAME", $tarballFilename );
+
   ReportUtils::check_valid_html( $htmlText );
 
-  FileUtils::write_string_to_new_file( $htmlOutputFilename, $htmlText );
-  
+  FileUtils::write_string_to_new_file( FileUtils::cat_path( $outputDir, $htmlOutputFilename ), $htmlText );
+
+  my $cmd = qq[ cd $outputDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename" ];
+  # write_stdout( "Compressed archive cmd: $cmd\n" );
+  ProcessUtils::run_process( $cmd );
+
   write_stdout( "HTML report finished.\n" );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
