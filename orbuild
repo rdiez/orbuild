@@ -148,15 +148,19 @@ sub main ()
   }
 
 
+  my %configEntries;
+  process_config_file_etc( \%configEntries, $arg_interactive );
+
+
   my $cmd = shift @ARGV;
 
   if ( $cmd eq "new" )
   {
-    build_command( MiscUtils::TRUE, $arg_interactive );
+    build_command( MiscUtils::TRUE, \%configEntries );
   }
   elsif ( $cmd eq "resume" )
   {
-    build_command( MiscUtils::FALSE, $arg_interactive );
+    build_command( MiscUtils::FALSE, \%configEntries );
   }
   elsif ( $cmd eq "test-mail" )
   {
@@ -164,7 +168,8 @@ sub main ()
   }
   elsif ( $cmd eq "test-visual-notification" )
   {
-    die "TODO: not implemented yet\n";
+    my $reportPath = FileUtils::cat_path( TOOLS_DIR, "TestReportForVisualNotificationTest.html" );
+    run_visual_notification( $reportPath, \%configEntries, MiscUtils::TRUE );
   }
   else
   {
@@ -177,12 +182,8 @@ sub main ()
 
 sub build_command ( $ $ )
 {
-  my $rotate      = shift;
-  my $interactive = shift;
-
-  my %configEntries;
-
-  process_config_file_etc( \%configEntries, $interactive );
+  my $rotate        = shift;
+  my $configEntries = shift;
 
   if ( $rotate )
   {
@@ -190,10 +191,10 @@ sub build_command ( $ $ )
 
     # The 'new' command was permanently replaced by 'rotate'. The old 'new' command
     # used to pass MiscUtils::FALSE here:
-    rotate_build_dir( \%configEntries, MiscUtils::TRUE );
+    rotate_build_dir( $configEntries, MiscUtils::TRUE );
   }
 
-  resume_build( \%configEntries );
+  resume_build( $configEntries );
 }
 
 
@@ -211,11 +212,14 @@ sub resume_build ( $ )
         "Rerun @{[SCRIPT_NAME]} with the 'new' command in order to create a new one.\n";
   }
 
-
   write_stdout( "The current build directory is: $buildDir\n" );
 
-  my $downloadCacheDir     = File::Spec->rel2abs( $configEntries->{ "DownloadCacheDir" }, SANDBOX_DIR );
-  my $repositoriesDir      = File::Spec->rel2abs( $configEntries->{ "RepositoriesDir"  }, SANDBOX_DIR );
+  my $latestBuildDirLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildDir" ) );
+  create_symbolic_link( $latestBuildDirLinkPath, $buildDir );
+
+
+  my $downloadCacheDir   = File::Spec->rel2abs( $configEntries->{ "DownloadCacheDir" }, SANDBOX_DIR );
+  my $repositoriesDir    = File::Spec->rel2abs( $configEntries->{ "RepositoriesDir"  }, SANDBOX_DIR );
 
   my $publicReportsDir   = FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_SUBDIR );
   my $internalReportsDir = FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR );
@@ -305,13 +309,13 @@ sub resume_build ( $ )
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
   my $reportFilename = "BuildReport.html";
-
   my $reportFilePath = FileUtils::cat_path( $publicReportsDir, $reportFilename );
 
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
                   "$internalReportsDir " .
                   "$makefileReportFile " .
-                  "$reportFilePath ";
+                  "$publicReportsDir " .
+                  "$reportFilename";
 
   my $reportExitCode = ProcessUtils::run_process( $reportCmd );
 
@@ -319,6 +323,10 @@ sub resume_build ( $ )
   {
     die "Error generating the build report.\n";
   }
+
+  my $latestReportLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildReport.html" ) );
+  create_symbolic_link( $latestReportLinkPath, $reportFilePath );
+
 
   # write_stdout( "---------------------------------------\n" );
 
@@ -334,32 +342,11 @@ sub resume_build ( $ )
   {
     write_stdout( "The orbuild was completed successfully.\n" );
 
-    my $latestBuildDirLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildDir" ) );
-    my $latestReportLinkPath   = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildReport.html" ) );
-
-    create_symbolic_link( $latestReportLinkPath  , $reportFilePath );
-    create_symbolic_link( $latestBuildDirLinkPath, $buildDir       );
-
     write_stdout( "The generated build report is: $latestReportLinkPath\n" );
     write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
   }
 
-  $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilePath;
-
-  my $visualNotification = $configEntries->{ "VisualNotification" };
-
-  if ( defined ( $visualNotification ) and length( $visualNotification ) > 0 )
-  {
-    write_stdout( "Running the visual notification action...\n" );
-    my $visualNotificationExitCode = ProcessUtils::run_process( $visualNotification );
-
-    if ( $visualNotificationExitCode != 0 )
-    {
-      die "The VisualNotification action failed with exit code $visualNotificationExitCode, the command was:\n" .
-          "$visualNotification\n";
-    }
-  }
-
+  run_visual_notification( $reportFilePath, $configEntries, MiscUtils::FALSE );
 
   if ( defined $error )
   {
@@ -379,6 +366,34 @@ sub resume_build ( $ )
       die "The post-build action failed with exit code $postBuildActionExitCode, the command was:\n" .
           "$postBuildAction\n";
     }
+  }
+}
+
+
+sub run_visual_notification ( $ $ $ )
+{
+  my $reportFilePath = shift;
+  my $configEntries  = shift;
+  my $isTestMode     = shift;
+
+  $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilePath;
+
+  my $visualNotification = $configEntries->{ "VisualNotification" };
+
+  if ( defined ( $visualNotification ) and length( $visualNotification ) > 0 )
+  {
+    write_stdout( "Running the visual notification action...\n" );
+    my $visualNotificationExitCode = ProcessUtils::run_process( $visualNotification );
+
+    if ( $visualNotificationExitCode != 0 )
+    {
+      die "The VisualNotification action failed with exit code $visualNotificationExitCode, the command was:\n" .
+          "$visualNotification\n";
+    }
+  }
+  elsif ( $isTestMode )
+  {
+      die "The VisualNotification configuration setting is empty.\n";
   }
 }
 
