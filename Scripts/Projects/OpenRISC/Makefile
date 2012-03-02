@@ -328,7 +328,7 @@ all: $($(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 # ----------- MinSoC -----------
 
 # Test MinSoC's automatic installation script.
-
+# This script downloads a repository and some files automatically, so skip it if we have disabled repository downloading.
 ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 
 MINSOC_INSTALLATION_TEST_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
