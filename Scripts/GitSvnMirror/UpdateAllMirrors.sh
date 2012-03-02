@@ -105,7 +105,7 @@ perl "$MIRROR_TOOLS/GenerateGitSvnMirrorReport.pl" \
          "$REPORT_FILENAME" \
          "$ORBUILD_GIT_URL_PREFIX"
 
-LATEST_LINK_NAME="$ALL_PUBLIC_REPORTS_DIR/Latest"
+LATEST_LINK_NAME="$ALL_PUBLIC_REPORTS_DIR/Latest.html"
 
 ln --symbolic --no-dereference --force "$PUBLIC_REPORTS_DIR" "$LATEST_LINK_NAME"
 
