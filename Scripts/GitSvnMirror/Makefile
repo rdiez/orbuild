@@ -42,7 +42,7 @@ ALL_GIT_DIRS :=  # This variable ends up holding all the git directories, see be
 #  $(4) is the repository description.
 #
 
-define update_giv_svn_mirror_template_variables
+define update_git_svn_mirror_template_variables
 
   $(1)_CREATE_REPORT_FILE      := $(ORBUILD_REPORTS_DIR)/$(2).Create.report
   $(1)_CREATE_LOG_FILE         := $(ORBUILD_LOGS_DIR)/$(2).CreateLog.txt
@@ -57,9 +57,9 @@ define update_giv_svn_mirror_template_variables
 
 endef
 
-define update_giv_svn_mirror_template
+define update_git_svn_mirror_template
 
-  $(eval $(call update_giv_svn_mirror_template_variables,$(1),$(2)))
+  $(eval $(call update_git_svn_mirror_template_variables,$(1),$(2)))
 
   # This step initialises the git repository and is only done once.
   #
@@ -103,15 +103,15 @@ endef
 # Here is the list of repositories to mirror. You can add other Subversion repositories below.
 
 # OpenCores repositories under http://opencores.org/ocsvn/openrisc/openrisc/
-$(eval $(call update_giv_svn_mirror_template,DOCS,docs,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/docs,Documentation))
-$(eval $(call update_giv_svn_mirror_template,OR1200,or1200,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/or1200,Processor Core))
-$(eval $(call update_giv_svn_mirror_template,OR1KSIM,or1ksim,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/or1ksim,Simulator))
-$(eval $(call update_giv_svn_mirror_template,ORPSOCV2,orpsocv2,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/orpsocv2,System on a Chip - orpsocv2))
-$(eval $(call update_giv_svn_mirror_template,GNU_SRC,gnu-src,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/gnu-src,GNU Toolchain))
+$(eval $(call update_git_svn_mirror_template,DOCS,docs,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/docs,Documentation))
+$(eval $(call update_git_svn_mirror_template,OR1200,or1200,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/or1200,Processor Core))
+$(eval $(call update_git_svn_mirror_template,OR1KSIM,or1ksim,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/or1ksim,Simulator))
+$(eval $(call update_git_svn_mirror_template,ORPSOCV2,orpsocv2,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/orpsocv2,System on a Chip - orpsocv2))
+$(eval $(call update_git_svn_mirror_template,GNU_SRC,gnu-src,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/gnu-src,GNU Toolchain))
 
 # Other OpenCores repositories.
-$(eval $(call update_giv_svn_mirror_template,ADV_DEBUG_SYS,adv_debug_sys,git svn init --stdlayout http://opencores.org/ocsvn/adv_debug_sys/adv_debug_sys,advanced debug system))
-$(eval $(call update_giv_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - MinSoC))
+$(eval $(call update_git_svn_mirror_template,ADV_DEBUG_SYS,adv_debug_sys,git svn init --stdlayout http://opencores.org/ocsvn/adv_debug_sys/adv_debug_sys,advanced debug system))
+$(eval $(call update_git_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - MinSoC))
 
 
 .PHONY: $(ALL_GIT_DIRS)
