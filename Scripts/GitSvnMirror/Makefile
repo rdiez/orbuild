@@ -110,8 +110,9 @@ $(eval $(call update_git_svn_mirror_template,ORPSOCV2,orpsocv2,git svn init http
 $(eval $(call update_git_svn_mirror_template,GNU_SRC,gnu-src,git svn init http://opencores.org/ocsvn/openrisc/openrisc/trunk/gnu-src,GNU Toolchain))
 
 # Other OpenCores repositories.
-$(eval $(call update_git_svn_mirror_template,ADV_DEBUG_SYS,adv_debug_sys,git svn init --stdlayout http://opencores.org/ocsvn/adv_debug_sys/adv_debug_sys,advanced debug system))
-$(eval $(call update_git_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - MinSoC))
+# Commented out for now as they still require a password:
+#   $(eval $(call update_git_svn_mirror_template,ADV_DEBUG_SYS,adv_debug_sys,git svn init --stdlayout http://opencores.org/ocsvn/adv_debug_sys/adv_debug_sys,advanced debug system))
+#   $(eval $(call update_git_svn_mirror_template,MINSOC,minsoc,git svn init --stdlayout http://opencores.org/ocsvn/minsoc/minsoc,System on a Chip - MinSoC))
 
 
 .PHONY: $(ALL_GIT_DIRS)
