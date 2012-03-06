@@ -19,13 +19,15 @@ REPO_DIR="$BASE_DIR/$DEST_DIR"
 
 pushd "$REPO_DIR" >/dev/null
 
-echo "Fetching updated content from git repository at URL \"$GIT_URL\"..."
-
 # POSSIBLE OPTIMISATION: For the purposes of a daily build, maybe we just need to
 #                        download the HEAD branches with something like this:
 #                          git fetch origin +refs/heads/master:refs/remotes/origin/master
 
+echo "Fetching updated content from git repository at URL \"$GIT_URL\"..."
 git fetch --all
+
+echo "Garbage collecting the git repository..."
+git gc --auto
 
 popd >/dev/null
 
