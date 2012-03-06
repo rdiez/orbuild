@@ -224,6 +224,11 @@ sub convert_text_file_to_html ( $ $ )
                "padding-right: 10px;\n" .
                "border-style: solid;\n" .
                "border-width: 0px;\n" .
+               "word-break: break-all;\n" .  # CSS3, only supported by Microsoft Internet Explorer (tested with version 9) and
+                                             # Chromium (tested with version 17), but not by Firefox 10.
+                                             # Without it, very long lines will cause horizontal scroll-bars to appear at bottom of the page.
+                                             # The alternative 'break-word' works well with Chromium, chopping at word boundaries except when the word is too long,
+                                             # but unfortunately it does not well with IE 9 (scroll-bars appear again).
                "}\n" .
 
                "</style>\n" .
@@ -241,6 +246,8 @@ sub convert_text_file_to_html ( $ $ )
   (print $destFile $header) or
       die "Cannot write to file \"$destFilename\": $!\n";
 
+  my $htmlBr = "<br/>";
+
   for ( my $lineNumber = 1; ; ++$lineNumber )
   {
     my $line = readline( $srcFile );
@@ -248,12 +255,19 @@ sub convert_text_file_to_html ( $ $ )
     last if not defined $line;
 
     # Strip trailing new-line characters.
-    $line =~ s/[\n\r]*$//;
+    $line =~ s/[\n\r]*$//o;
 
     if ( 0 != length( $line ) )
     {
       # $line = "<code>" . encode_entities( $line ) . "</code>";
       $line = encode_entities( $line );
+
+      # Git shows and updates every second or so a progress message like this:
+      #    Checking out files:   0% (2/38541)
+      # These messages end with a Carriage Return (\r, 0x0D) only, without a Line Feed (\n, 0x0A) at the end,
+      # and that's not displayed well in the HTML report. Therefore,
+      # convert all embedded Carriage Return codes into HTML line breaks here.
+      $line =~ s/\r/$htmlBr/og;
     }
 
     $line = "<tr>" .
