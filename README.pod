@@ -426,7 +426,7 @@ of Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for mor
 
 =over
 
-=item * Use a fully-fledged continuous integration server like Apache Continuum, CruiseControl or BuildBot.
+=item * Use a fully-fledged continuous integration server like Apache Continuum, CruiseControl, BuildBot or Hudson/Jenkins.
 
 =item * Create a top-level Git or Subversion repository where each component is a git submodule or a Subversion external reference.
 
