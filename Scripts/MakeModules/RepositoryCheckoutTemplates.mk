@@ -204,9 +204,15 @@ endef
 # so that they are cloned/fetched sequentially instead of in parallel.
 # Otherwise, we could overload the remote server with many parallel requests.
 #
+# Note that this rule is not perfect: 1 clone and 1 fetch can still run in parallel.
+# Note also that a clone target cannot depend on any fetch target, or
+# the repositories will be cloned every time a fetch is performed.
+#
 #  $(1) is the first git repository to download.
 #  $(2) is the second git repository to download when the first one is finished.
 
 define git_download_serializer_template
-  $(value $(2)_CLONE_SENTINEL): $(value $(1)_FETCH_SENTINEL)
+  $(value $(2)_CLONE_SENTINEL): $(value $(1)_CLONE_SENTINEL)
+  $(value $(2)_FETCH_SENTINEL): $(value $(1)_FETCH_SENTINEL)
+  $(value $(2)_FETCH_SENTINEL): $(value $(1)_CLONE_SENTINEL)
 endef
