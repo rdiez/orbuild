@@ -163,7 +163,7 @@ define git_checkout_template
 
   $(value $(1)_CHECKOUT_SENTINEL): $(value $(1)_FETCH_SENTINEL)
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
-                   "$(2) git merge" \
+                   "$(2) git checkout/merge" \
                    "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                    "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
                    report-always \
