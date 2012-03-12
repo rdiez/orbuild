@@ -264,7 +264,29 @@ sub resume_build ( $ )
 
   if ( lc($configEntries->{ "ParallelBuild" }) eq "yes" )
   {
+    # If the user did not specify the parallel build option, do NOT add any -j parameter.
+    # This way, a top-level makefile invoking orbuild can control the parallel build
+    # with the MAKEFLAGS environment variable, just like orbuild tries to do with its own
+    # sub-make child processes.
+    #
+    # Option --max-load is useful in order to avoid increasing the load on an already-overloaded PC.
+    # Keep in mind that some of the orbuild sub-tasks invoke GNU Make with their own -j parameter values,
+    # which means that orbuild itself will probably exceed its own -j limit on the system.
+    #
+    # Note that argument --max-load alone is not enough, as most systems have a delay
+    # when calculating the current load, which may cause too many child processes to get started.
+    #
+    # Note also that --max-load means orbuild will not get a fair share of CPU time, as any
+    # other system load will take priority. That's usually fine, as orbuild is normally executed as
+    # a long-running background task that should not interfere too much with the system's main tasks.
+    #
+    # If you are serious about constraining your system load, you'll have to resort to
+    # more powerful methods like cgroups under Linux.
+
     $makeFlags   .= "-j $makeJParam ";
+
+    my $maxLoadJParam = $makeJParam + 5;  # This heuristic is not very smart.
+    $makeFlags   .= "--max-load $maxLoadJParam ";
   }
   # $makeFlags .= "--debug=v ";  # For make debugging purposes
 
