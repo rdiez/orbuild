@@ -54,6 +54,8 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 
 set +o errexit
 
+print_command "$@"
+
 {
     "$@"
 } 2>&1 | tee --append "$LOG_FILENAME"
