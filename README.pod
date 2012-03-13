@@ -71,7 +71,7 @@ Components are automatically packaged for off-line installation.
 
 =over
 
-=item * Users who wish to install OpenRISC components
+=item * Users who wish to install many OpenRISC components at once
 
 =item * Developers who wish to test several OpenRISC components together
 
@@ -109,31 +109,11 @@ Some of the required package names are:
   util-linux
   patch
 
-=head1 Usage
+=head1 Usage scenarios
 
-The general steps are:
+=head2 How to get and build the OpenRISC components for the first time
 
-=over
-
-=item * Download the latest version of I<< orbuild >> from L<< https://github.com/rdiez/orbuild >>
-
-=item * Edit the F<< orbuild.conf >> file
-
-=item * Start the build process
-
-=back
-
-Run the following command for quick help text.
-
-  ./orbuild --help      # Alternative:  perl orbuild --help
-
-=head2 Standard usage scenarios
-
-=over
-
-=item * The user wants to get the OpenRISC components for the first time
-
-The steps are (with bash):
+The steps are (this example is for the bash shell):
 
    mkdir orbuild-2010-11-30
    cd    orbuild-2010-11-30
@@ -142,34 +122,38 @@ The steps are (with bash):
 
    # Edit the orbuild.config file, there should be little to change.
 
-   # The very first time Subversion may prompt you for a login and password,
-   # so you may want to run the 'new' command at least once in interactive mode (with the --interactive switch).
-
-   ./orbuild new       # start a new build
-   ./orbuild resume    # resume a failed build
+   # The very first time around, you may want to run the build in interactive mode
+   # (with the --interactive switch), which disables parallel compilation but
+   # allows you to enter your login and password for remote Subversion repositories and so on.
+   # Afterwards, your credentials should get cached, and you should not need the interactive mode any more.
+   
+   ./orbuild
+   ./orbuild --resume    # (optional) resume a failed build, but see below for caveats
 
 At the end, the user will probably find it convenient to set an environment variable
 like this, so that all other software will automatically find the just-built OpenRISC components:
 
    export OPENRISC_TOOLS="$PWD/builds/<new subdir name>"
 
-=item * The user wants to update his OpenRISC components
+Run the following command for quick help text:
+
+  ./orbuild --help      # Alternative:  perl orbuild --help
+
+=head2 How to update and rebuild the OpenRISC components
 
 There are several alternatives:
 
 =over
 
-=item * Create a new sandbox, maybe reuse the downloaded files
+=item * Create a new I<< orbuild >> sandbox, optionally reusing downloaded files
 
 The safest way is to repeat the first-time scenario in a different directory.
-If the new build is successful, the user can then update the OPENRISC_TOOLS
-environment variable to point to the new version.
 
 If the user wants to conserve Internet bandwidth, it should be safe
 to edit F<< orbuild.conf >> in the new sandbox in order to share a global cache 
 of downloaded tarball files.
 
-=item * Reuse the sandbox
+=item * Reuse the I<< orbuild >> sandbox
 
 In order to further conserve Internet bandwidth, it is possible to reuse
 the I<< orbuild >> sandbox and avoid checking out new copies
@@ -178,54 +162,68 @@ of all repositories. The steps are:
    cd orbuild-2010-11-30
 
    # Update orbuild itself. This is optional but should be done often.
+   # Otherwise, orbuild itself may not be up-to-date enough in order to build the latest versions of all components.
    git pull
 
-   ./orbuild new       # start a new build
-   ./orbuild resume    # resume a failed build
-     
+   ./orbuild
+   ./orbuild --resume    # (optional) resume a failed build, but see below for caveats
+
+   # Switch to the new versions:     
    export OPENRISC_TOOLS="$PWD/builds/<new subdir name>"
 
 =back
 
-=item * A daily build scenario
+=head2 Setting up a daily build server
 
-The server administrator will have to edit the F<< orbuild.conf >> file extensively
-in order to generate non-standard builds.
+The server administrator will probbly have to edit the F<< orbuild.conf >> file
+and the project F<< Makefile >> extensively in order to generate non-standard builds.
 
 In addition to generating HTML report files, the server will probably want to send
 a notification e-mail to some mailing list at the end of the build. See file
 F<< orbuild.conf >> for details.
 
-=back
+=head2 How to resume a failed build
 
-=head2 Resuming a failed build
-
-The build is designed to be a one-shot process: for every I<< orbuild new >> command,
+The build is designed to be a one-shot process:
 components are built just once, from beginning to end. However, if the build fails,
-it is possible to fix the problem in the local computer and resume from the last point of failure
-by issuing an I<< orbuild resume >> command.
+it is possible to try and fix the problem in the local computer and resume from the last point of failure
+by issuing an I<< ./orbuild --resume >> command.
+Resuming a build can save some time but is not always reliable. Therefore, when the resumed build completes successfully,
+you should re-build from scratch in order to make sure that those successful results are repeatable.
 
-When resuming a build, I<< orbuild >> only moves forwards: components that were successfully built
-the last time around will never be rebuilt. There is no dependency checking at source-code level, and
+=head3 Why resuming is not reliable
+
+When resuming, I<< orbuild >> only moves forwards: components that were successfully built the last time
+around will never be rebuilt. There is no dependency checking at source-code level, and
 the installed tool versions are not checked either. Therefore, it is not safe to change
-any local build tools or update I<< orbuild >> itself before
-resuming a build, as not all components will then be built with the same tool versions.
+any local build tools or update I<< orbuild >> itself before resuming a build, as not all components
+will then be built with the same tool versions.
 Coping with such dependencies is well beyond the scope of this project.
 
-Note also that, if the components to build change in the mean time, the current
-I<< orbuild >> version may no longer be up-to-date enough to build them properly.
+The reasons why the results are not right may be subtle. Say component A builds successfully but
+component B fails because some library is not installed in your Operating System. If you install the library
+and resume the build, only component B will be built. However, if component A had seen the library installed the
+first time around, it may have enabled more features. Rebuilding from scratch
+may yield different results the next time around.
+
+Resuming a build may fail even after interrupting it 'gently' with Ctrl+C, as most makefiles do not use
+the I<< .DELETE_ON_ERROR: >> directive and the C compiler can then leave corrupted or zero-length object files behind.
+The next time around, those files will not be recompiled, and the linking phase will fail.
+
+Note that the I<< --resume >> switch will not update the source code repositories. If you want to build
+the most up-to-date components, you need to start the build from scratch.
 
 =head3 Resuming a build while developing I<< orbuid >> itself
 
-During development of the I<< orbuild >> makefiles themselves, keep also in mind that
-a change in an I<< orbuild >> makefile will not trigger a rebuild of any affected components.
+If you are developing the I<< orbuild >> makefiles themselves, keep in mind that
+a change in those makefiles will not trigger a rebuild of any affected components.
 
 For example, adding a compiler flag to an application's makefile will not rebuild the related application.
 
 =head4 Manually rebuilding a single component
 
 After changing a component or an I<< orbuild >> makefile, the safest way to test the changes
-is to rebuild all components with an I<< orbuild new >> command. However, this can be time consuming,
+is to rebuild all components from scratch. However, this can be time consuming,
 so rebuilding a single component may be desirable.
 
 Depending on the I<< orbuild >> project makefile and the specific component, it may be possible to rebuild just one
@@ -243,49 +241,6 @@ to handle components and its dependencies. That's also the reason why, when the 
 I<< orbuild >> will report all succeeded and failed components, but not
 those that were not even tried because some of their dependencies had already failed to build.
 
-=head1 About interactive builds and Subversion credentials
-
-Normally, a build process should be completely automated, but often some sort of human interaction is needed,
-especially the very first time. For example, the Subversion repositories on the opencores.org web site
-require a login and password, which are manually entered once and then cached for any subsequent runs.
-
-At first, I considered adding login and password configuration entries to F<< orbuild.conf >>, so that
-they can be passed to Subversion on the command line, but then it would be too easy to forget this fact
-and publish a build log which makes your password visible in clear text.
-
-In order to run a build in interactive mode, turn off settings I<< ParallelBuild >> and I<< InteractiveBuild >>, 
-see F<< orbuild.conf >> for details.
-
-=head1 I<< orbuild >> Commands
-
-I<< orbuild >> takes the following commands:
-
-=over
-
-=item * new
-
-Start a build in a new subdirectory. Possibly delete some of the older builds,
-in order to limit the amount of builds kept on disk.
-
-Note that the source code repositories are not fetched from scratch every time,
-but just updated, in order to conserve bandwidth.
-
-=item * resume
-
-Resume a failed build.
-
-=item * test-email
-
-Send a test e-mail to check that the e-mail configuration in file F<< orbuild.conf >> is correct.
-
-=item * test-visual-notification
-
-Display the end-of-build visual notification. If it does not work,
-maybe the right package is not installed, or the configuration
-in file F<< orbuild.conf >> is not quite right.
-
-=back
-
 =head1 Directory structure
 
 This is what the directory structure looks like:
@@ -297,8 +252,6 @@ This is what the directory structure looks like:
     DownloadCache/       # All tarballs downloaded from the Internet.
 
     Repositories/        # All git and subversion repositories downloaded from the Internet.
-      gnu-src/
-      ...
 
     Builds/
       build-2011-02-19/  # The build from yesterday.
@@ -343,6 +296,103 @@ F<< orbuild.conf >> is a text file in simplified .INI file format. There are no 
 all entries have the form "key = value", and lines starting with # are considered comments.
 
 =head1 Caveats
+
+=head2 About interactive builds and Subversion credentials
+
+Normally, a build process should be completely automated, but often some sort of human interaction is needed,
+especially the very first time. For example, most Subversion repositories on the L<< http://opencores.org/ >> web site
+require a login and password, which are manually entered once and then cached for any subsequent runs.
+In its default configuration, I<< orbuild >> will run the build in such a way that anything requiring
+use interaction (like prompting for a password) will fail.
+
+At first, I considered adding login and password configuration entries to F<< orbuild.conf >>, so that
+they can be passed to Subversion on the command line, but then it would be too easy to forget this fact
+and publish a build log which makes your password visible in clear text.
+
+In order to run a build in interactive mode, pass the I<< --interactive >> command-line switch to I<< orbuild >>
+(see related settings I<< ParallelBuild >> and I<< InteractiveBuild >> in file F<< orbuild.conf >>).
+Running the build in interactive mode disables parallel compilation, which will slow down the process significantly.
+Therefore, once all the passwords are cached, you will probably want to run the build in non-interactive mode
+the next time around.
+
+=head2 Parallel builds can overload the computer
+
+A parallel build process can easily overload the system, cause thrashing and render the computer
+unresponsive for long periods of time. I<< orbuild >>'s efforts to prevent that from happening
+are rudimentary at best. If you are serious about constraining your system load, you'll have to
+resort to more powerful methods like I<< cgroups >> under Linux, or running the build
+inside a virtual PC.
+
+=head3 How to write sub-makefiles with regards to parallel builds
+
+Configuration setting I<< Makefile = xxx >> in file F<< orbuild.conf >> specifies the top-level makefile that
+will be driving the build. In order to avoid overloading the computer (which would cause thrashing),
+I<< orbuild >> sets a global limit on the number of build sub-processes that should run in parallel,
+see the GNU Make documentation for the I<< -j >> switch for more information.
+
+When the top-level makefile starts further instances (child processes) of GNU Make, it passes along
+information about how to talk back to the top-level GNU Make instance in order to coordinate the build.
+This information is located in environment variable MAKEFLAGS and looks like this:
+
+  <...other flags...>  --jobserver-fds=3,4 -j
+
+This way, GNU Make makes sure that the parallel limit is not exceeded across the whole build process.
+Note that this limit is not enforced in any hard way, as child processes are actually free to start as many
+sub-processes as they like. Overstepping the parallel limit is not usually fatal,
+it just increases the risk of overloading the computer.
+
+For GNU Make's limit mechanism to work, all sub-makefiles and child build scripts must obey the following rules:
+
+=over
+
+=item * All parallel process creation must be performed with GNU Make. Other build tools will probably not respect the global limit.
+
+=item * No-one else can specify his own "-j I<< x >>" value, as that disables the global coordination mechanism.
+
+Only I<< orbuild >> is allowed to set the -j limit for the top-level makefile.
+If you don't clear MAKEFLAGS manually, you will be able to easily identify other places that do, as they generate this warning:
+
+  warning: -jN forced in submake: disabling jobserver mode.
+
+=item * The "--jobserver-fds=x,y -j" information must be passed along in the MAKEFLAGS environment variable.
+
+I<< orbuild >> can help you extract that information where it is normally needed, see the xxx_MAKEFLAGS_FILTER variables
+in the bundled example makefiles.
+
+Note that, if you do not call the sub-makefile directly from the parent makefile, but indirectly over some other script,
+GNU Make may not automatically pass the necessary information, and you'll get this warning further down the line:
+
+  warning: jobserver unavailable: using -j1. Add `+' to parent make rule.
+
+Just add a '+' character at the beginning of your rule. For example, this rule:
+
+  target.o:
+    script_that_runs_make.sh
+
+becomes then:
+
+  target.o:
+    +script_that_runs_make.sh
+
+Consult the GNU Make documentation for details.
+
+=back
+
+Unfortunately, most third-party build scripts tend to specify their own -j I<< x >> value,
+so the global limit will not be honoured at that point. Some of them allow the user to disable
+the parallel build, but then they tend to pass I<< -j 1 >> along, which is also not ideal,
+as parallel building is always disabled for the related build step, even when the parent makefile
+and the current parallel limit would allow it.
+
+I<< orbuild >> does follow the above rules: if the parallel build is disabled in the configuration file,
+it will not pass any -j flag to GNU Make. That makes the build process sequential while
+still allowing for parallel building if I<< orbuild >> itself has been started from a higher-level makefile
+in parallel build mode.
+
+Beware that some makefiles do not support parallel execution. In those cases,
+the calling makefile/script should filter the "--jobserver-fds=x,y -j" information out of MAKEFLAGS
+(the easiest way is to clear MAKEFLAGS completely). Without that information, the makefile will run sequentially.
+Explicitly specifying "-j 1" has no further effect but does not harm either.
 
 =head2 Repository skew
 
@@ -396,23 +446,22 @@ Some of the perl scripts use mktime and the like and are not year 2038 compliant
 
 =head1 Why write I<< orbuild >> in perl, bash and make
 
-There are open-source tools like Apache Continuum, CruiseControl or BuildBot that could take on the task
-of building software components. However, at the time I<< orbuild >> was developed, they seemed overkill.
-Besides, most OpenRISC users would not be prepared to install such a build system locally in order to
-get the build running on their machines.
+There are a number of open-source build frameworks (see section "Alternatives to I<< orbuild >>" below)
+that could take on the task of building software components. However, at the time I<< orbuild >> was developed,
+they seemed overkill. Besides, most OpenRISC users would not be prepared to install and configure such complex software
+systems in order to get the build running on their machines.
 
 Perl, Bash and Make are very popular and should be easy to install on all systems, if they are not already there.
 
 The original author of I<< orbuild >> was already familiar with Perl and had no experience with Python, Ruby and so on.
-
-The dash shell would be faster, but speed is not so important here, and bash has more features.
+The I<< dash >> shell would be faster, but speed is not so important here, and I<< bash >> has more features.
 
 Makefiles are hard to write, linear scripts would have been much easier to maintain. However, GNU Make has
 a killer feature: all make subprocesses coordinate with each other in order to limit the amount
-of concurrent processes and keep the system's load within the given limit (see the documentation for the -j switch
-for more information). The user can easily set the number of concurrent processes to 1 (sequential processing),
-in order to keep his PC responsive for other tasks, or set it to 'auto' and use all available CPUs, but without
-starting so many processes at once that the PC overloads and starts thrashing.
+of concurrent processes and keep the system's load within the given limit,
+see section "How to write sub-makefiles" for more information.
+Note that the user can always set the number of concurrent processes to 1 (sequential processing),
+in order to keep his PC responsive for other tasks.
 
 The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact,
 most of them have evolved over the years in other unrelated projects.
@@ -422,7 +471,7 @@ most of them have evolved over the years in other unrelated projects.
 This project contains a set of tools to create and maintain a collection of read-only Git mirrors
 of Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for more information.
 
-=head1 Alternatives to orbuild
+=head1 Alternatives to I<< orbuild >>
 
 =over
 
@@ -434,6 +483,12 @@ This is only a partial solution, as it would allow the user to easily fecht or u
 but without any further build steps.
 
 =back
+
+=head1 Feedback
+
+Please send feedback to rdiezmail-openrisc at yahoo.de
+
+The project's official web site is L<< https://github.com/rdiez/orbuild >>
 
 =head1 License
 
