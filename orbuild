@@ -8,15 +8,14 @@ Build system for OpenRISC - see the README file for more information.
 
 =head1 USAGE
 
-  ./orbuild [options] <command>
-
-=head1 COMMANDS
-
-new, resume, test-mail, test-visual-notification
+  ./orbuild [options]
 
 =head1 OPTIONS
 
--h, --help, --version, --license, --interactive
+-h, --help, --version, --license, --interactive,
+--resume, --test-visual-notification
+
+Please see the README file for more information.
 
 =head1 EXIT CODE
 
@@ -104,13 +103,18 @@ sub main ()
   my $arg_version          = 0;
   my $arg_license          = 0;
   my $arg_interactive      = 0;
+  my $arg_resume           = 0;
+  my $arg_testVisualNotification = 0;
+
 
   my $result = GetOptions(
-                 'help'                =>  \$arg_help,
-                 'h'                   =>  \$arg_h,
-                 'version'             =>  \$arg_version,
-                 'license'             =>  \$arg_license,
-                 'interactive'         =>  \$arg_interactive
+                 'help'                     => \$arg_help,
+                 'h'                        => \$arg_h,
+                 'version'                  => \$arg_version,
+                 'license'                  => \$arg_license,
+                 'interactive'              => \$arg_interactive,
+                 'test-visual-notification' => \$arg_testVisualNotification,
+                 'resume'                   => \$arg_resume
                 );
 
   if ( not $result )
@@ -137,7 +141,7 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( 1 != scalar @ARGV )
+  if ( 0 != scalar @ARGV )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
@@ -147,33 +151,18 @@ sub main ()
     die "The orbuild sandbox path \"@{[SANDBOX_DIR]}\" contains whitespace, but GNU make cannot cope with whitespaces.\n";
   }
 
-
   my %configEntries;
   process_config_file_etc( \%configEntries, $arg_interactive );
 
-
-  my $cmd = shift @ARGV;
-
-  if ( $cmd eq "new" )
-  {
-    build_command( MiscUtils::TRUE, \%configEntries );
-  }
-  elsif ( $cmd eq "resume" )
-  {
-    build_command( MiscUtils::FALSE, \%configEntries );
-  }
-  elsif ( $cmd eq "test-mail" )
-  {
-    die "TODO: not implemented yet\n";
-  }
-  elsif ( $cmd eq "test-visual-notification" )
+  if ( $arg_testVisualNotification )
   {
     my $reportPath = FileUtils::cat_path( TOOLS_DIR, "TestReportForVisualNotificationTest.html" );
     run_visual_notification( $reportPath, \%configEntries, MiscUtils::TRUE );
   }
   else
   {
-    die qq<Unknown command "$cmd".\n>;
+    build_command( $arg_resume ? MiscUtils::FALSE : MiscUtils::TRUE,
+                   \%configEntries );
   }
 
   return MiscUtils::EXIT_CODE_SUCCESS;
@@ -327,6 +316,13 @@ sub resume_build ( $ )
                     "-f \"$makefileFilename\" " .
                     "all " .
                     "$noStdInput";
+
+  # Lower our CPU priority. Builds are normally long-running processes that should not interfere
+  # too much with other system load.
+  use constant PRIO_PROCESS => 0;
+  my $currentPrio = getpriority( PRIO_PROCESS, $$ );
+  # 10 = 5 * 2, that means under Linux that the default ionice priority is automatically reduced by 2 notches.
+  setpriority( PRIO_PROCESS, $$, $currentPrio + 10 );
 
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
