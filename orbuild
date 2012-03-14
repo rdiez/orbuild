@@ -198,7 +198,7 @@ sub resume_build ( $ )
   if ( not -d $buildDir )
   {
     die "The build directory \"$buildDir\" does not exist. " .
-        "Rerun @{[SCRIPT_NAME]} with the 'new' command in order to create a new one.\n";
+        "Rerun @{[SCRIPT_NAME]} without the '--resume' switch in order to create a new one.\n";
   }
 
   write_stdout( "The current build directory is: $buildDir\n" );
@@ -244,7 +244,9 @@ sub resume_build ( $ )
 
   my $makeFlags = "--no-builtin-variables ";  # Accelerates the dependency processing.
   $makeFlags   .= "--warn-undefined-variables ";
-  $makeFlags   .= "-s ";  # Silent.
+
+  # Disable the silent built. I think the user should see the actual commands issued in the log file.
+  #   $makeFlags   .= "-s ";  # Silent.
 
   if ( lc($configEntries->{ "StopOnFirstError" }) eq "no" )
   {
@@ -304,6 +306,14 @@ sub resume_build ( $ )
 
   $ENV{ ORBUILD_IS_INTERACTIVE_BUILD   } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
 
+  # Most build failures under Cygwin are due to spaces in the PATH, as most Windows PC have something
+  # like "C:\Program Files" in there. In order to test that all components can cope with this situation,
+  # add here a non-existent directory name with a space in the middle.
+  if ( $ENV{ PATH } eq "" )
+  {
+    die "The PATH environment variable is empty.\n";
+  }
+  $ENV{ PATH } = $ENV{ PATH } . ":" . FileUtils::cat_path( $buildDir, "TestPathEntry WithASpaceInTheMiddle" );
 
   my $cmd = "@{[SHELL_INTERPRETER]} @{[TOOLS_DIR]}/RunAndReport.sh " .
                         "\"top-level makefile\" " .
@@ -354,7 +364,7 @@ sub resume_build ( $ )
   {
     $error= "The build failed with exit code $makeExitCode, see the generated report:\n" .
             "$reportFilePath\n" .
-            "Rerun @{[SCRIPT_NAME]} with the 'resume' argument to try again.\n";
+            "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again.\n";
   }
   else
   {
