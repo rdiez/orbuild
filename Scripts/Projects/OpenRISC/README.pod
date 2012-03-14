@@ -63,8 +63,6 @@ A full I<< diskcheck >> is performed for I<< or1ksim >>.
 
 At the moment only the bare-metal version (without Linux support) is built.
 
-Peter Gavin's OpenRISC toolchain is also built. The Binutils test suite is also run for this toolchain.
-
 Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
 
 The F<< bld-all.sh >> script, which automatically builds most of the components together, is also run separately.
@@ -74,6 +72,14 @@ The F<< bld-all.sh >> script, which automatically builds most of the components 
 The I<< rtl-tests >> are run. The PDF documentation is also built.
 
 =item * Peter Gavin's OpenRISC toolchain
+
+Taken from git head at git://github.com/pgavin
+
+Both the "bare" toolchain with Newlib and the Linux toolchain with uClibc are built.
+
+The Binutils test suite is also run for the "bare" toolchain.
+
+GDB 7.2 from OpenCores.org gets built with the Linux toolchain.
 
 =item * MinSoC
 
