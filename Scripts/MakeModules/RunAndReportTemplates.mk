@@ -42,7 +42,6 @@ endef
 
 define run_and_report_template_variables_3
   $(if $(filter undefined,$(origin $(1)_MAKEFLAGS_VALUE)),$(error Invalid $(1)_MAKEFLAGS_FILTER value of "$(value $(1)_MAKEFLAGS_FILTER)"))
-  $(if $(filter pass-all,$(value $(1)_MAKEFLAGS_FILTER)),$(error Variable $(1)_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
 endef
 
 
@@ -72,6 +71,8 @@ define run_makefile_and_report_template
   $(eval $(call run_and_report_template_variables_1,$(1)))
   $(eval $(call run_and_report_template_variables_2,$(1)))
   $(eval $(call run_and_report_template_variables_3,$(1)))
+
+  $(if $(filter pass-all,$(value $(1)_MAKEFLAGS_FILTER)),$(error Variable $(1)_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
 
   $(value $(1)_SENTINEL):
 	+export PATH="$(value $(1)_PATH_TO_USE)" && \
