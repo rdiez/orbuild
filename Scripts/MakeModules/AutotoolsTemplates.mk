@@ -15,8 +15,9 @@
 #  $(prefix_CHECK_SENTINEL)     # Optional, triggers "make check".
 #  $(prefix_DISTCHECK_SENTINEL) # Optional, triggers "make distcheck".
 
-define autotool_project_template_variables
+define autotool_project_template_variables_1
 
+  # Extra arguments passed to the 'configure' phase.
   ifeq ($(origin $(1)_EXTRA_CONFIG_ARGS), undefined)
     $(1)_EXTRA_CONFIG_ARGS :=
   endif
@@ -26,10 +27,17 @@ define autotool_project_template_variables
     $(1)_EXTRA_GLOBAL_MAKE_ARGS :=
   endif
 
+  # Extra arguments passed to the 'make install' phase.
   ifeq ($(origin $(1)_EXTRA_INSTALL_ARGS), undefined)
     $(1)_EXTRA_INSTALL_ARGS :=
   endif
 
+  # How to filter the MAKEFLAGS variable for the 'make install' phase.
+  ifeq ($(origin $(1)_INSTALL_MAKEFLAGS_FILTER), undefined)
+    $(1)_INSTALL_MAKEFLAGS_FILTER := pass-j
+  endif
+
+  # Path prefix to prepend for all phases.
   ifeq ($(origin $(1)_AUTOCONF_PREPEND_PATH), undefined)
     $(1)_AUTOCONF_PATH_TO_USE := $(PATH)
   else
@@ -76,8 +84,25 @@ define autotool_project_template_variables
 
 endef
 
+define autotool_project_template_variables_2
+  ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "clear"
+    $(1)_INSTALL_MAKEFLAGS_VALUE :=
+  else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-j"
+    $(1)_INSTALL_MAKEFLAGS_VALUE := $$$$(filter --jobserver-fds=%,$$$$(MAKEFLAGS)) $$$$(filter -j,$$$$(MAKEFLAGS))
+  else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-all"
+    $(1)_INSTALL_MAKEFLAGS_VALUE := $$$$(MAKEFLAGS)
+  endif
+endef
+
+define autotool_project_template_variables_3
+  $(if $(filter undefined,$(origin $(1)_INSTALL_MAKEFLAGS_VALUE)),$(error Invalid $(1)_INSTALL_MAKEFLAGS_FILTER value of "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)"))
+  $(if $(filter pass-all,$(value $(1)_INSTALL_MAKEFLAGS_FILTER)),$(error Variable $(1)_INSTALL_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
+endef
+
 define autotool_project_template
-  $(eval $(call autotool_project_template_variables,$(1),$(3)))
+  $(eval $(call autotool_project_template_variables_1,$(1),$(3)))
+  $(eval $(call autotool_project_template_variables_2,$(1)))
+  $(eval $(call autotool_project_template_variables_3,$(1)))
 
   $(value $(1)_CONFIGURE_SENTINEL):
 	echo "Configuring $(2)..." && \
@@ -110,13 +135,13 @@ define autotool_project_template
 
   $(value $(1)_INSTALL_SENTINEL): $(value $(1)_MAKE_SENTINEL)
 	+echo "Installing $(2)..." && \
-    export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
-    PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
-	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
-                    "$(2) install" \
-                    "$(value $(1)_INSTALL_LOG_FILENAME)" \
-                    "$(value $(1)_INSTALL_REPORT_FILENAME)" \
-                    report-always \
+    export PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" && \
+    export MAKEFLAGS="$(value $(1)_INSTALL_MAKEFLAGS_VALUE)" && \
+    "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(2) install" \
+                  "$(value $(1)_INSTALL_LOG_FILENAME)" \
+                  "$(value $(1)_INSTALL_REPORT_FILENAME)" \
+                  report-always \
         "$(ORBUILD_TOOLS)/AutoconfInstall.sh" \
                 "$(value $(1)_OBJ_DIR)" \
                 "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_EXTRA_INSTALL_ARGS) $(value $(1)_INSTALL_TARGETS)" \
