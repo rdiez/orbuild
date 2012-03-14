@@ -132,7 +132,11 @@ all: $(ICARUS_VERILOG_CHECKOUT_SENTINEL)
 # We don't actually need to create a local branch like this, checking out branch origin/v0_9-branch will probably do.
 $(eval $(call git_branch_template,ICARUS_VERILOG,--track v0_9-branch origin/v0_9-branch))
 
-ICARUS_VERILOG_EXTRA_INSTALL_ARGS := -j 1  # Icarus Verilog's "make install" breaks when running in parallel mode.
+# Icarus Verilog's "make install" breaks when running in parallel mode. I have reported it,
+# so it may well have been fixed by now.
+ICARUS_VERILOG_INSTALL_MAKEFLAGS_FILTER := clear
+ICARUS_VERILOG_EXTRA_INSTALL_ARGS := -j 1  # Not actually needed if MAKEFLAGS gets cleared.
+
 $(eval $(call autotool_project_template,ICARUS_VERILOG,Icarus Verilog,$(ICARUS_VERILOG_CHECKOUT_DIR)))
 
 ICARUS_VERILOG_AUTOGEN_CMD = sh autoconf.sh
@@ -316,8 +320,8 @@ ORPSOC_NAME := ORPSOC
 #       if that would introduce undesirable side-effects under Linux.
 $(ORPSOC_NAME)_DOCUMENTATION_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/doc && ./configure && make $(FASTER_MAKE) pdf
 $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
-$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,sh -c "$($(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
-all: $($(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
+$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,sh -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
+all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
 
 # Run some of the self-tests.
@@ -325,14 +329,15 @@ all: $($(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
 $(ORPSOC_NAME)_RTL_TESTS_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/sim/bin &&
 $(ORPSOC_NAME)_RTL_TESTS_CMD += make -j 1 rtl-tests  # About the "-j 1": The rtl-tests target breaks when run in parallel mode.
+                                                     # Not actually needed if MAKEFLAGS gets cleared (see below).
 
 # Clear variable MAKEFLAGS, as the rtl-tests target breaks when run in parallel mode.
 $(ORPSOC_NAME)_RTL_TESTS_MAKEFLAGS_FILTER := clear
 
 $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$(BARE_TOOLCHAIN_DIR)/bin
 
-$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,sh -c "$($(ORPSOC_NAME)_RTL_TESTS_CMD)"))
-all: $($(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
+$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,sh -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
+all: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 
 
 # ----------- MinSoC -----------
