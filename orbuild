@@ -331,8 +331,9 @@ sub resume_build ( $ )
   # too much with other system load.
   use constant PRIO_PROCESS => 0;
   my $currentPrio = getpriority( PRIO_PROCESS, $$ );
-  # 10 = 5 * 2, that means under Linux that the default ionice priority is automatically reduced by 2 notches.
-  setpriority( PRIO_PROCESS, $$, $currentPrio + 10 );
+  # 15 = 5 * 3, that means under Linux that the default ionice priority is automatically reduced by 3 notches,
+  # which should also help reduce the hard disk performace impact on other applications.
+  setpriority( PRIO_PROCESS, $$, $currentPrio + 15 );
 
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
