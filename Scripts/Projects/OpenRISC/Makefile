@@ -177,6 +177,9 @@ endif
 
 # or32-elf is the default target, and I don't think that or32-linux would have any effect for the simulator itself,
 # although the bundled Test Suite can be built for a Linux target.
+# TODO: The configure script will try to configure the Test Suite but will do it wrong, as the cross-compiler
+#       toolchain is not there yet. That's why we need to reconfigure afterwards. We could also build or1ksim
+#       after GCC has been built.
 OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET)
 OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
 OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
@@ -185,6 +188,7 @@ $(eval $(call autotool_project_template,OR1KSIM,or1ksim,$(OR1KSIM_CHECKOUT_DIR))
 all: $(OR1KSIM_INSTALL_SENTINEL)
 $(OR1KSIM_CONFIGURE_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL)
 
+# TODO: this is no longer needed, or1ksim should depend on GCC, so that it can do it all at once.
 # See "or1ksim distcheck" below, which must be after the GCC rules because it depends on $(GCC_PHASE_2_INSTALL_SENTINEL).
 
 
@@ -211,7 +215,6 @@ $(BINUTILS_CONFIGURE_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
 # ----------- GCC cross-compiler for OpenRISC -----------
 
 COMMON_GCC_OPTIONS := --disable-shared
-COMMON_GCC_OPTIONS += --with-or1ksim=$(OR1KSIM_BIN_DIR)
 COMMON_GCC_OPTIONS += --disable-libssp
 
 COMMON_GCC_OPTIONS += --disable-multilib
@@ -236,7 +239,7 @@ GCC_PHASE_1_INSTALL_TARGETS          := install-gcc
 
 $(eval $(call autotool_project_template,GCC_PHASE_1,GCC Phase 1,$(GCC_SRC_DIR)))
 
-# In order to build GCC, the OpenRISC Binutils binaries are needed. # TODO: and or1ksim? See flag --with-or1ksim
+# In order to build GCC, the OpenRISC Binutils binaries are needed.
 $(GCC_PHASE_1_CONFIGURE_SENTINEL): $(BINUTILS_INSTALL_SENTINEL)
 
 
@@ -277,11 +280,12 @@ all: $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 
 # ----------- or1ksim distcheck -----------
+
 # Run a distcheck on the simulator, but use a different rule here (as opposed to the standard one provided by AutotoolsTemplates.mk),
 # because the checks need to run with a different PATH as the one used to build the simulator.
 # Note also that GNU Make's flag "--no-builtin-variables" (in variable FASTER_MAKE) is not compatible with distcheck.
 SPECIAL_OR1KSIM_DISTCHECK_CMD := cd "$(OR1KSIM_OBJ_DIR)" &&
-SPECIAL_OR1KSIM_DISTCHECK_CMD += make -s distcheck
+SPECIAL_OR1KSIM_DISTCHECK_CMD += make distcheck
 SPECIAL_OR1KSIM_DISTCHECK_MAKEFLAGS_FILTER := pass-j
 
 SPECIAL_OR1KSIM_DISTCHECK_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
@@ -292,6 +296,26 @@ $(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL): $(OR1KSIM_CONFIGURE_SENTINEL) $(GCC_PHASE
 all: $(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL)
 
 
+# ----------- or1ksim check -----------
+# See "or1ksim distcheck" for more information about this rule.
+# TODO: disable if "or1ksim distcheck" is enabled.
+
+# When or1ksim was configured, there was no cross-compiler toolchain yet. We need to reconfigure the
+# or1ksim test suite now in order to find the toolchain.
+# TODO: we should reconfigure inside the "testsuite" dir only
+SPECIAL_OR1KSIM_CHECK_CMD := cd \"$(OR1KSIM_OBJ_DIR)\" &&
+SPECIAL_OR1KSIM_CHECK_CMD += \"$(OR1KSIM_CHECKOUT_DIR)/configure\" --enable-eth-phy --target=$(OPENRISC_BARE_TARGET) &&
+SPECIAL_OR1KSIM_CHECK_CMD += make check
+SPECIAL_OR1KSIM_CHECK_MAKEFLAGS_FILTER := clear
+
+SPECIAL_OR1KSIM_CHECK_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+
+$(eval $(call run_makefile_and_report_template,SPECIAL_OR1KSIM_CHECK,or1ksim check,sh -c "$(SPECIAL_OR1KSIM_CHECK_CMD)"))
+
+$(SPECIAL_OR1KSIM_CHECK_SENTINEL): $(OR1KSIM_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
+all: $(SPECIAL_OR1KSIM_CHECK_SENTINEL)
+
+
 # ----------- GDB cross-debugger for OpenRISC -----------
 
 GDB_SRC_DIR := $(GNUSRC_CHECKOUT_DIR)/gdb-7.2
@@ -300,6 +324,7 @@ GDB_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
 
 GDB_EXTRA_CONFIG_ARGS :=
 GDB_EXTRA_CONFIG_ARGS += --target=$(OPENRISC_BARE_TARGET)
+# GDB uses or1ksim as the target simulator.
 GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(OR1KSIM_BIN_DIR)
 
 $(eval $(call autotool_project_template,GDB,GDB,$(GDB_SRC_DIR)))
@@ -419,7 +444,6 @@ all: $(PGAVIN_BINUTILS_CHECK_SENTINEL)
 # ----------- Peter Gavin's GCC cross-compiler for OpenRISC -----------
 
 PGAVIN_COMMON_GCC_OPTIONS := --disable-shared
-PGAVIN_COMMON_GCC_OPTIONS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 PGAVIN_COMMON_GCC_OPTIONS += --disable-libssp
 
 PGAVIN_COMMON_GCC_OPTIONS += --disable-multilib
@@ -442,7 +466,7 @@ PGAVIN_GCC_PHASE_1_INSTALL_TARGETS          := install-gcc
 
 $(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_1,Peter Gavin's GCC Phase 1,$(PGAVIN_GCC_CHECKOUT_DIR)))
 
-# In order to build GCC, the OpenRISC Binutils binaries are needed.  TODO: and PGAVIN_OR1KSIM too? See flag --with-or1ksim.
+# In order to build GCC, the OpenRISC Binutils binaries are needed.
 $(PGAVIN_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_INSTALL_SENTINEL) $(PGAVIN_GCC_CHECKOUT_SENTINEL)
 
 
@@ -522,8 +546,6 @@ PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libssp
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-multilib
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-lto
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libgomp
-# TODO: "or1ksim" does not appear in the entire GCC source repository, is it really necessary here? If so, remember to make GCC Phase 1 depend on or1ksim.
-#   PGAVIN_LINUX_COMMON_GCC_OPTIONS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += $(PGAVIN_LINUX_COMMON_GCC_OPTIONS) --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
 
 
@@ -612,6 +634,7 @@ LINUX_GDB_AUTOCONF_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
 # Peter Gavin's toolchain uses 'or1k' and this old GDB uses 'or32', therefore we need the CROSS_COMPILE argument here:
 LINUX_GDB_EXTRA_CONFIG_ARGS := CROSS_COMPILE=$(OPENRISC_LINUX_TARGET)-
 LINUX_GDB_EXTRA_CONFIG_ARGS += --target=$(OPENRISC_LINUX_TARGET)
+# GDB uses or1ksim as the target simulator.
 LINUX_GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 
 $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter Gavin's toolchain,$(LINUX_GDB_SRC_DIR)))
