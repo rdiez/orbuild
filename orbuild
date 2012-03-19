@@ -432,13 +432,22 @@ sub create_symbolic_link ( $ $ )
   my $linkFilename   = shift;
   my $targetFilename = shift;
 
-  my $linkCmd = qq<ln --symbolic --no-dereference --force "$targetFilename" "$linkFilename">;
+  # Do not recreate the link if it already exists and it points to the same target.
+  # Otherwise, any Gnome/KDE GUI file manager window open on that link will automatically
+  # close or lose its current position, which is annoying.
 
-  my $linkExitCode = ProcessUtils::run_process( $linkCmd );
+  my $existingLink = readlink( $linkFilename );
 
-  if ( $linkExitCode != 0 )
+  if ( !defined( $existingLink ) or $existingLink ne $targetFilename )
   {
-     die qq{Error creating symbolic link "$linkFilename" -> "$targetFilename".\n};
+    my $linkCmd = qq<ln --symbolic --no-dereference --force "$targetFilename" "$linkFilename">;
+
+    my $linkExitCode = ProcessUtils::run_process( $linkCmd );
+
+    if ( $linkExitCode != 0 )
+    {
+      die qq{Error creating symbolic link "$linkFilename" -> "$targetFilename".\n};
+    }
   }
 }
 
