@@ -232,7 +232,9 @@ sub process_report ( $ $ $ $ )
 
   $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } );
 
-  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename );
+  my $defaultEncoding = ReportUtils::get_default_encoding();
+
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding );
 
   $html.= "<td>$gitCloneUrlCellContents</td>\n";
 

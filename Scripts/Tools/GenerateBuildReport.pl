@@ -136,11 +136,13 @@ sub main ()
 
   write_stdout( "Generating HTML report...\n" );
 
+  my $defaultEncoding = ReportUtils::get_default_encoding();
+
   my $injectedHtml = "";
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $makefileUserFriendlyName );
+    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $defaultEncoding );
   }
 
   my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "BuildReportTemplate.html" );
@@ -185,10 +187,11 @@ sub main ()
 }
 
 
-sub process_report ( $ $ )
+sub process_report ( $ $ $ )
 {
   my $report                   = shift;
   my $makefileUserFriendlyName = shift;
+  my $defaultEncoding          = shift;
 
   my $logFilename      = $report->{ "LogFile" };
   my $userFriendlyName = $report->{ "UserFriendlyName" };
@@ -199,7 +202,7 @@ sub process_report ( $ $ )
 
   $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } );
 
-  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename );
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding );
 
   $html.= "</tr>\n";
   $html.= "\n";

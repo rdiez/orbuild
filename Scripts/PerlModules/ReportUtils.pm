@@ -171,23 +171,30 @@ sub sort_reports ( $ $ )
 }
 
 
-sub convert_text_file_to_html ( $ $ )
+sub get_default_encoding ()
 {
-  my $srcFilename  = shift;
-  my $destFilename = shift;
-
-  open( my $srcFile, "<$srcFilename" )
-    or die "Cannot open file \"$srcFilename\": $!\n";
-
   # The build log outputs are redirected to files, which are normally encoded in UTF-8,
   # but could be encoded in some other system default encoding.
-  # If we don't specify anything here, the UTF-8 characters are garbled in the resulting HTML page.
+  # If we don't specify any encoding when reading the files, the UTF-8 characters are garbled in the resulting HTML page.
   # Here we are attempting to find out the system's default text encoding.
   # Alternatively, we could use module Encode::Locale and then binmode( ':encoding(locale)' ),
   # but that module is not usually installed.
   my $defaultCodeset = I18N::Langinfo::langinfo( I18N::Langinfo::CODESET() );
   my $defaultEncoding = Encode::find_encoding( $defaultCodeset )->name;
   # print "---> defaultEncoding: $defaultEncoding\n";
+
+  return $defaultEncoding;
+}
+
+sub convert_text_file_to_html ( $ $ $ )
+{
+  my $srcFilename     = shift;
+  my $destFilename    = shift;
+  my $defaultEncoding = shift;
+
+  open( my $srcFile, "<$srcFilename" )
+    or die "Cannot open file \"$srcFilename\": $!\n";
+
   binmode( $srcFile, ":encoding($defaultEncoding)" );  # Also avoids CRLF conversion.
 
   open( my $destFile, ">$destFilename" )
@@ -255,7 +262,7 @@ sub convert_text_file_to_html ( $ $ )
     last if not defined $line;
 
     # Strip trailing new-line characters.
-    $line =~ s/[\n\r]*$//o;
+    $line =~ s/[\n\r]+$//o;
 
     if ( 0 != length( $line ) )
     {
@@ -292,9 +299,10 @@ sub convert_text_file_to_html ( $ $ )
 }
 
 
-sub generate_html_log_file_and_cell_links ( $ )
+sub generate_html_log_file_and_cell_links ( $ $ )
 {
-  my $logFilename = shift;
+  my $logFilename     = shift;
+  my $defaultEncoding = shift;
 
   my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
 
@@ -311,7 +319,7 @@ sub generate_html_log_file_and_cell_links ( $ )
 
   my $htmlLogFilename = FileUtils::cat_path( $volume, $directories, $htmlLogFilenameOnly );
 
-  ReportUtils::convert_text_file_to_html( $logFilename, $htmlLogFilename );
+  convert_text_file_to_html( $logFilename, $htmlLogFilename, $defaultEncoding );
 
 
   my $html = "";
