@@ -11,6 +11,7 @@ include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 
 .PHONY: all
 
+
 # ----------- General options -----------
 
 # Option --no-builtin-variables implies --no-builtin-rules, which accelerates GNU Make considerably.
@@ -26,6 +27,9 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 
 
 # ----------- OpenRISC-specific options -----------
+
+ENABLE_PGAVIN := 0
+ENABLE_TESTS  := 0
 
 LINUX_ARCH                   := or32
 OPENRISC_BARE_TARGET         := $(LINUX_ARCH)-elf
@@ -84,6 +88,8 @@ endif
 # Each repository depends on the previous one, therefore they are checked out sequentially instead of in parallel,
 # in order to prevent overloading the Github server.
 
+ifeq "$(ENABLE_PGAVIN)" "1"
+
 PGAVIN_GIT_BASE_URL := git://github.com/pgavin
 
 $(eval $(call git_checkout_template,PGAVIN_LINUX,Peter Gavin's Linux,$(PGAVIN_GIT_BASE_URL)/linux.git))
@@ -112,6 +118,8 @@ $(PGAVIN_NEWLIB_CHECKOUT_SENTINEL): $(PGAVIN_BINUTILS_CHECKOUT_SENTINEL)
 $(eval $(call git_checkout_template,PGAVIN_GCC,Peter Gavin's GCC,$(PGAVIN_GIT_BASE_URL)/gcc.git))
 all: $(PGAVIN_GCC_CHECKOUT_SENTINEL)
 $(eval $(call git_download_serializer_template,PGAVIN_NEWLIB,PGAVIN_GCC))
+
+endif  # ifeq "$(ENABLE_PGAVIN)" "1"
 
 
 # ----------- Jonas Bonn's repositories -----------
@@ -281,6 +289,8 @@ all: $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 # ----------- or1ksim distcheck -----------
 
+ifeq "$(ENABLE_TESTS)" "1"
+
 # Run a distcheck on the simulator, but use a different rule here (as opposed to the standard one provided by AutotoolsTemplates.mk),
 # because the checks need to run with a different PATH as the one used to build the simulator.
 # Note also that GNU Make's flag "--no-builtin-variables" (in variable FASTER_MAKE) is not compatible with distcheck.
@@ -295,9 +305,14 @@ $(eval $(call run_makefile_and_report_template,SPECIAL_OR1KSIM_DISTCHECK,or1ksim
 $(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL): $(OR1KSIM_CONFIGURE_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
 all: $(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL)
 
+endif  # ifeq "$(ENABLE_TESTS)" "1"
+
 
 # ----------- or1ksim check -----------
 # See "or1ksim distcheck" for more information about this rule.
+
+ifeq "$(ENABLE_TESTS)" "1"
+
 # TODO: disable if "or1ksim distcheck" is enabled.
 
 # When or1ksim was configured, there was no cross-compiler toolchain yet. We need to reconfigure the
@@ -314,6 +329,8 @@ $(eval $(call run_makefile_and_report_template,SPECIAL_OR1KSIM_CHECK,or1ksim che
 
 $(SPECIAL_OR1KSIM_CHECK_SENTINEL): $(OR1KSIM_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
 all: $(SPECIAL_OR1KSIM_CHECK_SENTINEL)
+
+endif  # ifeq "$(ENABLE_TESTS)" "1"
 
 
 # ----------- GDB cross-debugger for OpenRISC -----------
@@ -349,6 +366,8 @@ $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPS
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
 
+ifeq "$(ENABLE_TESTS)" "1"
+
 # Run some of the self-tests.
 # Note that this step slightly pollutes the source repository its run upon.
 
@@ -364,13 +383,16 @@ $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$(BARE_TO
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,sh -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
 all: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 
+endif  # ifeq "$(ENABLE_TESTS)" "1"
+
 
 # ----------- MinSoC -----------
 
 # Test MinSoC's automatic installation script.
 # This script downloads a repository and some files automatically, so skip it if we have disabled repository downloading.
 
-ifeq "ONLY_ANONYMOUS_CHECKOUTS" "0"
+ifeq "$(ENABLE_TESTS)" "1"
+ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
 ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 
 MINSOC_INSTALLATION_SCRIPT_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
@@ -384,9 +406,12 @@ all: $(MINSOC_INSTALLATION_SCRIPT_SENTINEL)
 
 endif
 endif
+endif
 
 
 # ----------- Test OpenCore's gnu-src bld-all.sh -----------
+
+ifeq "$(ENABLE_TESTS)" "1"
 
 # WARNING: This component waits until all other components have finished with the GNUSRC repository,
 #          and then it cleans it before starting its own work. This is to prevent the following error:
@@ -411,6 +436,10 @@ $(OC_BLD_ALL_SENTINEL): $(GDB_INSTALL_SENTINEL) $(JBONN_LINUX_CHECKOUT_SENTINEL)
 
 all: $(OC_BLD_ALL_SENTINEL)
 
+endif  # ifeq "$(ENABLE_TESTS)" "1"
+
+
+ifeq "$(ENABLE_PGAVIN)" "1"
 
 # ----------- Peter Gavin's or1ksim -----------
 
@@ -641,3 +670,5 @@ $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter G
 
 $(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
 all: $(LINUX_GDB_INSTALL_SENTINEL)
+
+endif  # ifeq "$(ENABLE_PGAVIN)" "1"
