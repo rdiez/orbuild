@@ -165,7 +165,7 @@ define autotool_project_template
 
   $(value $(1)_DISTCHECK_SENTINEL): $(value $(1)_MAKE_SENTINEL)
 	+echo "Distcheck $(2)..." && \
-    export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
+    export MAKEFLAGS="$(value $(1)_INSTALL_MAKEFLAGS_VALUE)" && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
       "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(2) distcheck" \
