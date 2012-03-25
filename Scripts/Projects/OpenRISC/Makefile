@@ -75,12 +75,11 @@ $(eval $(call subversion_checkout_template,GNUSRC,GNU sources,$(OC_OR_SVN_BASE_U
 all: $(GNUSRC_CHECKOUT_SENTINEL)
 $(GNUSRC_CHECKOUT_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 
-ifeq "ONLY_ANONYMOUS_CHECKOUTS" "0"
+ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
   $(eval $(call subversion_checkout_template,MINSOC,MinSoC,$(OC_SVN_BASE_URL)/minsoc/minsoc/trunk))
   all: $(MINSOC_CHECKOUT_SENTINEL)
   $(MINSOC_CHECKOUT_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
 endif
-
 
 
 # ----------- Check out a number of Peter Gavin's repositories under https://github.com/pgavin/ -----------
@@ -172,32 +171,11 @@ ifeq "0" "1"  # Run Verilator's install tests, disabled at the moment.
   # Verilator's install_test script sets its own -j flag for GNU Make, therefore remove any inherited flags from MAKEFLAGS.
   VERILATOR_INSTALL_TEST_CMD := cd $(VERILATOR_CHECKOUT_DIR) && perl nodist/install_test
   VERILATOR_INSTALL_TEST_MAKEFLAGS_FILTER := clear
-  $(eval $(call run_and_report_template,VERILATOR_INSTALL_TEST,Verilator installation test,sh -c "$(VERILATOR_INSTALL_TEST_CMD)"))
+  $(eval $(call run_and_report_template,VERILATOR_INSTALL_TEST,Verilator installation test,$(SHELL) -c "$(VERILATOR_INSTALL_TEST_CMD)"))
 
   $(VERILATOR_INSTALL_TEST_SENTINEL): $(VERILATOR_INSTALL_SENTINEL)
   all: $(VERILATOR_INSTALL_TEST_SENTINEL)
 endif
-
-
-# ----------- or1ksim -----------
-
-# Build or1ksim as a standard autoconf project.
-
-# or32-elf is the default target, and I don't think that or32-linux would have any effect for the simulator itself,
-# although the bundled Test Suite can be built for a Linux target.
-# TODO: The configure script will try to configure the Test Suite but will do it wrong, as the cross-compiler
-#       toolchain is not there yet. That's why we need to reconfigure afterwards. We could also build or1ksim
-#       after GCC has been built.
-OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET)
-OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
-OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
-
-$(eval $(call autotool_project_template,OR1KSIM,or1ksim,$(OR1KSIM_CHECKOUT_DIR)))
-all: $(OR1KSIM_INSTALL_SENTINEL)
-$(OR1KSIM_CONFIGURE_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL)
-
-# TODO: this is no longer needed, or1ksim should depend on GCC, so that it can do it all at once.
-# See "or1ksim distcheck" below, which must be after the GCC rules because it depends on $(GCC_PHASE_2_INSTALL_SENTINEL).
 
 
 # ----------- Binutils -----------
@@ -287,50 +265,32 @@ $(GCC_PHASE_2_CONFIGURE_SENTINEL): $(NEWLIB_INSTALL_SENTINEL)
 all: $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 
-# ----------- or1ksim distcheck -----------
+# ----------- or1ksim -----------
+
+# Build or1ksim as a standard autoconf project.
+
+# About the target used here: or32-elf is the default target, and I don't think that or32-linux
+# would have any effect for the simulator itself, although the bundled Test Suite can be built for a Linux target.
+OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET)
+OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
+# Flag --no-builtin-rules makes the build faster. Flag --no-builtin-variables does not work here becuase at least one makefile uses built-in variable $(RM).
+OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules V=1
+
+# The test suite bundled with or1ksim needs the target compiler.
+OR1KSIM_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+
+$(eval $(call autotool_project_template,OR1KSIM,or1ksim,$(OR1KSIM_CHECKOUT_DIR)))
+all: $(OR1KSIM_INSTALL_SENTINEL)
+$(OR1KSIM_CONFIGURE_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
+
+# If the normal installation fails, do not attempt to do any checks.
+$(OR1KSIM_DISTCHECK_SENTINEL) : $(OR1KSIM_INSTALL_SENTINEL)
+$(OR1KSIM_CHECK_SENTINEL)     : $(OR1KSIM_INSTALL_SENTINEL)
 
 ifeq "$(ENABLE_TESTS)" "1"
-
-# Run a distcheck on the simulator, but use a different rule here (as opposed to the standard one provided by AutotoolsTemplates.mk),
-# because the checks need to run with a different PATH as the one used to build the simulator.
-# Note also that GNU Make's flag "--no-builtin-variables" (in variable FASTER_MAKE) is not compatible with distcheck.
-SPECIAL_OR1KSIM_DISTCHECK_CMD := cd "$(OR1KSIM_OBJ_DIR)" &&
-SPECIAL_OR1KSIM_DISTCHECK_CMD += make distcheck
-SPECIAL_OR1KSIM_DISTCHECK_MAKEFLAGS_FILTER := pass-j
-
-SPECIAL_OR1KSIM_DISTCHECK_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
-
-$(eval $(call run_makefile_and_report_template,SPECIAL_OR1KSIM_DISTCHECK,or1ksim distcheck,sh -c "$(SPECIAL_OR1KSIM_DISTCHECK_CMD)"))
-
-$(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL): $(OR1KSIM_CONFIGURE_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
-all: $(SPECIAL_OR1KSIM_DISTCHECK_SENTINEL)
-
-endif  # ifeq "$(ENABLE_TESTS)" "1"
-
-
-# ----------- or1ksim check -----------
-# See "or1ksim distcheck" for more information about this rule.
-
-ifeq "$(ENABLE_TESTS)" "1"
-
-# TODO: disable if "or1ksim distcheck" is enabled.
-
-# When or1ksim was configured, there was no cross-compiler toolchain yet. We need to reconfigure the
-# or1ksim test suite now in order to find the toolchain.
-# TODO: we should reconfigure inside the "testsuite" dir only
-SPECIAL_OR1KSIM_CHECK_CMD := cd \"$(OR1KSIM_OBJ_DIR)\" &&
-SPECIAL_OR1KSIM_CHECK_CMD += \"$(OR1KSIM_CHECKOUT_DIR)/configure\" --enable-eth-phy --target=$(OPENRISC_BARE_TARGET) &&
-SPECIAL_OR1KSIM_CHECK_CMD += make check
-SPECIAL_OR1KSIM_CHECK_MAKEFLAGS_FILTER := clear
-
-SPECIAL_OR1KSIM_CHECK_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
-
-$(eval $(call run_makefile_and_report_template,SPECIAL_OR1KSIM_CHECK,or1ksim check,sh -c "$(SPECIAL_OR1KSIM_CHECK_CMD)"))
-
-$(SPECIAL_OR1KSIM_CHECK_SENTINEL): $(OR1KSIM_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
-all: $(SPECIAL_OR1KSIM_CHECK_SENTINEL)
-
-endif  # ifeq "$(ENABLE_TESTS)" "1"
+all: $(OR1KSIM_DISTCHECK_SENTINEL)
+# all: $(OR1KSIM_CHECK_SENTINEL)
+endif
 
 
 # ----------- GDB cross-debugger for OpenRISC -----------
@@ -361,7 +321,7 @@ ORPSOC_NAME := ORPSOC
 #       if that would introduce undesirable side-effects under Linux.
 $(ORPSOC_NAME)_DOCUMENTATION_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/doc && ./configure && make $(FASTER_MAKE) pdf
 $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
-$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,sh -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
+$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
 
@@ -379,7 +339,7 @@ $(ORPSOC_NAME)_RTL_TESTS_MAKEFLAGS_FILTER := clear
 
 $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$(BARE_TOOLCHAIN_DIR)/bin
 
-$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,sh -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
+$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,$(SHELL) -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
 
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
 all: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
@@ -397,11 +357,11 @@ ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
 ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 
 MINSOC_INSTALLATION_SCRIPT_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
-MINSOC_INSTALLATION_SCRIPT_CMD += $(ORBUILD_PROJECT_DIR)/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
+MINSOC_INSTALLATION_SCRIPT_CMD := $(ORBUILD_PROJECT_DIR)/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
 
-MINSOC_INSTALLATION_SCRIPT_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+MINSOC_INSTALLATION_SCRIPT_MAKEFLAGS_FILTER := clear
 
-$(eval $(call run_and_report_template,MINSOC_INSTALLATION_SCRIPT,MinSoC's installation script,bash -c "$(MINSOC_INSTALLATION_SCRIPT_CMD)"))
+$(eval $(call run_and_report_template,MINSOC_INSTALLATION_SCRIPT,MinSoC's installation script,$(SHELL) -c "$(MINSOC_INSTALLATION_SCRIPT_CMD)"))
 $(MINSOC_INSTALLATION_SCRIPT_SENTINEL): $(MINSOC_CHECKOUT_SENTINEL)
 all: $(MINSOC_INSTALLATION_SCRIPT_SENTINEL)
 
@@ -426,15 +386,15 @@ OC_BLD_ARGS += --linux-dir $(JBONN_LINUX_CHECKOUT_DIR)
 # Many of the tests are known to fail, so do not enable them for the time being:
 #   OC_BLD_ARGS += --check
 
-OC_BLD_ALL_CMD := $(ORBUILD_TOOLS)/SvnCleanRepo.sh $(GNUSRC_CHECKOUT_DIR) &&
-OC_BLD_ALL_CMD += cd $(GNUSRC_CHECKOUT_DIR) &&
+OC_BLD_ALL_CMD := echo \"Cleaning repository...\" && $(ORBUILD_TOOLS)/SvnCleanRepo.sh $(GNUSRC_CHECKOUT_DIR) &&
+OC_BLD_ALL_CMD += echo \"Running bld-all.sh...\" && cd $(GNUSRC_CHECKOUT_DIR) &&
 OC_BLD_ALL_CMD += ./bld-all.sh $(OC_BLD_ARGS)
 
 OC_BLD_ALL_MAKEFLAGS_FILTER := clear
 
-$(eval $(call run_and_report_template,OC_BLD_ALL,OpenCore's gnu-src bld-all.sh,bash -c "$(OC_BLD_ALL_CMD)"))
-$(OC_BLD_ALL_SENTINEL): $(GDB_INSTALL_SENTINEL) $(JBONN_LINUX_CHECKOUT_SENTINEL) $(JBONN_UCLIBC_CHECKOUT_SENTINEL)
+$(eval $(call run_and_report_template,OC_BLD_ALL,OpenCore's gnu-src bld-all.sh,$(SHELL) -c "$(OC_BLD_ALL_CMD)"))
 
+$(OC_BLD_ALL_SENTINEL): $(OR1KSIM_INSTALL_SENTINEL) $(GNUSRC_CHECKOUT_SENTINEL) $(JBONN_LINUX_CHECKOUT_SENTINEL) $(JBONN_UCLIBC_CHECKOUT_SENTINEL)
 all: $(OC_BLD_ALL_SENTINEL)
 
 endif  # ifeq "$(ENABLE_TESTS)" "1"
@@ -564,7 +524,7 @@ PGAVIN_LINUX_HEADERS_CMD += make -C \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" ARCH=$(P
 
 PGAVIN_LINUX_HEADERS_MAKEFLAGS_FILTER := clear
 
-$(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_HEADERS,Peter Gavin's Linux Headers,sh -c "$(PGAVIN_LINUX_HEADERS_CMD)"))
+$(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_HEADERS,Peter Gavin's Linux Headers,$(SHELL) -c "$(PGAVIN_LINUX_HEADERS_CMD)"))
 $(PGAVIN_LINUX_HEADERS_SENTINEL): $(PGAVIN_LINUX_CHECKOUT_SENTINEL)
 all: $(PGAVIN_LINUX_HEADERS_SENTINEL)
 
@@ -626,7 +586,7 @@ PGAVIN_LINUX_UCLIBC_MAKEFLAGS_FILTER := pass-j
 
 PGAVIN_LINUX_UCLIBC_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
 
-$(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_UCLIBC,Peter Gavin's uClibc for Linux,sh -c "$(PGAVIN_LINUX_UCLIBC_CMD)"))
+$(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_UCLIBC,Peter Gavin's uClibc for Linux,$(SHELL) -c "$(PGAVIN_LINUX_UCLIBC_CMD)"))
 $(PGAVIN_LINUX_UCLIBC_SENTINEL): $(PGAVIN_UCLIBC_CHECKOUT_SENTINEL) $(PGAVIN_LINUX_HEADERS_SENTINEL) $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
 all: $(PGAVIN_LINUX_UCLIBC_SENTINEL)
 
