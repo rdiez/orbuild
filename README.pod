@@ -19,8 +19,6 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< orbuild >> - a build system for OpenRISC
 
------ NOTE THAT THIS PROJECT IS STILL IN AN EARLY DEVELOPMENT STAGE, THE MAIN SOFTWARE HAS NOT BEEN RELEASED YET! The GitSvnMirror toolset is however available, see below.  -----
-
 I<< orbuild >> is a script framework that automatically downloads, builds
 and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
 
@@ -54,7 +52,7 @@ as manual release procedures often result in human error.
 
 =over
 
-=item * Automatically download, configure, build, test and install all OpenRISC components locally.
+=item * Automatically download, configure, build, test and install the most common OpenRISC components locally.
 
 All users end up with the same directory structure.
 
@@ -295,6 +293,8 @@ a nice addition to this project.
 F<< orbuild.conf >> is a text file in simplified .INI file format. There are no [sections],
 all entries have the form "key = value", and lines starting with # are considered comments.
 
+Please see the configuration file (which is well commented) for more information.
+
 =head1 Caveats
 
 =head2 About interactive builds and Subversion credentials
@@ -444,13 +444,12 @@ with "git log -1 --first-parent --until=...".
 
 Some of the perl scripts use mktime and the like and are not year 2038 compliant on 32-bit Linux systems and on Cygwin.
 
-=head1 Why write I<< orbuild >> in perl, bash and make
+=head1 Why I<< orbuild >> is written in perl, bash and make
 
 There are a number of open-source build frameworks (see section "Alternatives to I<< orbuild >>" below)
 that could take on the task of building software components. However, at the time I<< orbuild >> was developed,
 they seemed overkill. Besides, most OpenRISC users would not be prepared to install and configure such complex software
 systems in order to get the build running on their machines.
-
 Perl, Bash and Make are very popular and should be easy to install on all systems, if they are not already there.
 
 The original author of I<< orbuild >> was already familiar with Perl and had no experience with Python, Ruby and so on.
