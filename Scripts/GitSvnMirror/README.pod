@@ -19,7 +19,7 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< GitSvnMirror >> - tools to maintain a git mirror of Subversion repositories
 
-Version 0.80 beta.
+GitSvnMirror version 1.00
 
 GitSvnMirror is a set of tools to create and maintain a collection of read-only Git mirrors
 of Subversion repositories.
