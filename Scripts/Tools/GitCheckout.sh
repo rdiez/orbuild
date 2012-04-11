@@ -10,7 +10,7 @@ if [ $# -ne 6 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
-GIT_URL="$1"
+GIT_URL="$1"  # No longer used, this script does not download anything.
 DEST_DIR="$2"
 BASE_DIR="$3"
 SENTINEL_FILENAME="$4"
@@ -26,10 +26,10 @@ if [ -n "$TIMESTAMP" ]; then
   COMMIT_ID="$(git rev-list -n 1 --before="$TIMESTAMP" origin/master)"
 
   if [ -z "$COMMIT_ID" ]; then
-    abort "The git repository \"$GIT_URL\" does not have a history at timestamp \"$TIMESTAMP\"."
+    abort "The git repository at \"$REPO_DIR\" does not have a history at timestamp \"$TIMESTAMP\"."
   fi
 
-  echo "Checking out git repository from URL \"$GIT_URL\" at timestamp \"$TIMESTAMP\"..."
+  echo "Checking out git repository at \"$REPO_DIR\" at timestamp \"$TIMESTAMP\"..."
 
   git checkout $EXTRA_GIT_CHECKOUT_ARGS "$COMMIT_ID"
 
@@ -37,7 +37,7 @@ if [ -n "$TIMESTAMP" ]; then
 
 else
 
-  echo "Checking out git repository from URL \"$GIT_URL\"..."
+  echo "Checking out git repository at \"$REPO_DIR\"..."
   git checkout $EXTRA_GIT_CHECKOUT_ARGS
 
   echo "Merging any changes from upstream git..."
@@ -48,4 +48,4 @@ fi
 
 popd >/dev/null
 
-printf "This file acts as a flag that git repository:\n  %s was successfully checked out at this location at timestamp: \"%s\".\n" "$GIT_URL" "$TIMESTAMP" >"$SENTINEL_FILENAME"
+printf "This file acts as a flag that git repository:\n  %s was successfully checked out at this location at timestamp: \"%s\".\n" "$REPO_DIR" "$TIMESTAMP" >"$SENTINEL_FILENAME"
