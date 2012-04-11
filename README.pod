@@ -98,7 +98,8 @@ Each project has its own prerequisites. For the OpenRISC project, look at file F
 =head2 Cygwin
 
 Unfortunately, there does not seem to be a standard way to automatically install all Cygwin packages at once
-from the command line. There is a third-party project called L<< apt-cyg|http://apt-cyg.googlecode.com >> that may be worth investigating though.
+from the command line, so you'll have to do it manually.
+There is a third-party project called L<< apt-cyg|http://apt-cyg.googlecode.com >> that may be worth investigating though.
 
 Some of the required package names are:
 
@@ -122,8 +123,9 @@ The steps are (this example is for the bash shell):
 
    # The very first time around, you may want to run the build in interactive mode
    # (with the --interactive switch), which disables parallel compilation but
-   # allows you to enter your login and password for remote Subversion repositories and so on.
-   # Afterwards, your credentials should get cached, and you should not need the interactive mode any more.
+   # allows you to enter your login and password for remote Subversion repositories
+   # and so on. Afterwards, your credentials should get cached, and you should
+   # not need the interactive mode any more.
    
    ./orbuild
    ./orbuild --resume    # (optional) resume a failed build, but see below for caveats
@@ -160,7 +162,8 @@ of all repositories. The steps are:
    cd orbuild-2010-11-30
 
    # Update orbuild itself. This is optional but should be done often.
-   # Otherwise, orbuild itself may not be up-to-date enough in order to build the latest versions of all components.
+   # Otherwise, orbuild itself may not be up-to-date enough in order to build
+   # the latest versions of all components.
    git pull
 
    ./orbuild
