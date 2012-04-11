@@ -100,7 +100,10 @@ Each project has its own prerequisites. For the OpenRISC project, look at file F
 
 =head2 Cygwin
 
-Unfortunately, there does not seem to be a standard way to automatically install all Cygwin packages at once
+Please make sure that your Cygwin is up to date. If you step through Cygwin's installation program without making any changes,
+all installed components will be upgraded to their latest versions.
+
+Unfortunately, there does not seem to be a standard way to automatically install all the Cygwin packages listed below at once
 from the command line, so you'll have to do it manually.
 There is a third-party project called L<< apt-cyg|http://apt-cyg.googlecode.com >> that may be worth investigating though.
 
