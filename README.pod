@@ -22,7 +22,10 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 I<< orbuild >> is a script framework that automatically downloads, builds
 and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
 
-Note that the framework is sufficiently generic so that it can be easily repurposed to build other projects.
+All the build steps are performed in parallel and there is an HTML report at the end with the overall build results,
+where you can click through to view each component build log separately.
+
+Note that I<< orbuild >>'s framework is sufficiently generic so that it can be easily repurposed to build other projects.
 
 =head1 Motivation
 
