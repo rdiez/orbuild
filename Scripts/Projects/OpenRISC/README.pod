@@ -48,7 +48,7 @@ Some of the required package names are:
 =head2 Components built
 
 This is what the project can currently download, build and test. You can choose what steps are performed
-by editing the F<< Makefile >>, see the I<< ENABLE_xxx >> constants at the beginning.
+by editing the F<< Makefile >> next to this README file, see the I<< ENABLE_xxx >> constants at the beginning.
 
 =over
 

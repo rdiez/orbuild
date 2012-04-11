@@ -120,6 +120,7 @@ The steps are (this example is for the bash shell):
    git clone git://github.com/rdiez/orbuild.git
 
    # Edit the orbuild.config file, there should be little to change.
+   # Take a look at file Scripts/Projects/OpenRISC/README.pod too for more information.
 
    # The very first time around, you may want to run the build in interactive mode
    # (with the --interactive switch), which disables parallel compilation but
