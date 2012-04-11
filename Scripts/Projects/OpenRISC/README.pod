@@ -17,8 +17,9 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =pod
 
-=head1 OpenRISC I<< orbuild >> project
+=head1 OpenRISC build project
 
+This is an I<< orbuild >> project, see the main I<< orbuild >> documentation on how to run it.
 
 =head2 Prerequisites
 
@@ -46,7 +47,8 @@ Some of the required package names are:
 
 =head2 Components built
 
-This is what the project currently downloads, builds and tests:
+This is what the project can currently download, build and test. You can choose what steps are performed
+by editing the F<< Makefile >>, see the I<< ENABLE_xxx >> constants at the beginning.
 
 =over
 
