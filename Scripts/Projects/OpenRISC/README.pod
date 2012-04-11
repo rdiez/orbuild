@@ -71,7 +71,7 @@ The F<< bld-all.sh >> script, which automatically builds most of the components 
 
 =item * ORPSoC v2
 
-The I<< rtl-tests >> are run. The PDF documentation is also built.
+The I<< rtl-tests >> are run. The PDF documentation is also built. Some basic linting is performed on a subset of the Verilog source code.
 
 =item * Peter Gavin's OpenRISC toolchain
 
