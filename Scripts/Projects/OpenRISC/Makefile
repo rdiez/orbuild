@@ -313,7 +313,7 @@ all: $(GDB_INSTALL_SENTINEL)
 
 # ----------- ORPSoC v2 -----------
 
-ORPSOC_NAME := ORPSOC
+ORPSOC_NAME := ORPSOCv2
 
 # Build the documentation.
 # Note that this step slightly pollutes the source repository it is run upon.
@@ -325,6 +325,11 @@ $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
+# Lint (part of the) Verilog code with Verilator and with Icarus Verilog.
+$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(VERILATOR_BIN_DIR)\" \"$(ICARUS_VERILOG_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\"
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT,ORPSoC v2 lint,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD)"))
+$(value $(ORPSOC_NAME)_LINT_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
+all: $(value $(ORPSOC_NAME)_LINT_SENTINEL)
 
 ifeq "$(ENABLE_TESTS)" "1"
 
