@@ -91,7 +91,7 @@ Perl module XML::Parser is also required by the HTML report generator perl scrip
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
 
-  sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl gxmessage
+  sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl gxmessage xdg-utils
 
 Each project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
