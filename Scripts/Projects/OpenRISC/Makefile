@@ -31,18 +31,18 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 ENABLE_PGAVIN := 0
 ENABLE_TESTS  := 0
 
-LINUX_ARCH                   := or32
-OPENRISC_BARE_TARGET         := $(LINUX_ARCH)-elf
-OPENRISC_LINUX_TARGET        := $(LINUX_ARCH)-linux
+LINUX_ARCH                    := or32
+OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
+OPENRISC_LINUX_TARGET         := $(LINUX_ARCH)-linux
 
-PGAVIN_LINUX_ARCH            := or1k
-PGAVIN_OPENRISC_BARE_TARGET  := $(PGAVIN_LINUX_ARCH)-elf
-PGAVIN_OPENRISC_LINUX_TARGET := $(PGAVIN_LINUX_ARCH)-linux
+PGAVIN_LINUX_ARCH             := or1k
+PGAVIN_OPENRISC_BARE_TARGET   := $(PGAVIN_LINUX_ARCH)-elf
+PGAVIN_OPENRISC_LINUX_TARGET  := $(PGAVIN_LINUX_ARCH)-linux
 
 # In order for the GCC cross-compiler to automatically pick up the right assembler and so on,
 # it must be configured to use the same bin directory as Binutils.
-BARE_TOOLCHAIN_DIR         := $(ORBUILD_BUILD_DIR)/ToolchainOr32
-LINUX_TOOLCHAIN_DIR        := $(ORBUILD_BUILD_DIR)/LinuxToolchainOr32
+BARE_TOOLCHAIN_DIR            := $(ORBUILD_BUILD_DIR)/ToolchainOr32
+LINUX_TOOLCHAIN_DIR           := $(ORBUILD_BUILD_DIR)/LinuxToolchainOr32
 
 PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1k
 PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinLinuxToolchainOr1k
@@ -273,8 +273,9 @@ all: $(GCC_PHASE_2_INSTALL_SENTINEL)
 # would have any effect for the simulator itself, although the bundled Test Suite can be built for a Linux target.
 OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET)
 OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
-# Flag --no-builtin-rules makes the build faster. Flag --no-builtin-variables does not work here becuase at least one makefile uses built-in variable $(RM).
-OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules V=1
+# TODO: optimise compilation for the test suite
+# Flag --no-builtin-rules makes the build faster. Flag --no-builtin-variables does not work here because at least one makefile uses built-in variable $(RM).
+OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules V=1  # TODO: remove V=1
 
 # The test suite bundled with or1ksim needs the target compiler.
 OR1KSIM_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
@@ -402,17 +403,6 @@ endif  # ifeq "$(ENABLE_TESTS)" "1"
 
 ifeq "$(ENABLE_PGAVIN)" "1"
 
-# ----------- Peter Gavin's or1ksim -----------
-
-# Build or1ksim as a standard autoconf project.
-PGAVIN_OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET)
-PGAVIN_OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
-PGAVIN_OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
-$(eval $(call autotool_project_template,PGAVIN_OR1KSIM,Peter Gavin's or1ksim,$(PGAVIN_OR1KSIM_CHECKOUT_DIR)))
-all: $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
-$(PGAVIN_OR1KSIM_CONFIGURE_SENTINEL): $(PGAVIN_OR1KSIM_CHECKOUT_SENTINEL)
-
-
 # ----------- Peter Gavin's Binutils -----------
 
 # Build Binutils as a standard autoconf project.
@@ -493,6 +483,24 @@ $(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_2,Peter Gavin's GCC Pha
 $(PGAVIN_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_NEWLIB_INSTALL_SENTINEL)
 
 all: $(PGAVIN_GCC_PHASE_2_INSTALL_SENTINEL)
+
+
+# ----------- Peter Gavin's or1ksim -----------
+
+# Build or1ksim as a standard autoconf project.
+
+PGAVIN_OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET)
+PGAVIN_OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
+# Flag --no-builtin-rules makes the build faster. Flag --no-builtin-variables does not work here because at least one makefile uses built-in variable $(RM).
+PGAVIN_OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
+
+# The test suite bundled with or1ksim needs the target compiler.
+PGAVIN_OR1KSIM_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+
+$(eval $(call autotool_project_template,PGAVIN_OR1KSIM,Peter Gavin's or1ksim,$(PGAVIN_OR1KSIM_CHECKOUT_DIR)))
+
+all: $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
+$(PGAVIN_OR1KSIM_CONFIGURE_SENTINEL): $(PGAVIN_OR1KSIM_CHECKOUT_SENTINEL) $(PGAVIN_GCC_PHASE_2_INSTALL_SENTINEL)
 
 
 # ----------- Peter Gavin's Binutils for Linux -----------
@@ -629,7 +637,8 @@ LINUX_GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 
 $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter Gavin's toolchain,$(LINUX_GDB_SRC_DIR)))
 
-$(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
+$(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL) $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
 all: $(LINUX_GDB_INSTALL_SENTINEL)
+
 
 endif  # ifeq "$(ENABLE_PGAVIN)" "1"
