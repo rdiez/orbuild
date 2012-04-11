@@ -19,7 +19,7 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< orbuild >> - a build system for OpenRISC
 
-I<< orbuild >> is a script framework that automatically downloads, builds
+I<< orbuild >> is a script framework that automatically downloads, builds, installs
 and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
 
 All the build steps are performed in parallel and there is an HTML report at the end with the overall build results,
