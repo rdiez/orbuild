@@ -12,8 +12,9 @@ Build system for OpenRISC - see the README file for more information.
 
 =head1 OPTIONS
 
--h, --help, --version, --license, --interactive,
---resume, --test-visual-notification
+-h, --help, --version, --license, --test-visual-notification,
+
+--resume, --restart, --interactive
 
 Please see the README file for more information.
 
@@ -85,7 +86,7 @@ use constant BUILD_AUTOCONF_SENTINELS_SUBDIR  => FileUtils::cat_path( BUILD_SENT
 use constant BUILD_COMMAND_SENTINELS_SUBDIR   => FileUtils::cat_path( BUILD_SENTINELS_SUBDIR, "Commands" );
 
 use constant SANDBOX_LAYOUT_VERSION_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.version" );
-use constant SANDBOX_LAYOUT_VERSION_NUMBER   => 1;
+use constant SANDBOX_LAYOUT_VERSION_NUMBER   => 2;
 
 use constant STATUS_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.status" );
 use constant CONFIG_FILENAME => FileUtils::cat_path( SANDBOX_DIR, "orbuild.conf" );
@@ -104,6 +105,7 @@ sub main ()
   my $arg_license          = 0;
   my $arg_interactive      = 0;
   my $arg_resume           = 0;
+  my $arg_restart          = 0;
   my $arg_testVisualNotification = 0;
 
 
@@ -114,7 +116,8 @@ sub main ()
                  'license'                  => \$arg_license,
                  'interactive'              => \$arg_interactive,
                  'test-visual-notification' => \$arg_testVisualNotification,
-                 'resume'                   => \$arg_resume
+                 'resume'                   => \$arg_resume,
+                 'restart'                  => \$arg_restart
                 );
 
   if ( not $result )
@@ -141,6 +144,11 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
+  if ( $arg_resume and $arg_restart )
+  {
+    die "Switches --resume and --restart cannot be specified at the same time.\n";
+  }
+
   if ( 0 != scalar @ARGV )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
@@ -154,25 +162,66 @@ sub main ()
   my %configEntries;
   process_config_file_etc( \%configEntries, $arg_interactive );
 
+  my $exitCode;
+
   if ( $arg_testVisualNotification )
   {
     my $reportPath = FileUtils::cat_path( TOOLS_DIR, "TestReportForVisualNotificationTest.html" );
     run_visual_notification( $reportPath, \%configEntries, MiscUtils::TRUE );
+    $exitCode = MiscUtils::EXIT_CODE_SUCCESS;
   }
   else
   {
-    build_command( $arg_resume ? MiscUtils::FALSE : MiscUtils::TRUE,
-                   \%configEntries );
+    $exitCode = build_command( $arg_resume, $arg_restart, \%configEntries );
   }
 
-  return MiscUtils::EXIT_CODE_SUCCESS;
+  return $exitCode;
 }
 
 
-sub build_command ( $ $ )
+sub build_command ( $ $ $ )
 {
-  my $rotate        = shift;
+  my $resume        = shift;
+  my $restart       = shift;
   my $configEntries = shift;
+
+  
+  # If there is a status file, and the user did not specify whether he wants --resume or --restart,
+  # it's not clear what we should do.
+
+  if ( !$resume and !$restart and -f STATUS_FILENAME )
+  {
+    my %temp;
+    read_status( \%temp );
+
+    my $lastAttempt = $temp{ "LastAttempt" };
+
+    if ( $lastAttempt eq "successful" )
+    {
+      write_stdout( "The last build attempt finished successfully, the results are here:\n" .
+                    "  " . $temp{ "CurrentBuildDir" } . "\n" .
+                    "If you wish to start a new build from scratch, please specify the --restart switch.\n" );
+      return MiscUtils::EXIT_CODE_FAILURE_ERROR;
+    }
+    else
+    {
+      write_stdout( "The last build attempt failed and no operation was explicitly specified.\n" .
+                    "If you wish to resume from the last point of failure, please specify the --resume switch " .
+                    "(but see the documentation for caveats).\n" .
+                    "Otherwise, please specify the --restart switch in order to start a new build from scratch.\n" );
+
+      return MiscUtils::EXIT_CODE_FAILURE_ERROR;
+    }
+  }
+
+  if ( $resume and ! -f STATUS_FILENAME )
+  {
+    write_stdout( "You specified the --resume switch, but there is no previous failed build to resume.\n" );
+    return MiscUtils::EXIT_CODE_FAILURE_ERROR;
+  }
+
+
+  my $rotate = $resume ? MiscUtils::FALSE : MiscUtils::TRUE;
 
   if ( $rotate )
   {
@@ -183,14 +232,6 @@ sub build_command ( $ $ )
     rotate_build_dir( $configEntries, MiscUtils::TRUE );
   }
 
-  resume_build( $configEntries );
-}
-
-
-sub resume_build ( $ )
-{
-  my $configEntries = shift;
-
   read_status( $configEntries );
 
   my $buildDir = $configEntries->{ "CurrentBuildDir" };
@@ -198,7 +239,7 @@ sub resume_build ( $ )
   if ( not -d $buildDir )
   {
     die "The build directory \"$buildDir\" does not exist. " .
-        "Rerun @{[SCRIPT_NAME]} without the '--resume' switch in order to create a new one.\n";
+        "Rerun @{[SCRIPT_NAME]} with the '--restart' switch in order to create a new one.\n";
   }
 
   write_stdout( "The current build directory is: $buildDir\n" );
@@ -365,15 +406,17 @@ sub resume_build ( $ )
   {
     $error= "The build failed with exit code $makeExitCode, see the generated report:\n" .
             "$reportFilePath\n" .
-            "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again.\n";
+            "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again (but see the documentation for caveats).\n";
   }
   else
   {
-    write_stdout( "The orbuild was completed successfully.\n" );
+    write_stdout( "The build was completed successfully.\n" );
 
     write_stdout( "The generated build report is: $latestReportLinkPath\n" );
     write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
   }
+
+  write_status( $buildDir, defined( $error ) ? MiscUtils::TRUE : MiscUtils::FALSE );
 
   run_visual_notification( $reportFilePath, $configEntries, MiscUtils::FALSE );
 
@@ -396,6 +439,8 @@ sub resume_build ( $ )
           "$postBuildAction\n";
     }
   }
+
+  return MiscUtils::EXIT_CODE_SUCCESS;
 }
 
 
@@ -517,7 +562,7 @@ sub rotate_build_dir ( $ $ )
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR ) );
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR  ) );
 
-  write_status( $buildDir );
+  write_status( $buildDir, MiscUtils::TRUE );
 }
 
 
@@ -525,11 +570,14 @@ sub rotate_build_dir ( $ $ )
 
 sub write_status ( $ $ )
 {
-  my $buildDir  = shift;
+  my $buildDir = shift;
+  my $lastAttemptFailed = shift;
 
   my $absBuildDir = File::Spec->rel2abs( $buildDir, SANDBOX_DIR );
+  my $lastAttemptFailedStr = $lastAttemptFailed ? "failed" : "successful";
 
   my $contents = "CurrentBuildDir = $absBuildDir\n";
+  $contents   .= "LastAttempt = $lastAttemptFailedStr\n";
 
   FileUtils::write_string_to_new_file( STATUS_FILENAME, $contents );
 }
@@ -544,13 +592,24 @@ sub read_status ( $ )
   ConfigFile::read_config_file( STATUS_FILENAME, \%statusEntries );
 
   my @mandatoryEntries = qw( CurrentBuildDir
-                           );
+                             LastAttempt     );
 
   ConfigFile::check_config_file_contents( \%statusEntries, \@mandatoryEntries, undef, STATUS_FILENAME );
 
-  my $buildDir = $statusEntries{ "CurrentBuildDir"    };
+  my $buildDir = $statusEntries{ "CurrentBuildDir" };
 
   $configEntries->{ "CurrentBuildDir" } = $buildDir;
+
+  my $lastAttempt = lc( $statusEntries{ "LastAttempt" } );
+
+  if ( $lastAttempt ne "successful" and
+       $lastAttempt ne "failed" )
+  {
+    die "The status file contains an invalid value of \"" . $statusEntries{ "LastAttempt" } .
+        "\" for setting LastAttempt, valid values are \"successful\" and \"failed\".\n";
+  }
+
+  $configEntries->{ "LastAttempt" } = $lastAttempt;
 }
 
 
@@ -562,7 +621,7 @@ sub check_boolean_option ( $ $ )
   if ( lc( $configEntries->{ $optionName } ) ne "yes" and
        lc( $configEntries->{ $optionName } ) ne "no" )
   {
-    die "The configuration contains an invalid value of \"" . $configEntries->{ $optionName } . "\" for option $optionName, valid values are \"yes\" or \"no\".\n";
+    die "The configuration contains an invalid value of \"" . $configEntries->{ $optionName } . "\" for setting $optionName, valid values are \"yes\" and \"no\".\n";
   }
 }
 

@@ -173,7 +173,7 @@ of all repositories. The steps are:
    # the latest versions of all components.
    git pull
 
-   ./orbuild
+   ./orbuild --restart
    ./orbuild --resume    # (optional) resume a failed build, but see below for caveats
 
    # Switch to the new versions:     
