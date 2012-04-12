@@ -47,7 +47,7 @@ Some of the required package names are:
 
 =head2 Components built
 
-This is what the project can currently download, build and test. You can choose what steps are performed
+This is what the project currently downloads, builds and tests. You can choose what steps are performed
 by editing the F<< Makefile >> next to this README file, see the I<< ENABLE_xxx >> constants at the beginning.
 
 =over
@@ -59,15 +59,23 @@ they are mostly Subversion repositories from L<< http://OpenCores.org/ >> .
 
 =item * OpenCores' OpenRISC Toolchain
 
-This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. Some of the self-tests are also run after building.
-
-A full I<< diskcheck >> is performed for I<< or1ksim >>.
+This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB. 
 
 At the moment only the bare-metal version (without Linux support) is built.
 
 Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
 
-The F<< bld-all.sh >> script, which automatically builds most of the components together, is also run separately.
+Optional steps are:
+
+=over
+
+=item * Some of the self-tests are also run after building their respective components.
+
+=item * A full I<< diskcheck >> is performed for I<< or1ksim >>.
+
+=item * The F<< bld-all.sh >> script, which automatically builds most of the components together, is also run separately.
+
+=back
 
 =item * ORPSoC v2
 
