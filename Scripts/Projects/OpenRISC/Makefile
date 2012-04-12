@@ -185,7 +185,7 @@ LOCAL_BINUTILS_SRC := $(GNUSRC_CHECKOUT_DIR)/binutils-2.20.1
 BINUTILS_BIN_DIR := $(BARE_TOOLCHAIN_DIR)
 # TODO: I am not sure whether --enable-fast-install=N/A or --disable-libssp are needed in BINUTILS_EXTRA_CONFIG_ARGS.
 BINUTILS_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET) 
-BINUTILS_EXTRA_MAKE_GLOBAL_ARGS := $(FASTER_MAKE)
+BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 # TODO: With the following targets, "make install" fails. I'm not sure which targets are the correct ones:
 #       BINUTILS_MAKE_TARGETS := all-binutils all-gas all-ld all-build
 BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
@@ -414,7 +414,7 @@ ifeq "$(ENABLE_PGAVIN)" "1"
 PGAVIN_BINUTILS_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
 # TODO: I am not sure whether --enable-fast-install=N/A or --disable-libssp are needed in PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS.
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET) 
-PGAVIN_BINUTILS_EXTRA_MAKE_GLOBAL_ARGS := $(FASTER_MAKE)
+PGAVIN_BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 # TODO: With the following targets, "make install" fails. I'm not sure which targets are the correct ones:
 #       PGAVIN_BINUTILS_MAKE_TARGETS := all-binutils all-gas all-ld all-build
 PGAVIN_BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
@@ -513,7 +513,7 @@ $(PGAVIN_OR1KSIM_CONFIGURE_SENTINEL): $(PGAVIN_OR1KSIM_CHECKOUT_SENTINEL) $(PGAV
 # Build Binutils as a standard autoconf project.
 PGAVIN_LINUX_BINUTILS_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
 PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
-PGAVIN_LINUX_BINUTILS_EXTRA_MAKE_GLOBAL_ARGS := $(FASTER_MAKE)
+PGAVIN_LINUX_BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 # PGAVIN_LINUX_BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
 $(eval $(call autotool_project_template,PGAVIN_LINUX_BINUTILS,Peter Gavin's Binutils for Linux,$(PGAVIN_BINUTILS_CHECKOUT_DIR)))
 
@@ -645,5 +645,24 @@ $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter G
 $(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL) $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
 all: $(LINUX_GDB_INSTALL_SENTINEL)
 
+
+# ---- Build gdbserver ----
+
+# Disabled for the time being, as I have not been able to get this to work yet.
+ifeq "1" "0"
+
+GDBSERVER_SRC_DIR := $(LINUX_GDB_SRC_DIR)/gdb/gdbserver
+
+GDBSERVER_EXTRA_CONFIG_ARGS := CC=$(PGAVIN_OPENRISC_LINUX_TARGET)-gcc
+GDBSERVER_EXTRA_CONFIG_ARGS += --target=$(OPENRISC_LINUX_TARGET)
+GDBSERVER_EXTRA_CONFIG_ARGS += --host=$(OPENRISC_LINUX_TARGET)
+
+GDBSERVER_AUTOCONF_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
+$(eval $(call autotool_project_template,GDBSERVER,gdbserver,$(GDBSERVER_SRC_DIR)))
+
+$(GDBSERVER_CONFIGURE_SENTINEL): $(LINUX_GDB_INSTALL_SENTINEL)
+all: $(GDBSERVER_INSTALL_SENTINEL)
+
+endif
 
 endif  # ifeq "$(ENABLE_PGAVIN)" "1"
