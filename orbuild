@@ -418,17 +418,10 @@ sub build_command ( $ $ $ )
 
   write_status( $buildDir, defined( $error ) ? MiscUtils::TRUE : MiscUtils::FALSE );
 
-  run_visual_notification( $reportFilePath, $configEntries, MiscUtils::FALSE );
-
-  if ( defined $error )
-  {
-    die $error;
-  }
-
 
   my $postBuildAction = $configEntries->{ "PostBuildAction" };
 
-  if ( defined ( $postBuildAction ) and length( $postBuildAction ) > 0 )
+  if ( defined ( $postBuildAction ) and length( $postBuildAction ) > 0 and !defined( $error ) )
   {
     write_stdout( "Running post-build action...\n" );
     my $postBuildActionExitCode = ProcessUtils::run_process( $postBuildAction );
@@ -438,6 +431,14 @@ sub build_command ( $ $ $ )
       die "The post-build action failed with exit code $postBuildActionExitCode, the command was:\n" .
           "$postBuildAction\n";
     }
+  }
+
+
+  run_visual_notification( $reportFilePath, $configEntries, MiscUtils::FALSE );
+
+  if ( defined $error )
+  {
+    die $error;
   }
 
   return MiscUtils::EXIT_CODE_SUCCESS;
