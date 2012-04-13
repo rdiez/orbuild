@@ -405,6 +405,7 @@ sub build_command ( $ $ $ )
   my $reportFilePathOverLatestBuildDirLink = FileUtils::cat_path( $latestBuildDirLinkPath, BUILD_PUBLIC_REPORTS_SUBDIR, $reportFilename );
 
   my $error;
+  my $finalMsg;
 
   if ( $makeExitCode != 0 )
   {
@@ -414,9 +415,9 @@ sub build_command ( $ $ $ )
   }
   else
   {
-    write_stdout( "The build was completed successfully. The generated HTML report file is:\n" );
-    write_stdout( "$reportFilePathOverLatestBuildDirLink\n" );
-    write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
+    $finalMsg = "\nThe build was completed successfully. The generated HTML report file is:\n" .
+                "$reportFilePathOverLatestBuildDirLink\n" .
+                "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n";
   }
 
   write_status( $buildDir, defined( $error ) ? MiscUtils::TRUE : MiscUtils::FALSE );
@@ -443,6 +444,8 @@ sub build_command ( $ $ $ )
   {
     die $error;
   }
+
+  write_stdout( $finalMsg );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
 }
