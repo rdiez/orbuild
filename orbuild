@@ -394,25 +394,28 @@ sub build_command ( $ $ $ )
     die "Error generating the build report.\n";
   }
 
-  my $latestReportLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildReport.html" ) );
-  create_symbolic_link( $latestReportLinkPath, $reportFilePath );
+  # Do not create the LatestBuildReport.html symbolic link any more, as it does not work if the user
+  # tries to click through to the individual build logs.
+  #   my $latestReportLinkPath = File::Spec->rel2abs( FileUtils::cat_path( $configEntries->{ "BuildsDir" }, "LatestBuildReport.html" ) );
+  #   create_symbolic_link( $latestReportLinkPath, $reportFilePath );
 
 
   # write_stdout( "---------------------------------------\n" );
+
+  my $reportFilePathOverLatestBuildDirLink = FileUtils::cat_path( $latestBuildDirLinkPath, BUILD_PUBLIC_REPORTS_SUBDIR, $reportFilename );
 
   my $error;
 
   if ( $makeExitCode != 0 )
   {
-    $error= "The build failed with exit code $makeExitCode, see the generated report:\n" .
-            "$reportFilePath\n" .
+    $error= "The build failed with exit code $makeExitCode, see the generated HTML report file:\n" .
+            "$reportFilePathOverLatestBuildDirLink\n" .
             "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again (but see the documentation for caveats).\n";
   }
   else
   {
-    write_stdout( "The build was completed successfully.\n" );
-
-    write_stdout( "The generated build report is: $latestReportLinkPath\n" );
+    write_stdout( "The build was completed successfully. The generated HTML report file is:\n" );
+    write_stdout( "$reportFilePathOverLatestBuildDirLink\n" );
     write_stdout( "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n" );
   }
 
