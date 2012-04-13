@@ -19,7 +19,7 @@ pushd "$OBJ_DIR" >/dev/null
 
 # echo "The inherited MAKEFLAGS are: $MAKEFLAGS"
 
-CMD="make -s $EXTRA_MAKE_ARGS"
+CMD="make $EXTRA_MAKE_ARGS"
 print_command $CMD
 $CMD
 
