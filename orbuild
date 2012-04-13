@@ -403,6 +403,18 @@ sub build_command ( $ $ $ )
   # write_stdout( "---------------------------------------\n" );
 
   my $reportFilePathOverLatestBuildDirLink = FileUtils::cat_path( $latestBuildDirLinkPath, BUILD_PUBLIC_REPORTS_SUBDIR, $reportFilename );
+  my $reportFileMsg;
+
+  if ( is_cygwin() )
+  {
+    my $winPath = ProcessUtils::run_process_capture_single_value_output( "cygpath -w \"$reportFilePathOverLatestBuildDirLink\"" );
+    $reportFileMsg = "Cygwin : $reportFilePathOverLatestBuildDirLink\n" .
+                     "Windows: $winPath\n";
+  }
+  else
+  {
+    $reportFileMsg = "$reportFilePathOverLatestBuildDirLink\n";
+  }
 
   my $error;
   my $finalMsg;
@@ -410,13 +422,13 @@ sub build_command ( $ $ $ )
   if ( $makeExitCode != 0 )
   {
     $error= "The build failed with exit code $makeExitCode, see the generated HTML report file:\n" .
-            "$reportFilePathOverLatestBuildDirLink\n" .
+            $reportFileMsg .
             "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again (but see the documentation for caveats).\n";
   }
   else
   {
     $finalMsg = "\nThe build was completed successfully. The generated HTML report file is:\n" .
-                "$reportFilePathOverLatestBuildDirLink\n" .
+                $reportFileMsg .
                 "Suggested environment variable: export OPENRISC_TOOLS=\"$buildDir\"\n";
   }
 
@@ -710,6 +722,12 @@ sub check_sandbox_layout_version ()
     my $contents = "SandboxLayoutVersion = @{[SANDBOX_LAYOUT_VERSION_NUMBER]}\n";
     FileUtils::write_string_to_new_file( SANDBOX_LAYOUT_VERSION_FILENAME, $contents );
   }
+}
+
+
+sub is_cygwin ()
+{
+  return $^O eq 'cygwin';
 }
 
 
