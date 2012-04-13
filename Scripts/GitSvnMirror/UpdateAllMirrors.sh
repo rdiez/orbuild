@@ -111,7 +111,7 @@ ln --symbolic --no-dereference --force "$PUBLIC_REPORTS_DIR" "$LATEST_LINK_NAME"
 
 if [[ $OSTYPE = "cygwin" ]]
 then
-  printf "The generated update report is:\nCygwin : %s\nWindows: %s\n" \
+  printf "The generated update report is:\nCygwin: %s\nWindows: %s\n" \
          "$LATEST_LINK_NAME/$REPORT_NAME_ONLY" \
          "$(cygpath -w "$PUBLIC_REPORTS_DIR/$REPORT_NAME_ONLY")"
 else
