@@ -92,11 +92,11 @@ Perl module XML::Parser is also required by the HTML report generator perl scrip
 
 =head2 Ubuntu/Debian Linux
 
-Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
+Under Ubuntu/Debian systems, the following command installs all prerequisites (for the basic I<< orbuild >> framework only) at once:
 
   sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl gxmessage xdg-utils
 
-Each project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
+Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
 =head2 Cygwin
 
@@ -113,6 +113,8 @@ Some of the required package names are:
   make
   util-linux
   patch
+
+Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
 =head1 Usage scenarios
 
