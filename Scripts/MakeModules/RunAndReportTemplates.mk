@@ -55,6 +55,7 @@ define run_and_report_template
 	export PATH="$(value $(1)_PATH_TO_USE)" && \
     export MAKEFLAGS="$(value $(1)_MAKEFLAGS_VALUE)" && \
       "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(1)" \
                   "$(2)" \
                   "$(value $(1)_LOG_FILENAME)" \
                   "$(value $(1)_REPORT_FILENAME)" \
@@ -78,6 +79,7 @@ define run_makefile_and_report_template
 	+export PATH="$(value $(1)_PATH_TO_USE)" && \
     export MAKEFLAGS="$(value $(1)_MAKEFLAGS_VALUE)" && \
     "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(1)" \
                   "$(2)" \
                   "$(value $(1)_LOG_FILENAME)" \
                   "$(value $(1)_REPORT_FILENAME)" \

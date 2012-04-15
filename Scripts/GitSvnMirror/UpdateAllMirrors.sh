@@ -74,7 +74,8 @@ MAKE_J_VAL=1
 # before this point, so that the report generator will fail too.
 set +o errexit
 
-"$ORBUILD_TOOLS/RunAndReport.sh"  "$TOP_LEVEL_FRIENDLY_NAME"  \
+"$ORBUILD_TOOLS/RunAndReport.sh"  "TOP_LEVEL" \
+                                  "$TOP_LEVEL_FRIENDLY_NAME" \
                                   "$MAKEFILE_LOG_FILENAME" \
                                   "$MAKEFILE_REPORT_FILENAME" \
                                   report-always \

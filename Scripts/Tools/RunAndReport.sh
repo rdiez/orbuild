@@ -8,9 +8,12 @@ source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -lt 5 ]; then
-  abort "Invalid number of command-line arguments. Usage: $0 <user-friendly name> log-filename.txt report-filename.txt < report-always | report-on-error > command ..."
+  abort "Invalid number of command-line arguments. Usage: $0 <programmatic name> <user-friendly name> log-filename.txt report-filename.txt < report-always | report-on-error > command ..."
 fi
 
+
+PROGRAMMATIC_NAME="$1"
+shift
 
 USER_FRIENDLY_NAME="$1"
 shift
@@ -125,6 +128,7 @@ else
 
     {
       echo "UserFriendlyName=$USER_FRIENDLY_NAME"
+      echo "ProgrammaticName=$PROGRAMMATIC_NAME"
       echo "ExitCode=$EXIT_CODE"
       echo "LogFile=$LOG_FILENAME"
 

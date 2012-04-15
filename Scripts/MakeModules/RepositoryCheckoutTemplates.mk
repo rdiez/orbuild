@@ -38,6 +38,7 @@ define subversion_checkout_template
   $(value $(1)_CHECKOUT_SENTINEL):
     ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(1)_SVN_CHECKOUT" \
                   "$(2) svn checkout" \
                   "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                   "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
@@ -51,6 +52,7 @@ define subversion_checkout_template
               ""
     else
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(1)_SVN_CHECKOUT" \
                   "$(2) svn checkout (skipped)" \
                   "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                   "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
@@ -129,6 +131,7 @@ define git_checkout_template
 
   $(value $(1)_CLONE_SENTINEL):
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                   "$(1)_GIT_CLONE" \
                    "$(2) git clone" \
                    "$(value $(1)_CLONE_LOG_FILENAME)" \
                    "$(value $(1)_CLONE_REPORT_FILENAME)" \
@@ -142,6 +145,7 @@ define git_checkout_template
   $(value $(1)_FETCH_SENTINEL): $(value $(1)_CLONE_SENTINEL)
     ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                   "$(1)_GIT_FETCH" \
                    "$(2) git fetch" \
                    "$(value $(1)_FETCH_LOG_FILENAME)" \
                    "$(value $(1)_FETCH_REPORT_FILENAME)" \
@@ -154,6 +158,7 @@ define git_checkout_template
 
     else
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                   "$(1)_GIT_FETCH" \
                    "$(2) git fetch (skipped)" \
                    "$(value $(1)_FETCH_LOG_FILENAME)" \
                    "$(value $(1)_FETCH_REPORT_FILENAME)" \
@@ -163,6 +168,7 @@ define git_checkout_template
 
   $(value $(1)_CHECKOUT_SENTINEL): $(value $(1)_FETCH_SENTINEL)
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                   "$(1)_GIT_CHECKOUT" \
                    "$(2) git checkout/merge" \
                    "$(value $(1)_CHECKOUT_LOG_FILENAME)" \
                    "$(value $(1)_CHECKOUT_REPORT_FILENAME)" \
@@ -190,6 +196,7 @@ define git_branch_template
 
   $(value $(1)_BRANCH_SENTINEL): $(value $(1)_CLONE_SENTINEL)
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                   "$(1)_GIT_BRANCH" \
                    "$(value $(1)_USER_FRIENDLY_NAME) git branch" \
                    "$(value $(1)_BRANCH_LOG_FILENAME)" \
                    "$(value $(1)_BRANCH_REPORT_FILENAME)" \

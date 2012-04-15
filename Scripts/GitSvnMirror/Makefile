@@ -72,7 +72,8 @@ define update_git_svn_mirror_template
   # and the user changes them and tries again. Otherwise, the user must remember
   # to manually delete the initialised repository before retrying.
   $(value $(1)_INIT_FILE):
-	"$(ORBUILD_SANDBOX)/Scripts/Tools/RunAndReport.sh"  "$(2)"  \
+	"$(ORBUILD_SANDBOX)/Scripts/Tools/RunAndReport.sh"  "$(1)_INIT" \
+                                                        "$(2)"  \
                                                         "$(value $(1)_CREATE_LOG_FILE)" \
                                                         "$(value $(1)_CREATE_REPORT_FILE)" \
                                                         report-always \
@@ -86,7 +87,8 @@ define update_git_svn_mirror_template
              "$(value $(1)_DESCRIPTION_FILE)"
 
   $(2): $(value $(1)_INIT_FILE)
-	"$(ORBUILD_SANDBOX)/Scripts/Tools/RunAndReport.sh"  "$(2)"  \
+	"$(ORBUILD_SANDBOX)/Scripts/Tools/RunAndReport.sh"  "$(1)_FIRST_UPDATE" \
+                                                        "$(2)" \
                                                         "$(value $(1)_UPDATE_LOG_FILE)" \
                                                         "$(value $(1)_UPDATE_REPORT_FILE)" \
                                                         report-always \

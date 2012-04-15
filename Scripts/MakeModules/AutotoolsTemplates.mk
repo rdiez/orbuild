@@ -108,6 +108,7 @@ define autotool_project_template
 	echo "Configuring $(2)..." && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
       "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                    "$(1)_CONFIGURE" \
                     "$(2) configure" \
                     "$(value $(1)_CONFIG_LOG_FILENAME)" \
                     "$(value $(1)_CONFIG_REPORT_FILENAME)" \
@@ -124,6 +125,7 @@ define autotool_project_template
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                    "$(1)_MAKE" \
                     "$(2) make" \
                     "$(value $(1)_MAKE_LOG_FILENAME)" \
                     "$(value $(1)_MAKE_REPORT_FILENAME)" \
@@ -138,6 +140,7 @@ define autotool_project_template
     export PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" && \
     export MAKEFLAGS="$(value $(1)_INSTALL_MAKEFLAGS_VALUE)" && \
     "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                  "$(1)_INSTALL" \
                   "$(2) install" \
                   "$(value $(1)_INSTALL_LOG_FILENAME)" \
                   "$(value $(1)_INSTALL_REPORT_FILENAME)" \
@@ -153,6 +156,7 @@ define autotool_project_template
     export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
       "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                    "$(1)_CHECK" \
                     "$(2) check" \
                     "$(value $(1)_CHECK_LOG_FILENAME)" \
                     "$(value $(1)_CHECK_REPORT_FILENAME)" \
@@ -168,6 +172,7 @@ define autotool_project_template
     export MAKEFLAGS="$(value $(1)_INSTALL_MAKEFLAGS_VALUE)" && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
       "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                    "$(1)_DISTCHECK" \
                     "$(2) distcheck" \
                     "$(value $(1)_DISTCHECK_LOG_FILENAME)" \
                     "$(value $(1)_DISTCHECK_REPORT_FILENAME)" \
@@ -209,6 +214,7 @@ define autogen_project_template
   $(value $(1)_AUTOGEN_SENTINEL):
 	echo "Autogen $(2)..." && \
     "$(ORBUILD_TOOLS)/RunAndReport.sh" \
+                    "$(1)_AUTOGEN" \
                     "$(2) autogen" \
                     "$(value $(1)_AUTOGEN_LOG_FILENAME)" \
                     "$(value $(1)_AUTOGEN_REPORT_FILENAME)" \

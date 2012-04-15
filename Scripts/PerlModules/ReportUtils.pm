@@ -68,6 +68,7 @@ sub load_report ( $ $ $ )
   ConfigFile::read_config_file( $filename, $allEntriesHashRef );
 
   my @mandatoryEntries = qw( UserFriendlyName
+                             ProgrammaticName
                              ExitCode        
                              LogFile         
                              StartTimeLocal  

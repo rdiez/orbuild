@@ -28,7 +28,7 @@ define url_download_template
   $(eval $(call url_download_template_variables,$(1),$(2),$(3),$(4)))
 
   $(value $(1)_DOWNLOAD_FILENAME):
-	  "$(ORBUILD_TOOLS)/RunAndReport.sh" "download $(2).$(3)" "$(value $(1)_LOG_FILENAME)" "$(value $(1)_REPORT_FILENAME)" report-on-error \
+	  "$(ORBUILD_TOOLS)/RunAndReport.sh" "DOWNLOAD_$(2).$(3)" "download $(2).$(3)" "$(value $(1)_LOG_FILENAME)" "$(value $(1)_REPORT_FILENAME)" report-on-error \
           "$(ORBUILD_TOOLS)/DownloadFile.sh" "$(value $(1)_DOWNLOAD_URL)" "$(ORBUILD_DOWNLOAD_CACHE_DIR)"
 
 endef
@@ -64,7 +64,7 @@ define url_download_and_unpack_template
   $(eval $(call url_download_and_unpack_template_variables,$(1),$(2),$(3),$(4)))
 
   $(value $(1)_UNPACK_SENTINEL): $(value $(1)_DOWNLOAD_FILENAME)
-	"$(ORBUILD_TOOLS)/RunAndReport.sh" "unpack $(2).$(3)" "$(value $(1)_LOG_FILENAME)" "$(value $(1)_REPORT_FILENAME)" report-on-error \
+	"$(ORBUILD_TOOLS)/RunAndReport.sh" "UNPACK_$(2).$(3)" "unpack $(2).$(3)" "$(value $(1)_LOG_FILENAME)" "$(value $(1)_REPORT_FILENAME)" report-on-error \
 	    "$(ORBUILD_TOOLS)/UnpackArchive.sh" "$(value $(1)_DOWNLOAD_FILENAME)" \
 	        "$(ORBUILD_BUILD_DIR)" \
 	        "$(value $(1)_UNPACK_SENTINEL)" \
