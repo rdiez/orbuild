@@ -12,6 +12,19 @@ use FileUtils;
 use StringUtils;
 
 
+sub run_process_exit_code_0 ( $ )
+{
+  my $cmdLine = shift;
+
+  my $exitCode = ProcessUtils::run_process( $cmdLine );
+
+  if ( $exitCode != 0 )
+  {
+    die "Error running the following command line: $cmdLine\n";
+  }
+}
+
+
 sub run_process ( $ )
 {
   my $cmd_line = shift;

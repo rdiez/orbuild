@@ -388,12 +388,7 @@ sub build_command ( $ $ $ )
                   "$publicReportsDir " .
                   "$reportFilename";
 
-  my $reportExitCode = ProcessUtils::run_process( $reportCmd );
-
-  if ( $reportExitCode != 0 )
-  {
-    die "Error generating the build report.\n";
-  }
+  ProcessUtils::run_process_exit_code_0( $reportCmd );
 
   # Do not create the LatestBuildReport.html symbolic link any more, as it does not work if the user
   # tries to click through to the individual build logs.
