@@ -4,9 +4,6 @@
 SHELL := bash  # This makefile has only been tested with bash.
 
 include $(ORBUILD_SANDBOX)/Scripts/MakeModules/MakeUtils.mk
-include $(ORBUILD_SANDBOX)/Scripts/MakeModules/DownloadAndUnpackTemplates.mk
-include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RepositoryCheckoutTemplates.mk
-include $(ORBUILD_SANDBOX)/Scripts/MakeModules/AutotoolsTemplates.mk
 include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 
 .PHONY: all
