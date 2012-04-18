@@ -14,6 +14,30 @@ use MiscUtils;
 
 #------------------------------------------------------------------------
 #
+# If the given directory exists, delete it. Then create it.
+#
+
+sub recreate_dir ( $ )
+{
+  my $subdirName = shift;
+
+  if ( -d $subdirName )
+  {
+    my $deleteCount = File::Path::rmtree( $subdirName );
+
+    if ( $deleteCount < 1 )
+    {
+      die "Cannot delete folder \"$subdirName\", the delete count was $deleteCount.\n";
+    }
+  }
+
+  # Note that mkpath() raises an error if it fails.
+  File::Path::mkpath( $subdirName );
+}
+
+
+#------------------------------------------------------------------------
+#
 # Creates folder if it doesn't exist.
 #
 # Security note: If it fails, the error message will contain the file it couldn't delete.
