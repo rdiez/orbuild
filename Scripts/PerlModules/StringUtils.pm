@@ -46,6 +46,24 @@ sub str_starts_with ( $ $ )
 
 
 #------------------------------------------------------------------------
+
+sub str_remove_optional_suffix ( $ $ )
+{
+  my $str    = shift;
+  my $ending = shift;
+
+  if ( str_ends_with( $str, $ending ) )
+  {
+    return substr( $str, 0, length( $str ) - length( $ending ) );
+  }
+  else
+  {
+    return $str;
+  }
+}
+
+
+#------------------------------------------------------------------------
 #
 # Useful to parse integer numbers.
 #
