@@ -79,7 +79,9 @@ Optional steps are:
 
 =item * ORPSoC v2
 
-The I<< rtl-tests >> are run. The PDF documentation is also built. Some basic linting is performed on a subset of the Verilog source code.
+The PDF documentation is also built. Some basic linting is performed on a subset of the Verilog source code.
+
+An optional step is to run the I<< rtl-tests >>.
 
 =item * Peter Gavin's OpenRISC toolchain
 
@@ -91,9 +93,11 @@ The Binutils test suite is also run for the "bare" toolchain.
 
 GDB 7.2 from OpenCores.org gets built with the Linux toolchain.
 
+An optional step is to run the Binutils checks.
+
 =item * MinSoC
 
-The MinSoC repository is downloaded. MinSoC's automatic installation script is run, which downloads
+This step is optional. The MinSoC repository is downloaded. MinSoC's automatic installation script is run, which downloads
 the same MinSoC repository again (among many other tools).
 
 =item * Icarus Verilog
