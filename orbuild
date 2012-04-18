@@ -74,7 +74,6 @@ use constant PERL_INTERPRETER  => "perl";
 use constant SCRIPTS_DIR => FileUtils::cat_path( SANDBOX_DIR, "Scripts" );
 use constant TOOLS_DIR   => FileUtils::cat_path( SCRIPTS_DIR, "Tools" );
 
-# If you update these constants, update the Makefile too.
 use constant BUILD_INTERNAL_REPORTS_SUBDIR    => "OrbuildInternalReports";
 use constant BUILD_PUBLIC_REPORTS_SUBDIR      => "OrbuildPublicReports";
 use constant BUILD_SENTINELS_SUBDIR           => "OrbuildSentinels";
@@ -273,10 +272,8 @@ sub build_command ( $ $ $ )
 
   my ( $makefileVolume, $makefileDirectories, $makefileFilenameOnly ) = File::Spec->splitpath( $makefileFilename );
   my $makefileDir = FileUtils::cat_path( $makefileVolume, $makefileDirectories );
-  if ( StringUtils::str_ends_with( $makefileDir, "/" ) )
-  {
-    $makefileDir = substr( $makefileDir, 0, length( $makefileDir ) - length( "/" ) );
-  }
+
+  $makefileDir = StringUtils::str_remove_optional_suffix( $makefileDir, "/" );
 
   # We already have an implementation in bash of how to get the number of CPUs,
   # so use it here, instead of reimplementing it in perl.
@@ -317,8 +314,13 @@ sub build_command ( $ $ $ )
 
     $makeFlags   .= "-j $makeJParam ";
 
-    my $maxLoadJParam = $makeJParam + 5;  # This heuristic is not very smart.
-    $makeFlags   .= "--max-load $maxLoadJParam ";
+    # Cygwin's port of GNU Make does not support the --max-load switch (as of April 2012).
+    # It does accept it, but then it prints a warning message.
+    if ( !is_cygwin() )
+    {
+      my $maxLoadJParam = $makeJParam + 5;  # This heuristic is not very smart.
+      $makeFlags   .= "--max-load $maxLoadJParam ";
+    }
   }
   # $makeFlags .= "--debug=v ";  # For make debugging purposes
 
@@ -473,13 +475,7 @@ sub run_visual_notification ( $ $ $ )
   if ( defined ( $visualNotification ) and length( $visualNotification ) > 0 )
   {
     write_stdout( "Running the visual notification action...\n" );
-    my $visualNotificationExitCode = ProcessUtils::run_process( $visualNotification );
-
-    if ( $visualNotificationExitCode != 0 )
-    {
-      die "The VisualNotification action failed with exit code $visualNotificationExitCode, the command was:\n" .
-          "$visualNotification\n";
-    }
+    ProcessUtils::run_process_exit_code_0( $visualNotification );
   }
   elsif ( $isTestMode )
   {
