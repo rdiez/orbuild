@@ -3,7 +3,7 @@
 
 <html>
 <head>
-<title>orbuild report</title>
+<title>${ TITLE }</title>
 <!-- table{border: 1px solid #000} -->
 <!-- td{border: 1px solid #000} -->
 <style TYPE="text/css">
@@ -28,35 +28,15 @@
 </head>
 <body>
 
-<h1>orbuild report</h1>
+<h1>${ TITLE }</h1>
 
-<p>Last update started at UTC ${ REPORT_START_TIME }.</p>
+<p>Build started at UTC ${ REPORT_START_TIME }.</p>
 
 <p>${ REPORT_STATUS_MESSAGE }</p>
 
 <p>You can <a href="${ TARBALL_FILENAME }">download</a> this report together with all log files in a single compressed archive.</p>
 
-<form action="">
-<table summary="Report table"
-       border="1"
-       CELLSPACING="0">
-
-  <thead>
-        <tr>
-          <th>Component</th>
-          <th>Status</th>
-          <th>Log File</th>
-        </tr>
-  </thead>
-
-  <tbody>
-
-${ REPORT_TABLE }
-
-  </tbody>
-
-</table>
-</form>
+${ REPORT_BODY }
 
 <p> Copyright (C) 2011 R. Diez - see the <a href="https://github.com/rdiez/orbuild">orbuild project</a> for source code and licensing information.</p>
 

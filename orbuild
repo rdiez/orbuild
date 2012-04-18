@@ -326,6 +326,13 @@ sub build_command ( $ $ $ )
 
   my $noStdInput = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "" : "</dev/null";
 
+  my $componentGroupsFilename = FileUtils::cat_path( $internalReportsDir, "ComponentGroups.lst" );
+  my $subprojectsFilename     = FileUtils::cat_path( $internalReportsDir, "Subprojects.lst" );
+
+  # Create the files with 0 length, or truncate them if they already exist.
+  FileUtils::write_string_to_new_file( $componentGroupsFilename, "" );
+  FileUtils::write_string_to_new_file( $subprojectsFilename, "" );
+
   # Export some variables for the project Makefile and for other orbuild tools.
   #
   # These variables are generic to the build process:
@@ -348,6 +355,8 @@ sub build_command ( $ $ $ )
   $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR );
 
   $ENV{ ORBUILD_IS_INTERACTIVE_BUILD   } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
+  $ENV{ ORBUILD_COMPONENT_GROUPS_FILENAME } = $componentGroupsFilename;
+  $ENV{ ORBUILD_SUBPROJECTS_FILENAME      } = $subprojectsFilename;
 
   # Most build failures under Cygwin are due to spaces in the PATH, as most Windows PC have something
   # like "C:\Program Files" in there. In order to test that all components can cope with this situation,
@@ -385,8 +394,10 @@ sub build_command ( $ $ $ )
   my $reportFilePath = FileUtils::cat_path( $publicReportsDir, $reportFilename );
 
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
+                  "--topLevelReportFilename $makefileReportFile " .
+                  "--componentGroupsFilename $componentGroupsFilename " .
+                  "--subprojectsFilename $subprojectsFilename " .
                   "$internalReportsDir " .
-                  "$makefileReportFile " .
                   "$publicReportsDir " .
                   "$reportFilename";
 

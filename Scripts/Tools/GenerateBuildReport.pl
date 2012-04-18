@@ -6,11 +6,21 @@ Generates an HTML report of the last orbuild run.
 
 =head1 USAGE
 
-perl GenerateBuildReport.pl <internal reports dir> <makefile report filename> <public reports dir> <html output filename>
+perl GenerateBuildReport.pl <internal reports dir> <public reports dir> <html output filename (without path)>
 
 =head1 OPTIONS
 
 -h, --help, --version, --license
+
+--title <some text>
+
+--topLevelReportFilename <myfile.report>
+
+--componentGroupsFilename <ComponentGroups.lst>
+
+--subprojectsFilename <Subprojects.lst>
+
+--startTimeUtc <time string to display in the report>  (if not present, the start time of the the top-level report is taken)
 
 =head1 EXIT CODE
 
@@ -61,7 +71,7 @@ use AGPL3;
 use constant SCRIPT_NAME => $0;
 
 use constant APP_NAME    => "GenerateReport.pl";
-use constant APP_VERSION => "0.10";  # If you update it, update also the perldoc text above if needed.
+use constant APP_VERSION => "0.16";  # If you update the version number, update also the perldoc text above if needed.
 
 use constant REPORT_EXTENSION => ".report";
 use constant LOG_EXTENSION    => ".txt";
@@ -75,12 +85,22 @@ sub main ()
   my $arg_h                = 0;
   my $arg_version          = 0;
   my $arg_license          = 0;
+  my $arg_startTimeUtc     = "";
+  my $arg_title            = "orbuild report";
+  my $arg_topLevelReportFilename  = "";
+  my $arg_componentGroupsFilename = "";
+  my $arg_subprojectsFilename     = "";
 
   my $result = GetOptions(
                  'help'                =>  \$arg_help,
                  'h'                   =>  \$arg_h,
                  'version'             =>  \$arg_version,
-                 'license'             =>  \$arg_license
+                 'license'             =>  \$arg_license,
+                 'startTimeUtc=s'      =>  \$arg_startTimeUtc,
+                 'title=s'             =>  \$arg_title,
+                 'topLevelReportFilename=s'  => \$arg_topLevelReportFilename,
+                 'componentGroupsFilename=s' => \$arg_componentGroupsFilename,
+                 'subprojectsFilename=s'     => \$arg_subprojectsFilename
                 );
 
   if ( not $result )
@@ -107,22 +127,83 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( scalar( @ARGV ) != 4 )
+  if ( scalar( @ARGV ) != 3 )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
   my $reportsDir             = shift @ARGV;
-  my $makefileReportFilename = shift @ARGV;
   my $outputDir              = shift @ARGV;
   my $htmlOutputFilename     = shift @ARGV;
 
+
   write_stdout( "Collecting reports...\n" );
 
-  my %makefileReportEntries;
-  ReportUtils::load_report( $makefileReportFilename, undef, \%makefileReportEntries );
+  my %componentToGroupLookup;  # Key: programmatic component name, Value: group name.
 
-  my $makefileUserFriendlyName = $makefileReportEntries{"UserFriendlyName"};
+  if ( $arg_componentGroupsFilename ne "" )
+  {
+    my %componentGroupsFileContents;
+    ConfigFile::read_config_file( $arg_componentGroupsFilename, \%componentGroupsFileContents );
+
+    foreach my $grpName ( keys %componentGroupsFileContents )
+    {
+      my $componentStr = $componentGroupsFileContents{ $grpName };
+      # write_stdout( "Grp: $grpName, components: $componentStr\n" );
+
+      my @allComponentNames = split( "\\s+", $componentStr );
+
+      foreach my $programmaticComponentName ( @allComponentNames )
+      {
+        if ( exists $componentToGroupLookup{ $programmaticComponentName } )
+        {
+          die "Duplicate programmatic component name \"$programmaticComponentName\" found in the component group definitions.\n";
+        }
+
+        $componentToGroupLookup{ $programmaticComponentName } = $grpName;
+      }
+    }
+  }
+
+  my %subprojectsFileContents;
+
+  if ( $arg_subprojectsFilename ne "" )
+  {
+    ConfigFile::read_config_file( $arg_subprojectsFilename, \%subprojectsFileContents );
+
+    if ( 0 )  # For debugging purposes only.
+    {
+      foreach my $subprojectName ( keys %subprojectsFileContents )
+      {
+        my $subprojectReportFilename = $subprojectsFileContents{ $subprojectName };
+        write_stdout( "Subproject: $subprojectName, report path: $subprojectReportFilename\n" );
+      }
+    }
+  }
+
+  my $makefileUserFriendlyName = "";
+
+  if ( $arg_topLevelReportFilename eq "" )
+  {
+    if ( $arg_startTimeUtc eq "" )
+    {
+      die "If there is no top-level report, you need to specify the --startTimeUtc argument.\n";
+    }
+  }
+  else
+  {
+  my %makefileReportEntries;
+
+    ReportUtils::load_report( $arg_topLevelReportFilename, undef, \%makefileReportEntries );
+    $makefileUserFriendlyName = $makefileReportEntries{ "UserFriendlyName" };
+
+    if ( $arg_startTimeUtc eq "" )
+    {
+      $arg_startTimeUtc = $makefileReportEntries{ "StartTimeUTC" };
+    }
+  }
+
+  write_stdout( "Generating HTML report...\n" );
 
   my @allReports;
   # At the moment, the makefile report is in the same directory as all others,
@@ -131,19 +212,142 @@ sub main ()
 
   my $failedCount;
   ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, undef, \@allReports, \$failedCount );
+  my $componentCount = scalar @allReports;
 
-  my @sortedReports = ReportUtils::sort_reports( \@allReports, $makefileUserFriendlyName );
 
-  write_stdout( "Generating HTML report...\n" );
+  # This loop performs 2 separate tasks:
+  #   1) Mark all the subproject reports, copy the subproject reports to the main report subdirectory.
+  #   2) Classify the reports into groups.
+
+  my @topLevelReports;
+  my %groupToReports;  # Key: group name, Value: referece to an array of reports.
+
+  foreach my $report( @allReports )
+  {
+    my $programmaticComponentName = $report->{ "ProgrammaticName" };
+
+    my $subprojectReportFilename = $subprojectsFileContents{ $programmaticComponentName };
+
+    if ( defined $subprojectReportFilename )
+    {
+      set_report_setting( $report, "ReportType", ReportUtils::RT_SUBPROJECT );
+
+      my ( $volume, $directories, $filename ) = File::Spec->splitpath( $subprojectReportFilename );
+      my $subprojectReportDir = FileUtils::cat_path( $volume, $directories );
+      $subprojectReportDir = StringUtils::str_remove_optional_suffix( $subprojectReportDir, "/" );
+      my $destDir = FileUtils::cat_path( $outputDir, $programmaticComponentName );
+
+      FileUtils::recreate_dir( $destDir );
+
+      # Copy all files and directories recursively.
+      # Alternatively, see http://stackoverflow.com/questions/227613/how-can-i-copy-a-directory-recursively-and-filter-filenames-in-perl
+
+      if ( -d $subprojectReportDir )
+      {
+        my $copyCmd = qq< cp -r -t "$destDir" "$subprojectReportDir" >;
+        # write_stdout( "Copy command: $copyCmd\n" );
+        ProcessUtils::run_process_exit_code_0( $copyCmd );
+      }
+
+      my ( $volume2, $directories2, $dirname2 ) = File::Spec->splitpath( $subprojectReportDir );
+      my $drillDownLink = FileUtils::cat_path( $programmaticComponentName, $dirname2, $filename );
+      set_report_setting( $report, "DrillDownLink", $drillDownLink );
+    }
+
+
+    # write_stdout( "Processing report for component $programmaticComponentName ...\n" );
+    my $groupName = $componentToGroupLookup{ $programmaticComponentName };
+
+    if ( defined $groupName )
+    {
+      my $existing = $groupToReports{ $groupName };
+
+      if ( defined $existing )
+      {
+        push @$existing, $report;
+      }
+      else
+      {
+        my @new_elem;
+        push @new_elem, $report;
+        $groupToReports{ $groupName } = \@new_elem;
+      }
+    }
+    else
+    {
+      push @topLevelReports, $report;
+    }
+  }
+
+
+  # Add one fake report per group.
+
+  foreach my $groupName ( keys %groupToReports )
+  {
+    my %fakeReport;
+
+    $fakeReport{ "UserFriendlyName" } = $groupName;
+
+    my $allGroupReports = $groupToReports{ $groupName };
+
+    my $allOk = MiscUtils::TRUE;
+
+    foreach my $report ( @$allGroupReports )
+    {
+      if ( $report->{ "ExitCode" } != 0 )
+      {
+        $allOk = MiscUtils::FALSE;
+        last;
+      }
+    }
+
+    # Fake an exit code.
+    $fakeReport{ "ExitCode" } = $allOk ? 0 : 1;
+
+    set_report_setting( \%fakeReport, "ReportType", ReportUtils::RT_GROUP );
+
+    push @topLevelReports, \%fakeReport;
+  }
+
 
   my $defaultEncoding = ReportUtils::get_default_encoding();
-
   my $injectedHtml = "";
 
-  foreach my $report ( @sortedReports )
+
+  # Generate the top-level table.
+
+  $injectedHtml .= generate_table_header();
+  $injectedHtml .= generate_report_table_entries( \@topLevelReports, $makefileUserFriendlyName, $defaultEncoding );
+  $injectedHtml .= generate_table_footer();
+
+
+  # Generate one table per group.
+
+  # Sort the groups by name.
+  my @sortedGroupNames = sort keys %groupToReports;
+
+  if ( 0 != scalar @sortedGroupNames )
   {
-    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $defaultEncoding );
+    $injectedHtml .= "<br/> <hr/> \n";
   }
+
+  foreach my $groupName ( @sortedGroupNames )
+  {
+    # write_stdout( "Processing group $groupName...\n" );
+
+    my $allGroupReports = $groupToReports{ $groupName };
+
+    my $anchorName = sanitize_name_for_id_purposes( $groupName );
+
+    $injectedHtml .= qq{ <a name="$anchorName"></a>  <h2> $groupName </h2> };
+
+    $injectedHtml .= generate_table_header();
+    $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $defaultEncoding );
+    $injectedHtml .= generate_table_footer();
+  }
+
+
+  # Load the HTML template file.
 
   my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "BuildReportTemplate.html" );
 
@@ -151,15 +355,16 @@ sub main ()
 
   ReportUtils::check_valid_html( $htmlText );
 
-  ReportUtils::replace_marker( \$htmlText, "REPORT_START_TIME", $makefileReportEntries{"StartTimeUTC"} );
-  ReportUtils::replace_marker( \$htmlText, "REPORT_TABLE"     , $injectedHtml );
 
-  my $componentCount = scalar @sortedReports;
+  # Fill out the HTML template.
+
+  ReportUtils::replace_marker( \$htmlText, "REPORT_START_TIME", $arg_startTimeUtc );
+  ReportUtils::replace_marker( \$htmlText, "REPORT_BODY"      , $injectedHtml );
 
   my $statusMsg;
   if ( $failedCount == 0 )
   {
-    $statusMsg = "All $componentCount components built successfully.";
+    $statusMsg = "All $componentCount components were built successfully.";
   }
   else
   {
@@ -168,14 +373,31 @@ sub main ()
     $statusMsg .= "Failed components are always displayed at the top.";
   }
 
+  ReportUtils::replace_marker( \$htmlText, "TITLE", $arg_title );
   ReportUtils::replace_marker( \$htmlText, "REPORT_STATUS_MESSAGE", $statusMsg );
 
   my $tarballFilename = "OrbuildReport.tgz";
   ReportUtils::replace_marker( \$htmlText, "TARBALL_FILENAME", $tarballFilename );
 
-  ReportUtils::check_valid_html( $htmlText );
+
+  # Write the HTML report file.
 
   FileUtils::write_string_to_new_file( FileUtils::cat_path( $outputDir, $htmlOutputFilename ), $htmlText );
+
+  eval
+  {
+    ReportUtils::check_valid_html( $htmlText );
+  };
+
+  my $errorMessage = $@;
+
+  if ( $errorMessage )
+  {
+    die "Error validating the generated HTML file \"$htmlOutputFilename\": $errorMessage\n";
+  }
+
+
+  # Generate the tarball file.
 
   my $cmd = qq[ cd $outputDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename" ];
   # write_stdout( "Compressed archive cmd: $cmd\n" );
@@ -184,6 +406,85 @@ sub main ()
   write_stdout( "HTML report finished.\n" );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
+}
+
+
+sub set_report_setting ( $ $ $ )
+{
+  my $report  = shift;
+  my $setting = shift;
+  my $value    = shift;
+
+  if ( exists $report->{ $setting } )
+  {
+    die "Internal error: the report has already a setting called '$setting'.\n";
+  }
+
+  $report->{ $setting } = $value;
+}
+
+
+sub sanitize_name_for_id_purposes ( $ )
+{
+  my $str = shift;
+
+  $str =~ s/[^[:alnum:]]/-/og;
+
+  return $str
+}
+
+
+sub generate_table_header ()
+{
+  my $injectedHtml = "";
+
+  $injectedHtml .= qq{ <table summary="Report table" \n };
+  $injectedHtml .= qq{        border="1" \n };
+  $injectedHtml .= qq{        CELLSPACING="0"> \n };
+
+  $injectedHtml .= qq{ <thead> \n };
+  $injectedHtml .= qq{ <tr> \n };
+
+  $injectedHtml .= qq{ <th>Component</th> \n };
+  $injectedHtml .= qq{ <th>Status</th> \n };
+  $injectedHtml .= qq{ <th>Drill down</th> \n };
+  
+  $injectedHtml .= qq{ </tr> \n };
+  $injectedHtml .= qq{ </thead> \n };
+          
+  $injectedHtml .= qq{ <tbody> \n };
+
+  return $injectedHtml;
+}
+
+
+sub generate_table_footer ()
+{
+  my $injectedHtml = "";
+
+  $injectedHtml .= qq{ </tbody> \n };
+  $injectedHtml .= qq{ </table> \n };
+
+  return $injectedHtml;
+}
+
+
+sub generate_report_table_entries ( $ $ )
+{
+  my $allReports               = shift;
+  my $makefileUserFriendlyName = shift;
+  my $defaultEncoding          = shift;
+
+  my @sortedReports = ReportUtils::sort_reports( $allReports, $makefileUserFriendlyName );
+
+  my $injectedHtml = "";
+
+  foreach my $report ( @sortedReports )
+  {
+    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $defaultEncoding );
+  }
+
+  return $injectedHtml;
 }
 
 
@@ -200,12 +501,26 @@ sub process_report ( $ $ $ )
 
   $html .= text_cell( $userFriendlyName );
 
-  $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } );
+  $html .= ReportUtils::generate_status_cell( $report->{ "ExitCode" } == 0 );
 
-  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding );
+  my $type = ReportUtils::get_report_type( $report );
 
-  $html.= "</tr>\n";
-  $html.= "\n";
+  if ( $type == ReportUtils::RT_GROUP )
+  {
+    my $anchorName = sanitize_name_for_id_purposes( $userFriendlyName );
+
+    $html .= "<td>";
+    $html .= "<a href=\"#$anchorName\">Group report below</a>";
+    $html .= "</td>\n";
+  }
+  else
+  {
+    my $drillDownTarget = $report->{ "DrillDownLink" };
+    $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding, $drillDownTarget );
+  }
+
+  $html .= "</tr>\n";
+  $html .= "\n";
 
   return $html;
 }

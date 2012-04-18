@@ -16,6 +16,11 @@ use StringUtils;
 use FileUtils;
 use ConfigFile;
 
+# In order of priority in the HTML report.
+use constant RT_GROUP      => 1;
+use constant RT_SUBPROJECT => 2;
+use constant RT_NORMAL     => 3;
+
 
 sub collect_all_reports ( $ $ $ $ $ )
 {
@@ -108,6 +113,23 @@ sub replace_marker ( $ $ $ )
 }
 
 
+sub get_report_type ( $ )
+{
+  my $report = shift;
+  
+  my $type = $report->{ "ReportType" };
+
+  if ( not defined $type )
+  {
+    return RT_NORMAL;
+  }
+  else
+  {
+    return $type;
+  }
+}
+
+
 sub sort_reports ( $ $ )
 {
   my $allReports               = shift;
@@ -117,6 +139,9 @@ sub sort_reports ( $ $ )
   {                             #  especially for recursive nested routines, but you get a compilation warning.
     my $left  = shift;
     my $right = shift;
+
+
+    # There can be one component that should always be at the top, no matter what.
 
     if ( $left ->{ "UserFriendlyName" } eq $userFriendlyNameAtTheTop )
     {
@@ -156,6 +181,18 @@ sub sort_reports ( $ $ )
         # Nothing to do here, drop below.
       }
     }
+
+
+    # Sort reports by their type.
+
+    my $leftType  = get_report_type( $left );
+    my $rightType = get_report_type( $right );
+
+    if ( $leftType != $rightType )
+    {
+      return $leftType - $rightType;
+    }
+
 
     # We could sort all failed components by their timestamp, as it's roughly
     # the dependency order, that is, the order in which they were executed.
@@ -300,21 +337,17 @@ sub convert_text_file_to_html ( $ $ $ )
 }
 
 
-sub generate_html_log_file_and_cell_links ( $ $ )
+sub generate_html_log_file_and_cell_links ( $ $ $ )
 {
   my $logFilename     = shift;
   my $defaultEncoding = shift;
+  my $drillDownTarget = shift;
 
   my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
 
   use constant SUFFIX_TO_REMOVE => ".txt";
 
-  my $htmlLogFilenameOnly = $logFilenameOnly;
-
-  if ( StringUtils::str_ends_with( $htmlLogFilenameOnly, SUFFIX_TO_REMOVE ) )
-  {
-    $htmlLogFilenameOnly = substr( $htmlLogFilenameOnly, 0, length( $htmlLogFilenameOnly ) - length( SUFFIX_TO_REMOVE ) );
-  }
+  my $htmlLogFilenameOnly = StringUtils::str_remove_optional_suffix( $logFilenameOnly, SUFFIX_TO_REMOVE );
 
   $htmlLogFilenameOnly .= ".html";
 
@@ -325,9 +358,18 @@ sub generate_html_log_file_and_cell_links ( $ $ )
 
   my $html = "";
 
+  $html .= "<td>";
+
+  if ( defined $drillDownTarget )
+  {
+    my $drillDownLink = encode_entities( $drillDownTarget );
+
+    $html .= html_link( $drillDownLink, "Breakdown" );
+    $html .= " or ";
+  }
+
   my $link1 = encode_entities( $htmlLogFilenameOnly );  # Absolute link: "file://" . encode_entities( $htmlLogFilenameOnly );
   my $link2 = encode_entities( $logFilenameOnly );
-  $html .= "<td>";
   $html .= html_link( $link1, "HTML" );
   $html .= " or ";
   $html .= html_link( $link2, "plain txt"  );
@@ -339,12 +381,12 @@ sub generate_html_log_file_and_cell_links ( $ $ )
 
 sub generate_status_cell ( $ )
 {
-  my $exitCode = shift;
+  my $successful = shift;
 
   my $styleClass;
   my $text;
 
-  if ( $exitCode == 0 )
+  if ( $successful )
   {
     $styleClass = "StatusOk";
     $text = "OK";

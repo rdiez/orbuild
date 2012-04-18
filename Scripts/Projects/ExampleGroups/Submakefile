@@ -1,0 +1,21 @@
+
+.DELETE_ON_ERROR:
+
+SHELL := bash  # This makefile has only been tested with bash.
+
+include $(ORBUILD_SANDBOX)/Scripts/MakeModules/MakeUtils.mk
+include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
+
+.PHONY: all
+
+$(eval $(call run_and_report_template,EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_1,Example Component $(SUBPROJECT_NUMBER).1,"$(ORBUILD_TOOLS)/GenerateLongLogTest.sh" 2))
+all: $(EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_1_SENTINEL)
+
+$(eval $(call run_and_report_template,EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_2,Example Component $(SUBPROJECT_NUMBER).2,"$(ORBUILD_TOOLS)/GenerateLongLogTest.sh" 3))
+all: $(EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_2_SENTINEL)
+
+$(eval $(call run_and_report_template,EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_3,Example Component $(SUBPROJECT_NUMBER).3,"$(ORBUILD_TOOLS)/GenerateLongLogTest.sh" 2))
+all: $(EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_3_SENTINEL)
+
+$(eval $(call run_and_report_template,EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_4,Example Component $(SUBPROJECT_NUMBER).4,"$(ORBUILD_TOOLS)/GenerateLongLogTest.sh" 3))
+all: $(EXAMPLE_SUBCOMPONENT_$(SUBPROJECT_NUMBER)_4_SENTINEL)
