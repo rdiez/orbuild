@@ -104,6 +104,13 @@ define autotool_project_template
   $(eval $(call autotool_project_template_variables_2,$(1)))
   $(eval $(call autotool_project_template_variables_3,$(1)))
 
+  $(1)_AUTOTOOLS_GROUP := $(1)_CONFIGURE
+  $(1)_AUTOTOOLS_GROUP += $(1)_MAKE
+  $(1)_AUTOTOOLS_GROUP += $(1)_INSTALL
+  $(1)_AUTOTOOLS_GROUP += $(1)_CHECK
+  $(1)_AUTOTOOLS_GROUP += $(1)_DISTCHECK
+  $(1)_AUTOTOOLS_GROUP += $(1)_AUTOGEN
+
   $(value $(1)_CONFIGURE_SENTINEL):
 	echo "Configuring $(2)..." && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
