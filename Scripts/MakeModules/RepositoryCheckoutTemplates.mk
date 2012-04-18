@@ -129,6 +129,8 @@ define git_checkout_template
 
   $(eval $(call git_checkout_template_variables,$(1),$(2)))
 
+  $(1)_GIT_GROUP := $(1)_GIT_CLONE   $(1)_GIT_FETCH   $(1)_GIT_CHECKOUT   $(1)_GIT_BRANCH
+
   $(value $(1)_CLONE_SENTINEL):
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                    "$(1)_GIT_CLONE" \
