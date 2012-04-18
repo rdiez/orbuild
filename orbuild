@@ -465,6 +465,7 @@ sub run_visual_notification ( $ $ $ )
   my $configEntries  = shift;
   my $isTestMode     = shift;
 
+  $ENV{ ORBUILD_TOOLS } = TOOLS_DIR;  # In case it's not already set (for example, when running with --test-visual-notification).
   $ENV{ ORBUILD_FINAL_REPORT_FILENAME  } = $reportFilePath;
 
   my $visualNotification = $configEntries->{ "VisualNotification" };
