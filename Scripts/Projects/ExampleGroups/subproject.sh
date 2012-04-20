@@ -25,8 +25,6 @@ REPORT_FILENAME="$1"
 shift
 
 
-TOOLS_DIR="$SANDBOX_DIR/Scripts/Tools"
-
 create_dir_if_not_exists ()
 {
     # $1 = dir name
@@ -65,7 +63,7 @@ make -k --no-builtin-variables --warn-undefined-variables \
      -f Submakefile \
      all
 
-perl "$TOOLS_DIR/GenerateBuildReport.pl" \
+perl "$ORBUILD_TOOLS/GenerateBuildReport.pl" \
      --title "Subproject $SUBPROJECT_NUMBER build report" \
      --startTimeUtc "$START_TIME_UTC" \
      "$ORBUILD_INTERNAL_REPORTS_DIR" \
