@@ -3,22 +3,43 @@
 # Copyright (C) 2011 R. Diez - see the orbuild project for licensing information.
 
 set -o errexit
+
 source "$(dirname $0)/../../ShellModules/StandardShellHeader.sh"
 source "$(dirname $0)/../../ShellModules/PrintCommand.sh"
 
 
-if [ $# -ne 4 ]; then
+create_dir_if_not_exists ()
+{
+    # $1 = dir name
+
+    if ! test -d "$1"
+    then
+        echo "Creating directory \"$1\" ..."
+        mkdir --parents "$1"
+    fi
+}
+
+
+if [ $# -ne 6 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
 VERILATOR_BIN_DIR="$1"
 ICARUS_VERILOG_BIN_DIR="$2"
 ORPSOCV2_CHECKOUT_DIR="$3"
-LEVEL="$4"
+LINT_TEMP_DIR="$4"
+LEVEL="$5"
+CONFIG="$6"
 
 LINT_WITH_VERILATOR=true
 
-OR1200_INCLUDE=" -I$ORPSOCV2_CHECKOUT_DIR/sim/vlt"
+TEMP_SUBDIR="$LINT_TEMP_DIR/$LEVEL-$CONFIG"
+
+# The include path where this script generates the replacement or1200_defines.v file
+# must be before the include path where the original or1200_defines.v is.
+OR1200_INCLUDE=" -I$TEMP_SUBDIR"
+
+OR1200_INCLUDE+=" -I$ORPSOCV2_CHECKOUT_DIR/sim/vlt"
 OR1200_INCLUDE+=" -I$ORPSOCV2_CHECKOUT_DIR/rtl/verilog/include"
 OR1200_INCLUDE+=" -I$ORPSOCV2_CHECKOUT_DIR/bench/verilog/include"
 OR1200_INCLUDE+=" -y $ORPSOCV2_CHECKOUT_DIR/rtl/verilog/or1200"
@@ -75,6 +96,11 @@ case "$LEVEL" in
   *)         abort "Invalid lint level argument '$LEVEL'.";;
 esac
 
+create_dir_if_not_exists "$TEMP_SUBDIR"
+
+"$ORBUILD_PROJECT_DIR/GenerateOr1200Config.pl" "$ORPSOCV2_CHECKOUT_DIR/rtl/verilog/include/or1200_defines.v" \
+                                               "$TEMP_SUBDIR/or1200_defines.v" \
+                                               "$CONFIG"
 
 VERILATOR_LINT_FAILED=0
 

@@ -79,7 +79,11 @@ Optional steps are:
 
 =item * ORPSoC v2
 
-The PDF documentation is also built. Some basic linting is performed on a subset of the Verilog source code.
+Some basic linting is performed on the Verilog source code.
+Several combinations of top-level modules (CPU core only, SoC, test bench)
+and CPU core configurations (with minimal or maximal features enabled) are linted separately.
+
+The PDF documentation is built out of the TeX sources.
 
 An optional step is to run the I<< rtl-tests >>.
 

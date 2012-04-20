@@ -181,6 +181,18 @@ endif
 # ----------- Binutils -----------
 
 # Build Binutils as a standard autoconf project.
+#
+# Note: I am seeing random build failures around chew.exe under Cygwin,
+#       it looks like some random timing issue in the makefile for parallel builds.
+#       I also found thees comments about it on the Internet:
+#         glitch in bfd/doc
+#         using make -j 4 for example leads to failure in bdf/doc at least for the mingw32
+#         targets, chew is build 4 times in parallel and the move to chew.exe fails:
+#         
+#         Re: Missing dependency on chew.exe somewhere?
+#         FWIW, I have seen random failures with "make -j 8 check" in bfd
+#         on Linux/x86-64. It is not very reproducible.
+
 LOCAL_BINUTILS_SRC := $(GNUSRC_CHECKOUT_DIR)/binutils-2.20.1
 BINUTILS_BIN_DIR := $(BARE_TOOLCHAIN_DIR)
 # TODO: I am not sure whether --enable-fast-install=N/A or --disable-libssp are needed in BINUTILS_EXTRA_CONFIG_ARGS.
@@ -320,25 +332,32 @@ $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
-LINT_PREREQS := $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
 
 # Lint (parts of the) Verilog code with Verilator and with Icarus Verilog.
-$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(VERILATOR_BIN_DIR)\" \"$(ICARUS_VERILOG_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\"
 
-$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_OR1200,ORPSoC v2 lint or1200,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) or1200"))
-$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint orpsoc,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc"))
-$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_TESTBENCH,ORPSoC v2 lint testbench,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) testbench"))
+LINT_TEMP_DIR := $(ORBUILD_BUILD_DIR)/LINT_TEMP
+LINT_PREREQS := $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
 
-$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)   : $(LINT_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)   : $(LINT_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL): $(LINT_PREREQS)
+$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(VERILATOR_BIN_DIR)\" \"$(ICARUS_VERILOG_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(LINT_TEMP_DIR)\"
+
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_OR1200,ORPSoC v2 lint or1200,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) or1200 minimal-features"))
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint orpsoc,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features"))
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG,ORPSoC v2 lint orpsoc alt cfg,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features-alt-cfg"))
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_TESTBENCH,ORPSoC v2 lint testbench,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) testbench maximal-features"))
+
+$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)       : $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(LINT_PREREQS)
 
 all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
+all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)
 
 LINT_GROUP := $(ORPSOC_NAME)_LINT_OR1200
 LINT_GROUP += $(ORPSOC_NAME)_LINT_ORPSOC
+LINT_GROUP += $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG
 LINT_GROUP += $(ORPSOC_NAME)_LINT_TESTBENCH
 
 
