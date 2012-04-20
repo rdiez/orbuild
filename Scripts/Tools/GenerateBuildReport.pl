@@ -132,9 +132,9 @@ sub main ()
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
-  my $reportsDir             = shift @ARGV;
-  my $outputDir              = shift @ARGV;
-  my $htmlOutputFilename     = shift @ARGV;
+  my $reportsDir              = shift @ARGV;
+  my $outputDir               = shift @ARGV;
+  my $htmlOutputFilename      = shift @ARGV;
 
 
   write_stdout( "Collecting reports...\n" );
@@ -192,7 +192,7 @@ sub main ()
   }
   else
   {
-  my %makefileReportEntries;
+    my %makefileReportEntries;
 
     ReportUtils::load_report( $arg_topLevelReportFilename, undef, \%makefileReportEntries );
     $makefileUserFriendlyName = $makefileReportEntries{ "UserFriendlyName" };

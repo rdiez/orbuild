@@ -336,14 +336,14 @@ sub build_command ( $ $ $ )
   # Export some variables for the project Makefile and for other orbuild tools.
   #
   # These variables are generic to the build process:
-  $ENV{ ORBUILD_SANDBOX                  } = SANDBOX_DIR;
-  $ENV{ ORBUILD_BUILD_DIR                } = $buildDir;
-  $ENV{ ORBUILD_DOWNLOAD_CACHE_DIR       } = $downloadCacheDir;
-  $ENV{ ORBUILD_REPOSITORIES_DIR         } = $repositoriesDir;
-  $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP   } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
-  $ENV{ ORBUILD_TOOLS                    } = TOOLS_DIR;
-  $ENV{ ORBUILD_SENTINEL_FILENAME_SUFFIX } = SENTINELS_FILENAME_SUFFIX;
-  $ENV{ ORBUILD_PROJECT_DIR              } = $makefileDir;
+  $ENV{ ORBUILD_SANDBOX                    } = SANDBOX_DIR;
+  $ENV{ ORBUILD_BUILD_DIR                  } = $buildDir;
+  $ENV{ ORBUILD_DOWNLOAD_CACHE_DIR         } = $downloadCacheDir;
+  $ENV{ ORBUILD_REPOSITORIES_DIR           } = $repositoriesDir;
+  $ENV{ ORBUILD_REPOSITORIES_TIMESTAMP     } = ""; # Timestamp support has not been fully developed yet, see the README file for more information.
+  $ENV{ ORBUILD_TOOLS                      } = TOOLS_DIR;
+  $ENV{ ORBUILD_SENTINEL_FILENAME_SUFFIX   } = SENTINELS_FILENAME_SUFFIX;
+  $ENV{ ORBUILD_PROJECT_DIR                } = $makefileDir;
 
   # These variables are used by some of the tools bundled with orbuild:
   $ENV{ ORBUILD_INTERNAL_REPORTS_DIR   } = $internalReportsDir;
@@ -354,7 +354,7 @@ sub build_command ( $ $ $ )
   $ENV{ ORBUILD_BUILD_SENTINELS_DIR    } = FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR );
   $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR );
 
-  $ENV{ ORBUILD_IS_INTERACTIVE_BUILD   } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
+  $ENV{ ORBUILD_IS_INTERACTIVE_BUILD      } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
   $ENV{ ORBUILD_COMPONENT_GROUPS_FILENAME } = $componentGroupsFilename;
   $ENV{ ORBUILD_SUBPROJECTS_FILENAME      } = $subprojectsFilename;
 

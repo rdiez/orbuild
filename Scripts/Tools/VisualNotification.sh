@@ -39,7 +39,7 @@ else
 
   if type xdg-open >/dev/null 2>&1 ;
   then
-  xdg-open "$REPORT_FILENAME"
+    xdg-open "$REPORT_FILENAME"
   else
     echo "Note: The xdg-open tool is not installed, therefore the HTML report will not be opened automatically."
   fi
