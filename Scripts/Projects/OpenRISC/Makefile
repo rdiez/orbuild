@@ -320,11 +320,26 @@ $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
-# Lint (part of the) Verilog code with Verilator and with Icarus Verilog.
+LINT_PREREQS := $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
+
+# Lint (parts of the) Verilog code with Verilator and with Icarus Verilog.
 $(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(VERILATOR_BIN_DIR)\" \"$(ICARUS_VERILOG_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\"
-$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT,ORPSoC v2 lint,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD)"))
-$(value $(ORPSOC_NAME)_LINT_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
-all: $(value $(ORPSOC_NAME)_LINT_SENTINEL)
+
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_OR1200,ORPSoC v2 lint or1200,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) or1200"))
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint orpsoc,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc"))
+$(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_TESTBENCH,ORPSoC v2 lint testbench,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) testbench"))
+
+$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)   : $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)   : $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL): $(LINT_PREREQS)
+
+all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
+all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
+all: $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)
+
+LINT_GROUP := $(ORPSOC_NAME)_LINT_OR1200
+LINT_GROUP += $(ORPSOC_NAME)_LINT_ORPSOC
+LINT_GROUP += $(ORPSOC_NAME)_LINT_TESTBENCH
 
 
 # Run some of the self-tests.
@@ -697,6 +712,7 @@ generate_groups_file:
 	echo "Verilog Tools              = $(VERILOG_TOOLS_GROUP)"    >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Peter Gavin's Toolchain    = $(PGAVIN_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Peter Gavin's Repositories = $(PGAVIN_GIT_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Lint results               = $(LINT_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Git Repositories           = $(GIT_GROUP)"              >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 
 all: generate_groups_file
