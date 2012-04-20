@@ -102,4 +102,61 @@ sub trim_blanks ( $ )
 }
 
 
+#------------------------------------------------------------------------
+#
+# Collects the new-line characters at the end of the string,
+# returns them as a string.
+#
+# Any combination or number of 0x0D and 0x0A are collected, that is,
+# multiple new-line characters or group of characters are collected
+# together, so you may want to make sure there's only 1 line in the string passed.
+#
+# Returns the empty string if no 0x0D or 0x0A characters are present at the end.
+#
+
+sub collect_eol_characters ( $ )
+{
+  my $line = shift;
+
+  # NOTE: The 's' option after m// is needed so that ^ only matches the beginning of the line,
+  #       even if there are embedded new-line characters. Otherwise, the following
+  #       string fails to collec the trailing new-line characters: "\nab\n\r\r\n".
+  #
+  # \012 is LF, \n, 10, 0x0A
+  # \015 is CR, \r, 13, 0x0D
+  #
+  # See self-test routine below, for test cases against this regular expression.
+  
+  my @captured = $line =~ m/ ^              # Beginning of string.
+                             .*?            # Anything at the beginning, non greedy.
+                            ([\012\015]+)   # Capture the group of new-line characters.
+                            $               # End of string.
+                           /osx;
+
+
+  if ( scalar(@captured) < 1 )
+  {
+    return "";
+  }
+  else
+  {
+    return $captured[0];
+  }
+}
+
+
+#------------------------------------------------------------------------
+#
+# Removes any end-of-line character combination from the end of the string.
+#
+
+sub remove_trailing_eol ( $ )
+{
+  my $l = shift;
+
+  my $eol_chars = collect_eol_characters( $l );
+  return substr( $l, 0, length($l) - length($eol_chars) );
+}
+
+
 1;  # The module returns a true value to indicate it compiled successfully.
