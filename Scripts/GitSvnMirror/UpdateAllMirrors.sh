@@ -5,26 +5,8 @@
 set -o errexit
 SCRIPT_DIR="$(dirname $(readlink -f "$0"))"
 source "$SCRIPT_DIR/../ShellModules/StandardShellHeader.sh"
+source "$SCRIPT_DIR/../ShellModules/FileUtils.sh"
 # source "$SCRIPT_DIR/../ShellModules/MakeJVal.sh"
-
-
-delete_file_if_exists ()
-{
-    if [ -f "$1" ]
-    then
-        rm -f "$1"
-    fi
-}
-
-
-create_dir_if_not_exists ()
-{
-    if ! test -d "$1"
-    then
-        echo "Creating directory \"$1\" ..."
-        mkdir --parents "$1"
-    fi
-}
 
 
 ORBUILD_SANDBOX="$(readlink -f "$SCRIPT_DIR/../..")"

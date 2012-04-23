@@ -5,6 +5,8 @@
 set -o errexit
 SANDBOX_DIR="$(readlink -f "$(dirname "$0")/../../..")"
 source "$SANDBOX_DIR/Scripts/ShellModules/StandardShellHeader.sh"
+source "$SANDBOX_DIR/Scripts/ShellModules/FileUtils.sh"
+
 
 if [ $# -ne 4 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
@@ -15,7 +17,7 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
 SUBPROJECT_NUMBER="$1"
 shift
 
-SUBPROJECT_OUTPUT_DIR="$(readlink -f $1)"
+SUBPROJECT_OUTPUT_DIR="$1"
 shift
 
 REPORTS_BASEDIR="$1"
@@ -25,17 +27,6 @@ REPORT_FILENAME="$1"
 shift
 
 REPORTS_SUBDIR="Reports"
-
-create_dir_if_not_exists ()
-{
-    # $1 = dir name
-
-    if ! test -d "$1"
-    then
-        echo "Creating directory \"$1\" ..."
-        mkdir --parents "$1"
-    fi
-}
 
 
 if [ -d "$SUBPROJECT_OUTPUT_DIR" ]; then
