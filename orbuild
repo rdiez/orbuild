@@ -159,6 +159,7 @@ sub main ()
     die "The orbuild sandbox path \"@{[SANDBOX_DIR]}\" contains whitespace, but GNU make cannot cope with whitespaces.\n";
   }
 
+
   my %configEntries;
   process_config_file_etc( \%configEntries, $arg_interactive );
 
@@ -179,12 +180,37 @@ sub main ()
 }
 
 
+sub read_uptime ()
+{
+  my $filename = "/proc/uptime";
+
+  my @lines = FileUtils::read_text_file( $filename );
+
+  if ( 0 == scalar( @lines ) )
+  {
+    die "File $filename is empty.\n";
+  }
+
+  my $uptimeStr = $lines[0];
+
+  my @seconds = $uptimeStr =~ m/(\d+)/o;
+
+  if ( 1 != scalar( @seconds ) )
+  {
+    die "Cannot parse contents of $filename: \"$uptimeStr\".\n";
+  }
+
+  return $seconds[0];
+}
+
+
 sub build_command ( $ $ $ )
 {
   my $resume        = shift;
   my $restart       = shift;
   my $configEntries = shift;
 
+  my $startUptime = read_uptime();
   
   # If there is a status file, and the user did not specify whether he wants --resume or --restart,
   # it's not clear what we should do.
@@ -394,10 +420,21 @@ sub build_command ( $ $ $ )
 
   my $reportFilename = "BuildReport.html";
 
+  my $elapsedUptime  = read_uptime() - $startUptime;
+  my $elapsedSeconds = $elapsedUptime % 60;
+  my $elapsedMinutes = $elapsedUptime / 60 % 60;
+  my $elapsedHours   = $elapsedUptime / 60 / 60;
+  my $elapsedMsg = "";
+
+  $elapsedMsg .= "$elapsedHours hour(s), " if ( $elapsedHours );
+  $elapsedMsg .= "$elapsedMinutes minute(s) and " if ( $elapsedHours or $elapsedMinutes );
+  $elapsedMsg .= "$elapsedSeconds second(s)";
+
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
                   "--topLevelReportFilename $makefileReportFile " .
                   "--componentGroupsFilename $componentGroupsFilename " .
                   "--subprojectsFilename $subprojectsFilename " .
+                  "--elapsedTime \"$elapsedMsg\" " .
                   "$internalReportsDir " .
                   "$publicReportsBasedir " .
                   "@{[BUILD_PUBLIC_REPORTS_SUBDIR]} " .

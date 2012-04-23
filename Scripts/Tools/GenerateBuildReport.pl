@@ -22,6 +22,8 @@ perl GenerateBuildReport.pl <internal reports dir> <public reports base path> <p
 
 --startTimeUtc <time string to display in the report>  (if not present, the start time of the the top-level report is taken)
 
+--elapsedTime <elapsed time string to display in the report>
+
 =head1 EXIT CODE
 
 Exit code: 0 on success, some other value on error.
@@ -88,6 +90,7 @@ sub main ()
   my $arg_version          = 0;
   my $arg_license          = 0;
   my $arg_startTimeUtc     = "";
+  my $arg_elapsedTime      = "";
   my $arg_title            = "orbuild report";
   my $arg_topLevelReportFilename  = "";
   my $arg_componentGroupsFilename = "";
@@ -99,6 +102,7 @@ sub main ()
                  'version'             =>  \$arg_version,
                  'license'             =>  \$arg_license,
                  'startTimeUtc=s'      =>  \$arg_startTimeUtc,
+                 'elapsedTime=s'       =>  \$arg_elapsedTime,
                  'title=s'             =>  \$arg_title,
                  'topLevelReportFilename=s'  => \$arg_topLevelReportFilename,
                  'componentGroupsFilename=s' => \$arg_componentGroupsFilename,
@@ -364,7 +368,15 @@ sub main ()
 
   # Fill out the HTML template.
 
-  ReportUtils::replace_marker( \$htmlText, "REPORT_START_TIME", $arg_startTimeUtc );
+  my $timeMsg = "Build started at UTC $arg_startTimeUtc";
+  if ( $arg_elapsedTime ne "" )
+  {
+    $timeMsg .= ", elapsed time: $arg_elapsedTime";
+  }
+  $timeMsg .= ".";
+
+  ReportUtils::replace_marker( \$htmlText, "REPORT_START_AND_ELAPSED_TIME", $timeMsg );
+
   ReportUtils::replace_marker( \$htmlText, "REPORT_BODY"      , $injectedHtml );
 
   my $statusMsg;
