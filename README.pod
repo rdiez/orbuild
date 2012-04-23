@@ -19,6 +19,20 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 I<< orbuild >> - a build system for OpenRISC
 
+=head2 Instructions for the impatient
+
+For the impatient user:
+
+=over
+
+=item * Check out the prerequisites in section L<< /"Prerequisites" >> below.
+
+=item * Jump straight to section L<< /"How to get and build the OpenRISC components for the first time" >> below.
+
+=back
+
+=head2 About I<< orbuild >>
+
 I<< orbuild >> is a script framework that automatically downloads, builds, installs
 and tests a number of software components related to the L<< OpenRISC|http://openrisc.net/ >> processor architecture.
 
@@ -86,7 +100,7 @@ I<< orbuild >> runs on Unix-like systems as well as in the Cygwin environment on
 However, the most thoroughly tested platform is Linux.
 
 Reasonably up-to-date versions of the following software are required: perl, bash, curl, subversion, git,
-GNU make (tested with version 3.81).
+GNU Make (tested with version 3.81).
 
 Perl module XML::Parser is also required by the HTML report generator perl script.
 
@@ -142,7 +156,7 @@ The steps are (this example is for the bash shell):
 At the end, the user will probably find it convenient to set an environment variable
 like this, so that all other software will automatically find the just-built OpenRISC components:
 
-   export OPENRISC_TOOLS="$PWD/builds/<new subdir name>"
+   export OPENRISC_TOOLS="$PWD/Builds/<new subdir name>"
 
 Run the following command for quick help text:
 
