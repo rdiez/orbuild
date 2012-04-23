@@ -57,11 +57,11 @@ define autotool_project_template_variables_1
   endif
 
   $(1)_SRC_DIR := $(2)
-  $(1)_OBJ_DIR := $(ORBUILD_BUILD_DIR)/$(1)-obj
+  $(1)_OBJ_DIR := $(ORBUILD_BUILD_DIR)/obj/$(1)-obj
 
   # The user can override the bin directory.
   ifeq ($(origin $(1)_BIN_DIR), undefined)
-    $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/$(1)-bin
+    $(1)_BIN_DIR := $(ORBUILD_BUILD_DIR)/bin/$(1)-bin
   endif
 
   $(1)_CONFIG_LOG_FILENAME    := $(ORBUILD_PUBLIC_REPORTS_DIR)/$(1).ConfigureLog.txt
