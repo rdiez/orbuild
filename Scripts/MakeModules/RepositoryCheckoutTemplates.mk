@@ -209,6 +209,7 @@ define git_branch_template
               "$(2)"
 endef
 
+
 # This template helps make each git repository depend on the previous one,
 # so that they are cloned/fetched sequentially instead of in parallel.
 # Otherwise, we could overload the remote server with many parallel requests.
@@ -216,6 +217,11 @@ endef
 # Note that this rule is not perfect: 1 clone and 1 fetch can still run in parallel.
 # Note also that a clone target cannot depend on any fetch target, or
 # the repositories will be cloned every time a fetch is performed.
+#
+# There is yet another drawback to these rules: if the user deletes a repository,
+# that will delete orbuild's sentinel files inside, which will trigger
+# a re-fetch for all subsequent repositories, although they are not actually
+# affected by the deletion.
 #
 #  $(1) is the first git repository to download.
 #  $(2) is the second git repository to download when the first one is finished.
