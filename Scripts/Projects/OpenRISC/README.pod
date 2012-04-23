@@ -63,7 +63,7 @@ This includes the I<< or1ksim >> simulator, Binutils, Newlib, GCC and GDB.
 
 At the moment only the bare-metal version (without Linux support) is built.
 
-Most of those components are installed together in a combined I<< ToolchainOr32 >> subdirectory.
+Most of those components are installed together in a combined I<< ToolchainOr32Bare >> subdirectory.
 
 Optional steps are:
 

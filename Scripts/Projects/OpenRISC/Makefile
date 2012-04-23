@@ -41,11 +41,11 @@ PGAVIN_OPENRISC_LINUX_TARGET  := $(PGAVIN_LINUX_ARCH)-linux
 
 # In order for the GCC cross-compiler to automatically pick up the right assembler and so on,
 # it must be configured to use the same bin directory as Binutils.
-BARE_TOOLCHAIN_DIR            := $(ORBUILD_BUILD_DIR)/ToolchainOr32
-LINUX_TOOLCHAIN_DIR           := $(ORBUILD_BUILD_DIR)/LinuxToolchainOr32
+BARE_TOOLCHAIN_DIR            := $(ORBUILD_BUILD_DIR)/ToolchainOr32Bare
+LINUX_TOOLCHAIN_DIR           := $(ORBUILD_BUILD_DIR)/ToolchainOr32Linux
 
-PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1k
-PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinLinuxToolchainOr1k
+PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kBare
+PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kLinux
 PGAVIN_LINUX_TOOLCHAIN_PREFIX := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/$(PGAVIN_OPENRISC_LINUX_TARGET)
 
 ifeq "$(ENABLE_PGAVIN)" "1"
