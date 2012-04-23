@@ -337,9 +337,10 @@ sub convert_text_file_to_html ( $ $ $ )
 }
 
 
-sub generate_html_log_file_and_cell_links ( $ $ $ )
+sub generate_html_log_file_and_cell_links ( $ $ $ $ )
 {
   my $logFilename     = shift;
+  my $reportsSubdir   = shift;
   my $defaultEncoding = shift;
   my $drillDownTarget = shift;
 
@@ -368,8 +369,10 @@ sub generate_html_log_file_and_cell_links ( $ $ $ )
     $html .= " or ";
   }
 
-  my $link1 = encode_entities( $htmlLogFilenameOnly );  # Absolute link: "file://" . encode_entities( $htmlLogFilenameOnly );
-  my $link2 = encode_entities( $logFilenameOnly );
+  my $reportsSubdirEncoded = encode_entities( $reportsSubdir );
+
+  my $link1 = FileUtils::cat_path( $reportsSubdirEncoded, encode_entities( $htmlLogFilenameOnly ) );
+  my $link2 = FileUtils::cat_path( $reportsSubdirEncoded, encode_entities( $logFilenameOnly ) );
   $html .= html_link( $link1, "HTML" );
   $html .= " or ";
   $html .= html_link( $link2, "plain txt"  );

@@ -6,7 +6,7 @@ Generates an HTML report of the last orbuild run.
 
 =head1 USAGE
 
-perl GenerateBuildReport.pl <internal reports dir> <public reports dir> <html output filename (without path)>
+perl GenerateBuildReport.pl <internal reports dir> <public reports base path> <public reports subdir (without path)> <html output filename (without path)>
 
 =head1 OPTIONS
 
@@ -71,10 +71,12 @@ use AGPL3;
 use constant SCRIPT_NAME => $0;
 
 use constant APP_NAME    => "GenerateReport.pl";
-use constant APP_VERSION => "0.16";  # If you update the version number, update also the perldoc text above if needed.
+use constant APP_VERSION => "0.18";  # If you update the version number, update also the perldoc text above if needed.
 
 use constant REPORT_EXTENSION => ".report";
 use constant LOG_EXTENSION    => ".txt";
+
+use constant SUBPROJECTS_REPORTS_DIR => "Subprojects";
 
 
 # ----------- main routine, the script entry point is at the bottom -----------
@@ -127,15 +129,19 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( scalar( @ARGV ) != 3 )
+  if ( scalar( @ARGV ) != 4 )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
   my $reportsDir              = shift @ARGV;
-  my $outputDir               = shift @ARGV;
+  my $outputBaseDir           = shift @ARGV;
+  my $outputSubDir            = shift @ARGV;
   my $htmlOutputFilename      = shift @ARGV;
 
+  my $subprojectsReportsDir = FileUtils::cat_path( $outputBaseDir, SUBPROJECTS_REPORTS_DIR );
+
+  FileUtils::create_folder_if_does_not_exist( $subprojectsReportsDir );
 
   write_stdout( "Collecting reports...\n" );
 
@@ -235,7 +241,7 @@ sub main ()
       my ( $volume, $directories, $filename ) = File::Spec->splitpath( $subprojectReportFilename );
       my $subprojectReportDir = FileUtils::cat_path( $volume, $directories );
       $subprojectReportDir = StringUtils::str_remove_optional_suffix( $subprojectReportDir, "/" );
-      my $destDir = FileUtils::cat_path( $outputDir, $programmaticComponentName );
+      my $destDir = FileUtils::cat_path( $subprojectsReportsDir, $programmaticComponentName );
 
       FileUtils::recreate_dir( $destDir );
 
@@ -250,7 +256,7 @@ sub main ()
       }
 
       my ( $volume2, $directories2, $dirname2 ) = File::Spec->splitpath( $subprojectReportDir );
-      my $drillDownLink = FileUtils::cat_path( $programmaticComponentName, $dirname2, $filename );
+      my $drillDownLink = FileUtils::cat_path( SUBPROJECTS_REPORTS_DIR, $programmaticComponentName, $dirname2, $filename );
       set_report_setting( $report, "DrillDownLink", $drillDownLink );
     }
 
@@ -317,7 +323,7 @@ sub main ()
   # Generate the top-level table.
 
   $injectedHtml .= generate_table_header();
-  $injectedHtml .= generate_report_table_entries( \@topLevelReports, $makefileUserFriendlyName, $defaultEncoding );
+  $injectedHtml .= generate_report_table_entries( \@topLevelReports, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding );
   $injectedHtml .= generate_table_footer();
 
 
@@ -342,7 +348,7 @@ sub main ()
     $injectedHtml .= qq{ <a name="$anchorName"></a>  <h2> $groupName </h2> };
 
     $injectedHtml .= generate_table_header();
-    $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $defaultEncoding );
+    $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $outputSubDir, $defaultEncoding );
     $injectedHtml .= generate_table_footer();
   }
 
@@ -382,7 +388,7 @@ sub main ()
 
   # Write the HTML report file.
 
-  FileUtils::write_string_to_new_file( FileUtils::cat_path( $outputDir, $htmlOutputFilename ), $htmlText );
+  FileUtils::write_string_to_new_file( FileUtils::cat_path( $outputBaseDir, $htmlOutputFilename ), $htmlText );
 
   eval
   {
@@ -399,7 +405,7 @@ sub main ()
 
   # Generate the tarball file.
 
-  my $cmd = qq[ cd $outputDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename" ];
+  my $cmd = qq[ cd $outputBaseDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename" ];
   # write_stdout( "Compressed archive cmd: $cmd\n" );
   ProcessUtils::run_process( $cmd );
 
@@ -469,10 +475,11 @@ sub generate_table_footer ()
 }
 
 
-sub generate_report_table_entries ( $ $ )
+sub generate_report_table_entries ( $ $ $ $ )
 {
   my $allReports               = shift;
   my $makefileUserFriendlyName = shift;
+  my $outputSubDir             = shift;
   my $defaultEncoding          = shift;
 
   my @sortedReports = ReportUtils::sort_reports( $allReports, $makefileUserFriendlyName );
@@ -481,17 +488,18 @@ sub generate_report_table_entries ( $ $ )
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $defaultEncoding );
+    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding );
   }
 
   return $injectedHtml;
 }
 
 
-sub process_report ( $ $ $ )
+sub process_report ( $ $ $ $ )
 {
   my $report                   = shift;
   my $makefileUserFriendlyName = shift;
+  my $outputSubDir             = shift;
   my $defaultEncoding          = shift;
 
   my $logFilename      = $report->{ "LogFile" };
@@ -516,7 +524,7 @@ sub process_report ( $ $ $ )
   else
   {
     my $drillDownTarget = $report->{ "DrillDownLink" };
-    $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding, $drillDownTarget );
+    $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $outputSubDir, $defaultEncoding, $drillDownTarget );
   }
 
   $html .= "</tr>\n";

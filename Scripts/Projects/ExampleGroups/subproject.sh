@@ -18,12 +18,13 @@ shift
 SUBPROJECT_OUTPUT_DIR="$(readlink -f $1)"
 shift
 
-REPORT_DIR="$1"
+REPORTS_BASEDIR="$1"
 shift
 
 REPORT_FILENAME="$1"
 shift
 
+REPORTS_SUBDIR="Reports"
 
 create_dir_if_not_exists ()
 {
@@ -47,7 +48,7 @@ mkdir "$SUBPROJECT_OUTPUT_DIR"
 
 # The example submakefile is reusing the orbuild infrastructure, so
 # we need to redirect the output directories here:
-export ORBUILD_PUBLIC_REPORTS_DIR="$SUBPROJECT_OUTPUT_DIR/$REPORT_DIR"
+export ORBUILD_PUBLIC_REPORTS_DIR="$SUBPROJECT_OUTPUT_DIR/$REPORTS_BASEDIR/$REPORTS_SUBDIR"
 export ORBUILD_INTERNAL_REPORTS_DIR="$SUBPROJECT_OUTPUT_DIR/SubprojectInternalReports"
 export ORBUILD_COMMAND_SENTINELS_DIR="$SUBPROJECT_OUTPUT_DIR/SubprojectSentinels"
 
@@ -67,5 +68,6 @@ perl "$ORBUILD_TOOLS/GenerateBuildReport.pl" \
      --title "Subproject $SUBPROJECT_NUMBER build report" \
      --startTimeUtc "$START_TIME_UTC" \
      "$ORBUILD_INTERNAL_REPORTS_DIR" \
-     "$ORBUILD_PUBLIC_REPORTS_DIR" \
+     "$SUBPROJECT_OUTPUT_DIR/$REPORTS_BASEDIR" \
+     "$REPORTS_SUBDIR" \
      "$REPORT_FILENAME"

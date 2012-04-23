@@ -75,7 +75,8 @@ use constant SCRIPTS_DIR => FileUtils::cat_path( SANDBOX_DIR, "Scripts" );
 use constant TOOLS_DIR   => FileUtils::cat_path( SCRIPTS_DIR, "Tools" );
 
 use constant BUILD_INTERNAL_REPORTS_SUBDIR    => "OrbuildInternalReports";
-use constant BUILD_PUBLIC_REPORTS_SUBDIR      => "OrbuildPublicReports";
+use constant BUILD_PUBLIC_REPORTS_BASEDIR     => "OrbuildPublicReports";
+use constant BUILD_PUBLIC_REPORTS_SUBDIR      => "Reports";
 use constant BUILD_SENTINELS_SUBDIR           => "OrbuildSentinels";
 use constant SENTINELS_FILENAME_SUFFIX        => "OrbuildSentinel";
 
@@ -250,8 +251,9 @@ sub build_command ( $ $ $ )
   my $downloadCacheDir   = File::Spec->rel2abs( $configEntries->{ "DownloadCacheDir" }, SANDBOX_DIR );
   my $repositoriesDir    = File::Spec->rel2abs( $configEntries->{ "RepositoriesDir"  }, SANDBOX_DIR );
 
-  my $publicReportsDir   = FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_SUBDIR );
-  my $internalReportsDir = FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR );
+  my $publicReportsBasedir = FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_BASEDIR );
+  my $publicReportsDir     = FileUtils::cat_path( $publicReportsBasedir, BUILD_PUBLIC_REPORTS_SUBDIR );
+  my $internalReportsDir   = FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR );
 
   my $makefileLogFile    = FileUtils::cat_path( $publicReportsDir  , "TopLevelMakefileLogFile.txt" );
   my $makefileReportFile = FileUtils::cat_path( $internalReportsDir, "TopLevelMakefile.report"     );
@@ -391,14 +393,14 @@ sub build_command ( $ $ $ )
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
   my $reportFilename = "BuildReport.html";
-  my $reportFilePath = FileUtils::cat_path( $publicReportsDir, $reportFilename );
 
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
                   "--topLevelReportFilename $makefileReportFile " .
                   "--componentGroupsFilename $componentGroupsFilename " .
                   "--subprojectsFilename $subprojectsFilename " .
                   "$internalReportsDir " .
-                  "$publicReportsDir " .
+                  "$publicReportsBasedir " .
+                  "@{[BUILD_PUBLIC_REPORTS_SUBDIR]} " .
                   "$reportFilename";
 
   ProcessUtils::run_process_exit_code_0( $reportCmd );
@@ -411,7 +413,7 @@ sub build_command ( $ $ $ )
 
   # write_stdout( "---------------------------------------\n" );
 
-  my $reportFilePathOverLatestBuildDirLink = FileUtils::cat_path( $latestBuildDirLinkPath, BUILD_PUBLIC_REPORTS_SUBDIR, $reportFilename );
+  my $reportFilePathOverLatestBuildDirLink = FileUtils::cat_path( $latestBuildDirLinkPath, BUILD_PUBLIC_REPORTS_BASEDIR, $reportFilename );
   my $reportFileMsg;
 
   if ( is_cygwin() )
@@ -458,7 +460,7 @@ sub build_command ( $ $ $ )
     }
   }
 
-
+  my $reportFilePath = FileUtils::cat_path( $publicReportsBasedir, $reportFilename );
   run_visual_notification( $reportFilePath, $configEntries, MiscUtils::FALSE );
 
   if ( defined $error )
@@ -578,7 +580,7 @@ sub rotate_build_dir ( $ $ )
 
   # Note that mkpath() raises an error if it fails.
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_INTERNAL_REPORTS_SUBDIR   ) );
-  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_SUBDIR     ) );
+  File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_PUBLIC_REPORTS_BASEDIR, BUILD_PUBLIC_REPORTS_SUBDIR ) );
 
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_CHECKOUT_SENTINELS_SUBDIR ) );
   File::Path::mkpath( FileUtils::cat_path( $buildDir, BUILD_UNPACK_SENTINELS_SUBDIR   ) );

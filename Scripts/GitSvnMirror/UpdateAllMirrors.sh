@@ -49,11 +49,14 @@ ROTATE_DIR_CMD="perl $ORBUILD_SANDBOX/Scripts/Tools/RotateDir.pl \
                 --timestamp "$(date +"%Y-%m-%d" --utc)" \
                 --output-only-new-dir-name"
 
-INTERNAL_REPORTS_DIR=$($ROTATE_DIR_CMD "$ALL_INTERNAL_REPORTS_DIR")
-PUBLIC_REPORTS_DIR=$($ROTATE_DIR_CMD "$ALL_PUBLIC_REPORTS_DIR")
+INTERNAL_REPORTS_DIR="$($ROTATE_DIR_CMD "$ALL_INTERNAL_REPORTS_DIR")"
+PUBLIC_REPORTS_BASEDIR="$($ROTATE_DIR_CMD "$ALL_PUBLIC_REPORTS_DIR")"
+
+PUBLIC_REPORTS_SUBDIR="Reports"
+create_dir_if_not_exists "$PUBLIC_REPORTS_BASEDIR/$PUBLIC_REPORTS_SUBDIR"
 
 MAKEFILE_REPORT_FILENAME="$INTERNAL_REPORTS_DIR/makefile.report"
-MAKEFILE_LOG_FILENAME="$PUBLIC_REPORTS_DIR/makefile-log.txt"
+MAKEFILE_LOG_FILENAME="$PUBLIC_REPORTS_BASEDIR/$PUBLIC_REPORTS_SUBDIR/makefile-log.txt"
 TOP_LEVEL_FRIENDLY_NAME="top-level process"
 
 # Updating the repositories is done sequentially for these reasons:
@@ -83,7 +86,7 @@ set +o errexit
         ORBUILD_SANDBOX="$ORBUILD_SANDBOX" \
         ORBUILD_GIT_BASE_DIR="$GIT_BASE_DIR" \
         ORBUILD_REPORTS_DIR="$INTERNAL_REPORTS_DIR" \
-        ORBUILD_LOGS_DIR="$PUBLIC_REPORTS_DIR" \
+        ORBUILD_LOGS_DIR="$PUBLIC_REPORTS_BASEDIR/$PUBLIC_REPORTS_SUBDIR" \
         --no-builtin-variables --warn-undefined-variables \
         -f "$MIRROR_TOOLS/Makefile" \
         -k -s -j "$MAKE_J_VAL" \
@@ -92,7 +95,7 @@ set +o errexit
 set -o errexit
 
 REPORT_NAME_ONLY="Status.html"
-REPORT_FILENAME="$PUBLIC_REPORTS_DIR/$REPORT_NAME_ONLY"
+REPORT_FILENAME="$PUBLIC_REPORTS_BASEDIR/$REPORT_NAME_ONLY"
 
 if [ "${ORBUILD_GIT_URL_PREFIX:-first}" != "${ORBUILD_GIT_URL_PREFIX:-second}" ]
 then
@@ -101,6 +104,7 @@ fi
 
 perl "$MIRROR_TOOLS/GenerateGitSvnMirrorReport.pl" \
          "$INTERNAL_REPORTS_DIR" \
+         "$PUBLIC_REPORTS_SUBDIR" \
          "$GIT_BASE_DIR" \
          "$MAKEFILE_REPORT_FILENAME" \
          "$REPORT_FILENAME" \
@@ -108,13 +112,13 @@ perl "$MIRROR_TOOLS/GenerateGitSvnMirrorReport.pl" \
 
 LATEST_LINK_NAME="$ALL_PUBLIC_REPORTS_DIR/LatestReport"
 
-ln --symbolic --no-dereference --force "$PUBLIC_REPORTS_DIR" "$LATEST_LINK_NAME"
+ln --symbolic --no-dereference --force "$PUBLIC_REPORTS_BASEDIR" "$LATEST_LINK_NAME"
 
 if [[ $OSTYPE = "cygwin" ]]
 then
   printf "The generated update report is:\nCygwin : %s\nWindows: %s\n" \
          "$LATEST_LINK_NAME/$REPORT_NAME_ONLY" \
-         "$(cygpath -w "$PUBLIC_REPORTS_DIR/$REPORT_NAME_ONLY")"
+         "$(cygpath -w "$PUBLIC_REPORTS_BASEDIR/$REPORT_NAME_ONLY")"
 else
   printf "The generated update report is:\n$LATEST_LINK_NAME/$REPORT_NAME_ONLY\n"
 fi

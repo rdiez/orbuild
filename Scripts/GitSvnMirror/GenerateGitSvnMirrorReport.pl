@@ -6,7 +6,7 @@ Generates an HTML report of the last update of the OpenRISC git svn mirrors.
 
 =head1 USAGE
 
-perl GenerateGitSvnMirrorReport.pl <reports dir> <git base dir>  <makefile report filename> <html output filename>
+perl GenerateGitSvnMirrorReport.pl <internal reports dir>  <public reports subdir (without path)>  <git base dir>  <makefile report filename> <html output filename>
 
 =head1 OPTIONS
 
@@ -106,12 +106,13 @@ sub main ()
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
-  if ( scalar( @ARGV ) != 5 )
+  if ( scalar( @ARGV ) != 6 )
   {
     die "Invalid number of arguments. Run this program with the --help option for usage information.\n";
   }
 
-  my $reportsDir             = shift @ARGV;
+  my $internalReportsDir     = shift @ARGV;
+  my $publicReportsSubdir    = shift @ARGV;
   my $gitBaseDir             = shift @ARGV;
   my $makefileReportFilename = shift @ARGV;
   my $htmlOutputFilename     = shift @ARGV;
@@ -132,7 +133,7 @@ sub main ()
   my @optionalReportEntries = qw( GitRepositoryDir );
 
   my $failedCount;
-  ReportUtils::collect_all_reports( $reportsDir, REPORT_EXTENSION, \@optionalReportEntries, \@allReports, \$failedCount );
+  ReportUtils::collect_all_reports( $internalReportsDir, REPORT_EXTENSION, \@optionalReportEntries, \@allReports, \$failedCount );
 
   my @sortedReports = ReportUtils::sort_reports( \@allReports, $makefileUserFriendlyName );
 
@@ -142,7 +143,7 @@ sub main ()
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $gitBaseDir, $gitUrlPrefix );
+    $injectedHtml .= process_report( $report, $publicReportsSubdir, $makefileUserFriendlyName, $gitBaseDir, $gitUrlPrefix );
   }
 
   my $htmlTemplateFilename = FileUtils::cat_path( THIS_SCRIPT_DIR, "GitSvnReportTemplate.html" );
@@ -167,6 +168,7 @@ sub main ()
 sub process_report ( $ $ $ $ )
 {
   my $report       = shift;
+  my $publicReportsSubdir      = shift;
   my $makefileUserFriendlyName = shift;
   my $gitBaseDir   = shift;
   my $gitUrlPrefix = shift;
@@ -234,7 +236,7 @@ sub process_report ( $ $ $ $ )
 
   my $defaultEncoding = ReportUtils::get_default_encoding();
 
-  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $defaultEncoding, undef );
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $publicReportsSubdir, $defaultEncoding, undef );
 
   $html.= "<td>$gitCloneUrlCellContents</td>\n";
 
