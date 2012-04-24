@@ -6,30 +6,17 @@ set -o errexit
 
 source "$(dirname $0)/../../ShellModules/StandardShellHeader.sh"
 source "$(dirname $0)/../../ShellModules/PrintCommand.sh"
+source "$(dirname $0)/../../ShellModules/FileUtils.sh"
 
 
-create_dir_if_not_exists ()
-{
-    # $1 = dir name
-
-    if ! test -d "$1"
-    then
-        echo "Creating directory \"$1\" ..."
-        mkdir --parents "$1"
-    fi
-}
-
-
-if [ $# -ne 6 ]; then
+if [ $# -ne 4 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
-VERILATOR_BIN_DIR="$1"
-ICARUS_VERILOG_BIN_DIR="$2"
-ORPSOCV2_CHECKOUT_DIR="$3"
-LINT_TEMP_DIR="$4"
-LEVEL="$5"
-CONFIG="$6"
+ORPSOCV2_CHECKOUT_DIR="$1"
+LINT_TEMP_DIR="$2"
+LEVEL="$3"
+CONFIG="$4"
 
 LINT_WITH_VERILATOR=true
 
@@ -108,7 +95,7 @@ if $LINT_WITH_VERILATOR; then
 
   printf "\n------------ Verilator lint begin ------------\n\n"
 
-  CMD="$VERILATOR_BIN_DIR/bin/verilator"
+  CMD="verilator"
   CMD+=" --lint-only -language 1364-2001 -Wall --error-limit 10000 -Wno-UNUSED -Wno-fatal"
   CMD+=" $ALL_INCLUDES "
   CMD+=" $TOP_LEVEL_FILE "
@@ -128,7 +115,7 @@ fi
 
 printf "\n------------ Icarus Verilog lint begin ------------\n\n"
 
-CMD="$ICARUS_VERILOG_BIN_DIR/bin/iverilog"
+CMD="iverilog"
 CMD+=" -gno-std-include"
 CMD+=" -Wall -Wno-timescale"
 CMD+=" -g2001"

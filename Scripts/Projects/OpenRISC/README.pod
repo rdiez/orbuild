@@ -27,7 +27,9 @@ This is an I<< orbuild project >>, see the main I<< orbuild system >> documentat
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
 
-  sudo apt-get install gcc g++ libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu
+  sudo apt-get install gcc g++ libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu verilator iverilog
+
+If your system does not have a package with Verilator or Icarus Verilog, you can enable building them in the Makefile.
 
 =head3 Cygwin
 
@@ -44,6 +46,9 @@ Some of the required package names are:
   libusb-win32
   flex
   bison
+
+Cygwin does not have a package with Verilator or Icarus Verilog. If you have not installed them manually,
+you'll have to enable building them in the Makefile.
 
 =head2 Components built
 
@@ -109,14 +114,14 @@ the same MinSoC repository again (among many other tools).
 Taken from git L<< git://github.com/steveicarus/iverilog.git >> , stable branch I<< v0_9-branch >> ,
 so it may not be as stable as an officially-released version.
 
-This step is not strictly necessary, an officially-released version will also do.
+This step is optional. If not enabled, the currently installed Icarus Verilog will be used.
 
 =item * Verilator
 
 Taken from git head at L<< http://git.veripool.org/git/verilator >> , so it may not be as stable
 as an officially-released version.
 
-This step is not strictly necessary, an officially-released version will also do.
+This step is optional. If not enabled, the currently installed Verilator will be used.
 
 =back
 

@@ -1,4 +1,6 @@
 
+# Copyright (C) 2011 R. Diez - see the orbuild project for licensing information.
+
 .DELETE_ON_ERROR:
 
 SHELL := bash  # This makefile has only been tested with bash.
@@ -30,6 +32,8 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 
 ENABLE_PGAVIN := 0
 ENABLE_TESTS  := 0
+ENABLE_ICARUS_VERILOG := 0
+ENABLE_VERILATOR := 0
 
 LINUX_ARCH                    := or32
 OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
@@ -146,11 +150,13 @@ ICARUS_VERILOG_EXTRA_INSTALL_ARGS := -j 1  # Not actually needed if MAKEFLAGS ge
 
 $(eval $(call autotool_project_template,ICARUS_VERILOG,Icarus Verilog,$(ICARUS_VERILOG_CHECKOUT_DIR)))
 
-ICARUS_VERILOG_AUTOGEN_CMD = sh autoconf.sh
+ICARUS_VERILOG_AUTOGEN_CMD = $(SHELL) autoconf.sh
 $(eval $(call autogen_project_template,ICARUS_VERILOG,Icarus Verilog))
 $(ICARUS_VERILOG_AUTOGEN_SENTINEL): $(ICARUS_VERILOG_CHECKOUT_SENTINEL)
 
-all: $(ICARUS_VERILOG_INSTALL_SENTINEL)
+ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+  all: $(ICARUS_VERILOG_INSTALL_SENTINEL)
+endif
 
 
 # ----------- Verilator -----------
@@ -160,7 +166,10 @@ $(eval $(call git_checkout_template,VERILATOR,Verilator,http://git.veripool.org/
 # Build Verilator as a standard autoconf project.
 VERILATOR_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 $(eval $(call autotool_project_template,VERILATOR,Verilator,$(VERILATOR_CHECKOUT_DIR)))
-all: $(VERILATOR_INSTALL_SENTINEL)
+
+ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+  all: $(VERILATOR_INSTALL_SENTINEL)
+endif
 
 # Before running the standard autoconf project operations, let autoconf generate the necessary files.
 VERILATOR_AUTOGEN_CMD = autoconf --warnings=all
@@ -321,6 +330,26 @@ $(GDB_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL) $(OR1KSIM_INSTALL_SEN
 all: $(GDB_INSTALL_SENTINEL)
 
 
+# ----------- Verilog Tools Path -----------
+
+COLON_CHAR := :
+EMPTY_VAR_TRICK :=
+SPACE_CHAR := $(EMPTY_VAR_TRICK) $(EMPTY_VAR_TRICK)
+
+VERILOG_TOOLS_PREPEND_PATH :=
+VERILOG_TOOLS_PREREQS      :=
+
+ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+  VERILOG_TOOLS_PREREQS += $(ICARUS_VERILOG_INSTALL_SENTINEL)
+  VERILOG_TOOLS_PREPEND_PATH += $(ICARUS_VERILOG_BIN_DIR)/bin
+endif
+
+ifeq "$(ENABLE_VERILATOR)" "1"
+  VERILOG_TOOLS_PREREQS += $(VERILATOR_INSTALL_SENTINEL)
+  VERILOG_TOOLS_PREPEND_PATH += $(VERILATOR_BIN_DIR)/bin
+endif
+
+
 # ----------- ORPSoC v2 -----------
 
 ORPSOC_NAME := ORPSOCv2
@@ -335,20 +364,26 @@ all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
 
 # Lint (parts of the) Verilog code with Verilator and with Icarus Verilog.
 
-LINT_TEMP_DIR := $(ORBUILD_BUILD_DIR)/LINT_TEMP
-LINT_PREREQS := $(ICARUS_VERILOG_INSTALL_SENTINEL) $(VERILATOR_INSTALL_SENTINEL)
+LINT_TEMP_DIR := $(ORBUILD_BUILD_DIR)/temp/LINT_TEMP
 
-$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(VERILATOR_BIN_DIR)\" \"$(ICARUS_VERILOG_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(LINT_TEMP_DIR)\"
+$(ORPSOC_NAME)_LINT_PREPEND_PATH := $(subst $(SPACE_CHAR),$(COLON_CHAR),$(strip $(VERILOG_TOOLS_PREPEND_PATH)))
+
+$(ORPSOC_NAME)_LINT_OR1200_PREPEND_PATH        := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
+$(ORPSOC_NAME)_LINT_ORPSOC_PREPEND_PATH        := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
+$(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_PREPEND_PATH := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
+$(ORPSOC_NAME)_LINT_TESTBENCH_PREPEND_PATH     := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
+
+$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(LINT_TEMP_DIR)\"
 
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_OR1200,ORPSoC v2 lint or1200,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) or1200 minimal-features"))
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint orpsoc,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features"))
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG,ORPSoC v2 lint orpsoc alt cfg,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features-alt-cfg"))
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_TESTBENCH,ORPSoC v2 lint testbench,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) testbench maximal-features"))
 
-$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)       : $(LINT_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(LINT_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(LINT_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(LINT_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)       : $(VERILOG_TOOLS_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(VERILOG_TOOLS_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(VERILOG_TOOLS_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(VERILOG_TOOLS_PREREQS)
 
 all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
@@ -371,11 +406,20 @@ $(ORPSOC_NAME)_RTL_TESTS_CMD += make -j 1 rtl-tests  # About the "-j 1": The rtl
 # Clear variable MAKEFLAGS, as the rtl-tests target breaks when run in parallel mode.
 $(ORPSOC_NAME)_RTL_TESTS_MAKEFLAGS_FILTER := clear
 
-$(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$(BARE_TOOLCHAIN_DIR)/bin
+$(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+
+ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+  $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$($(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH)
+endif
 
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,$(SHELL) -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
 
-$(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
+ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+  $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL)
+endif
+
+$(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
+
 all_tests: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 
 
