@@ -100,5 +100,44 @@ sub entry_point ( $ $ )
 }
 
 
+#------------------------------------------------------------------------
+#
+# Formats an elapsed in seconds into a human-friendly string,
+# with hours, minutes, etc.
+#
+# Code copied from http://perlmonks.thepen.com/110550.html
+#
+
+  sub plural_suffix ( $ )
+  {
+    my $number = shift;
+
+    return ( $number == 1 ) ? "" : "s";
+  }
+
+sub human_friendly_elapsed_time ( $ )
+{
+  my $seconds = shift;
+	
+  my ( $weeks, $days, $hours, $minutes, $sign, $res ) = qw/0 0 0 0 0/;
+
+  $sign = $seconds == abs $seconds ? '' : '-';
+  $seconds = abs $seconds;
+
+  ($seconds, $minutes) = ($seconds % 60, int($seconds / 60)) if $seconds;
+  ($minutes, $hours  ) = ($minutes % 60, int($minutes / 60)) if $minutes;
+  ($hours  , $days   ) = ($hours   % 24, int($hours   / 24)) if $hours;
+  ($days   , $weeks  ) = ($days    %  7, int($days    /  7)) if $days;
+
+  $res = sprintf '%d second%s', $seconds, plural_suffix( $seconds );
+  $res = sprintf "%d minute%s $res", $minutes, plural_suffix( $minutes ) if $minutes or $hours or $days or $weeks;
+  $res = sprintf "%d hour%s $res"  , $hours  , plural_suffix( $hours   ) if $hours   or $days  or $weeks;
+  $res = sprintf "%d day%s $res"   , $days   , plural_suffix( $days    ) if $days    or $weeks;
+  $res = sprintf "%d week%s $res"  , $weeks  , plural_suffix( $weeks   ) if $weeks;
+
+  return "$sign$res";
+}
+
+
 1;  # The module returns a true value to indicate it compiled successfully.
 

@@ -451,16 +451,7 @@ sub build_command ( $ $ $ )
 
   my $reportFilename = "BuildReport.html";
 
-  my $elapsedUptime  = read_uptime() - $startUptime;
-  my $elapsedSeconds = $elapsedUptime % 60;
-  my $elapsedMinutes = $elapsedUptime / 60 % 60;
-  my $elapsedHours   = $elapsedUptime / 60 / 60;
-  my $elapsedMsg = "";
-
-  $elapsedMsg .= "$elapsedHours hour(s), " if ( $elapsedHours );
-  $elapsedMsg .= "$elapsedMinutes minute(s) and " if ( $elapsedHours or $elapsedMinutes );
-  $elapsedMsg .= "$elapsedSeconds second(s)";
-
+  my $elapsedMsg = MiscUtils::human_friendly_elapsed_time( read_uptime() - $startUptime );
   my $failedCountFilename = FileUtils::cat_path( $publicReportsBasedir, "FailedCount.report" );
 
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
