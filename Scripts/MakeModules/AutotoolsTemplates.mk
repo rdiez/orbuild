@@ -40,6 +40,8 @@ define autotool_project_template_variables_1
   # Path prefix to prepend for all phases.
   ifeq ($(origin $(1)_AUTOCONF_PREPEND_PATH), undefined)
     $(1)_AUTOCONF_PATH_TO_USE := $(PATH)
+  else ifeq "$(strip $(value $(1)_AUTOCONF_PREPEND_PATH))" ""
+    $(1)_PATH_TO_USE := $(PATH)
   else
     $(1)_AUTOCONF_PATH_TO_USE := $(value $(1)_AUTOCONF_PREPEND_PATH):$(PATH)
   endif

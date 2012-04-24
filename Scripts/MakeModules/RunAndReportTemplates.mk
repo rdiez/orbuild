@@ -16,6 +16,8 @@ define run_and_report_template_variables_1
 
   ifeq ($(origin $(1)_PREPEND_PATH), undefined)
     $(1)_PATH_TO_USE := $(PATH)
+  else ifeq "$(strip $(value $(1)_PREPEND_PATH))" ""
+    $(1)_PATH_TO_USE := $(PATH)
   else
     $(1)_PATH_TO_USE := $(value $(1)_PREPEND_PATH):$(PATH)
   endif
