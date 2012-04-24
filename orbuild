@@ -2,7 +2,7 @@
 
 =head1 OVERVIEW
 
-orbuild version 1.02
+orbuild version 1.04
 
 Build system for OpenRISC - see the README file for more information.
 
@@ -65,7 +65,7 @@ use AGPL3;
 use constant SCRIPT_NAME => $0;
 
 use constant APP_NAME    => "orbuild";
-use constant APP_VERSION => "1.02";  # If you update it, update also the perldoc text above.
+use constant APP_VERSION => "1.04";  # If you update it, update also the perldoc text above.
 
 # In case the shebang fails in weird operating systems, use the explicit interpreter names.
 use constant SHELL_INTERPRETER => "bash";
