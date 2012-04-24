@@ -24,6 +24,8 @@ perl GenerateBuildReport.pl <internal reports dir> <public reports base path> <p
 
 --elapsedTime <elapsed time string to display in the report>
 
+--failedCountFilename <filename>
+
 =head1 EXIT CODE
 
 Exit code: 0 on success, some other value on error.
@@ -95,6 +97,7 @@ sub main ()
   my $arg_topLevelReportFilename  = "";
   my $arg_componentGroupsFilename = "";
   my $arg_subprojectsFilename     = "";
+  my $arg_failedCountFilename     = "";
 
   my $result = GetOptions(
                  'help'                =>  \$arg_help,
@@ -106,7 +109,8 @@ sub main ()
                  'title=s'             =>  \$arg_title,
                  'topLevelReportFilename=s'  => \$arg_topLevelReportFilename,
                  'componentGroupsFilename=s' => \$arg_componentGroupsFilename,
-                 'subprojectsFilename=s'     => \$arg_subprojectsFilename
+                 'subprojectsFilename=s'     => \$arg_subprojectsFilename,
+                 'failedCountFilename=s'     => \$arg_failedCountFilename
                 );
 
   if ( not $result )
@@ -414,6 +418,10 @@ sub main ()
     die "Error validating the generated HTML file \"$htmlOutputFilename\": $errorMessage\n";
   }
 
+  if ( $arg_failedCountFilename ne "" )
+  {
+    FileUtils::write_string_to_new_file( $arg_failedCountFilename, "$failedCount" );
+  }
 
   # Generate the tarball file.
 

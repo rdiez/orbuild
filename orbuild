@@ -204,6 +204,35 @@ sub read_uptime ()
 }
 
 
+sub read_failed_count ( $ )
+{
+  my $filename = shift;
+
+  my @lines = FileUtils::read_text_file( $filename );
+
+  if ( 0 == scalar( @lines ) )
+  {
+    die "File $filename is empty.\n";
+  }
+
+  if ( 1 != scalar( @lines ) )
+  {
+    die "File $filename has unexpected lines.\n";
+  }
+
+  my $failedCountStr = $lines[0];
+
+  my @components = $failedCountStr =~ m/^(\d+)$/o;
+
+  if ( 1 != scalar( @components ) )
+  {
+    die "Cannot parse contents of $filename: \"$failedCountStr\".\n";
+  }
+
+  return $components[0];
+}
+
+
 sub build_command ( $ $ $ )
 {
   my $resume        = shift;
@@ -314,7 +343,9 @@ sub build_command ( $ $ $ )
   # Disable the silent built. I think the user should see the actual commands issued in the log file.
   #   $makeFlags   .= "-s ";  # Silent.
 
-  if ( lc($configEntries->{ "StopOnFirstError" }) eq "no" )
+  my $stopOnFirstError = ( lc( $configEntries->{ "StopOnFirstError" } ) eq "no" ) ? "0" : "1";
+
+  if ( not $stopOnFirstError )
   {
     $makeFlags   .= "-k ";
   }
@@ -430,17 +461,22 @@ sub build_command ( $ $ $ )
   $elapsedMsg .= "$elapsedMinutes minute(s) and " if ( $elapsedHours or $elapsedMinutes );
   $elapsedMsg .= "$elapsedSeconds second(s)";
 
+  my $failedCountFilename = FileUtils::cat_path( $publicReportsBasedir, "FailedCount.report" );
+
   my $reportCmd = "@{[PERL_INTERPRETER]} @{[TOOLS_DIR]}/GenerateBuildReport.pl " .
                   "--topLevelReportFilename $makefileReportFile " .
                   "--componentGroupsFilename $componentGroupsFilename " .
                   "--subprojectsFilename $subprojectsFilename " .
                   "--elapsedTime \"$elapsedMsg\" " .
+                  "--failedCountFilename \"$failedCountFilename\" " .
                   "$internalReportsDir " .
                   "$publicReportsBasedir " .
                   "@{[BUILD_PUBLIC_REPORTS_SUBDIR]} " .
                   "$reportFilename";
 
   ProcessUtils::run_process_exit_code_0( $reportCmd );
+
+  my $failedCount = read_failed_count( $failedCountFilename );
 
   # Do not create the LatestBuildReport.html symbolic link any more, as it does not work if the user
   # tries to click through to the individual build logs.
@@ -467,7 +503,22 @@ sub build_command ( $ $ $ )
   my $error;
   my $finalMsg;
 
-  if ( $makeExitCode != 0 )
+  if ( $failedCount != 0 )
+  {
+    # When a component fails, it makes the top-level makefile fail too, which is not ideal. This is because
+    # each component is actually a GNU Make target. A failed target must return a non-zero exit code,
+    # otherwise GNU Make will carry on with any other targets that depend on the failed one,
+    # generating many more derived failures along the way.
+    #
+    # We could mask errors in the top-level makefile if any component failed. The trouble is,
+    # there could be 2 unrelated errors: a component may fail to build, and the makefile
+    # may also fail for another reason (like a bug in the makefile itself).
+
+    $error= "$failedCount component(s) failed to build, see the generated HTML report file:\n" .
+            $reportFileMsg .
+            "Rerun @{[SCRIPT_NAME]} with the '--resume' switch to try again (but see the documentation for caveats).\n";
+  }
+  elsif ( $makeExitCode != 0 )
   {
     $error= "The build failed with exit code $makeExitCode, see the generated HTML report file:\n" .
             $reportFileMsg .

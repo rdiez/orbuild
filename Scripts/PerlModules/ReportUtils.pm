@@ -133,25 +133,12 @@ sub get_report_type ( $ )
 sub sort_reports ( $ $ )
 {
   my $allReports               = shift;
-  my $userFriendlyNameAtTheTop = shift;
+  my $userFriendlyNameAtTheTop = shift;  # If successful, it goes at the top. If failed, after any other failures.
 
   my $comparator = sub ( $ $ )  #  "local *comparator" is allegedly better as "my $comparator",
   {                             #  especially for recursive nested routines, but you get a compilation warning.
     my $left  = shift;
     my $right = shift;
-
-
-    # There can be one component that should always be at the top, no matter what.
-
-    if ( $left ->{ "UserFriendlyName" } eq $userFriendlyNameAtTheTop )
-    {
-        return -1;
-    }
-
-    if ( $right ->{ "UserFriendlyName" } eq $userFriendlyNameAtTheTop )
-    {
-        return +1;
-    }
 
     my $leftExitCodeSuccess  =  0 == $left ->{ "ExitCode" };
     my $rightExitCodeSuccess =  0 == $right->{ "ExitCode" };
@@ -180,6 +167,20 @@ sub sort_reports ( $ $ )
       {
         # Nothing to do here, drop below.
       }
+    }
+
+
+    # There can be one component that should always be at the top
+    # or at the bottom, depending on the success/failed status.
+
+    if ( $left ->{ "UserFriendlyName" } eq $userFriendlyNameAtTheTop )
+    {
+        return  $leftExitCodeSuccess ? -1 : +1;
+    }
+
+    if ( $right ->{ "UserFriendlyName" } eq $userFriendlyNameAtTheTop )
+    {
+        return  $rightExitCodeSuccess ? +1 : -1;
     }
 
 
