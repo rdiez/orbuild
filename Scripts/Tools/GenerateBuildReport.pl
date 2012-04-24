@@ -75,7 +75,7 @@ use AGPL3;
 use constant SCRIPT_NAME => $0;
 
 use constant APP_NAME    => "GenerateReport.pl";
-use constant APP_VERSION => "0.18";  # If you update the version number, update also the perldoc text above if needed.
+use constant APP_VERSION => "0.20";  # If you update the version number, update also the perldoc text above if needed.
 
 use constant REPORT_EXTENSION => ".report";
 use constant LOG_EXTENSION    => ".txt";
