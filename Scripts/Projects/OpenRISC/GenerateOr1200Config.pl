@@ -107,7 +107,7 @@ sub main ()
 
   if ( $arg_license )
   {
-    write_stdout( AGPL3::get_gpl3_license_text() );
+    write_stdout( AGPL3::get_agpl3_license_text() );
     return MiscUtils::EXIT_CODE_SUCCESS;
   }
 
