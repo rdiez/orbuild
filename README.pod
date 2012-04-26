@@ -521,6 +521,8 @@ Copyright (C) R. Diez 2011,  rdiezmail-openrisc at yahoo.de
 
 The I<< orbuild >> source code is released under the GPL 3 license.
 
+Please note that some of the files distributed with I<< orbuild >> have other authors and licenses.
+
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 
 =cut
