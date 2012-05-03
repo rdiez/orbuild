@@ -425,13 +425,25 @@ sub main ()
 
   # Generate the tarball file.
 
-  my $cmd = qq[ cd $outputBaseDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename" ];
+  my $cmd = qq[cd $outputBaseDir && set -o pipefail && tar --create * --exclude="$tarballFilename" | gzip -1 - >"$tarballFilename"];
   # write_stdout( "Compressed archive cmd: $cmd\n" );
-  ProcessUtils::run_process( $cmd );
+  my $escapedCmd = escape_for_bash_c( $cmd );
+  my $cmdToRun = qq[bash -c "$escapedCmd"];
+  ProcessUtils::run_process_exit_code_0( $cmdToRun );
 
   write_stdout( "HTML report finished.\n" );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
+}
+
+
+sub escape_for_bash_c ( $ )
+{
+  my $str = shift;
+
+  $str =~ s/(")/\\$1/go;
+
+  return $str;
 }
 
 
