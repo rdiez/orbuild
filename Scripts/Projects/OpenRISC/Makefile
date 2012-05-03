@@ -296,7 +296,7 @@ OR1KSIM_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET)
 OR1KSIM_EXTRA_CONFIG_ARGS += --enable-eth-phy
 # TODO: optimise compilation for the test suite
 # Flag --no-builtin-rules makes the build faster. Flag --no-builtin-variables does not work here because at least one makefile uses built-in variable $(RM).
-OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules V=1  # TODO: remove V=1
+OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
 
 # The test suite bundled with or1ksim needs the target compiler.
 OR1KSIM_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
@@ -360,9 +360,10 @@ $(ORPSOC_NAME)_DOCUMENTATION_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/doc && ./configu
 $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
 all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
+$(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 
 
-# Lint (parts of the) Verilog code with Verilator and with Icarus Verilog.
+# ------- Lint (parts of the) Verilog code with Verilator and with Icarus Verilog.
 
 LINT_TEMP_DIR := $(ORBUILD_BUILD_DIR)/temp/LINT_TEMP
 
@@ -380,10 +381,10 @@ $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint 
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG,ORPSoC v2 lint orpsoc alt cfg,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features-alt-cfg"))
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_TESTBENCH,ORPSoC v2 lint testbench,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) testbench maximal-features"))
 
-$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)       : $(VERILOG_TOOLS_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(VERILOG_TOOLS_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(VERILOG_TOOLS_PREREQS)
-$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(VERILOG_TOOLS_PREREQS)
+$(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)       : $(VERILOG_TOOLS_PREREQS) $(ORPSOCV2_CHECKOUT_SENTINEL)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(VERILOG_TOOLS_PREREQS) $(ORPSOCV2_CHECKOUT_SENTINEL)
+$(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(VERILOG_TOOLS_PREREQS) $(ORPSOCV2_CHECKOUT_SENTINEL)
+$(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(VERILOG_TOOLS_PREREQS) $(ORPSOCV2_CHECKOUT_SENTINEL)
 
 all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
@@ -396,7 +397,8 @@ LINT_GROUP += $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG
 LINT_GROUP += $(ORPSOC_NAME)_LINT_TESTBENCH
 
 
-# Run some of the self-tests.
+# ------- Run some of the self-tests.
+
 # Note that this step slightly pollutes the source repository its run upon.
 
 $(ORPSOC_NAME)_RTL_TESTS_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/sim/bin &&
