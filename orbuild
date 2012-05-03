@@ -343,7 +343,7 @@ sub build_command ( $ $ $ )
   # Disable the silent built. I think the user should see the actual commands issued in the log file.
   #   $makeFlags   .= "-s ";  # Silent.
 
-  my $stopOnFirstError = ( lc( $configEntries->{ "StopOnFirstError" } ) eq "no" ) ? "0" : "1";
+  my $stopOnFirstError = ( lc( $configEntries->{ "StopOnFirstError" } ) eq "no" ) ? 0 : 1;
 
   if ( not $stopOnFirstError )
   {
@@ -403,6 +403,8 @@ sub build_command ( $ $ $ )
   $ENV{ ORBUILD_TOOLS                      } = TOOLS_DIR;
   $ENV{ ORBUILD_SENTINEL_FILENAME_SUFFIX   } = SENTINELS_FILENAME_SUFFIX;
   $ENV{ ORBUILD_PROJECT_DIR                } = $makefileDir;
+  $ENV{ ORBUILD_STOP_ON_FIRST_ERROR        } = $stopOnFirstError;
+
 
   # These variables are used by some of the tools bundled with orbuild:
   $ENV{ ORBUILD_INTERNAL_REPORTS_DIR   } = $internalReportsDir;
