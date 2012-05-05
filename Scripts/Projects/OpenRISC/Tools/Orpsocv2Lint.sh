@@ -4,9 +4,9 @@
 
 set -o errexit
 
-source "$(dirname $0)/../../ShellModules/StandardShellHeader.sh"
-source "$(dirname $0)/../../ShellModules/PrintCommand.sh"
-source "$(dirname $0)/../../ShellModules/FileUtils.sh"
+source "$(dirname $0)/../../../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../../../ShellModules/PrintCommand.sh"
+source "$(dirname $0)/../../../ShellModules/FileUtils.sh"
 
 
 if [ $# -ne 4 ]; then
@@ -85,9 +85,9 @@ esac
 
 create_dir_if_not_exists "$TEMP_SUBDIR"
 
-"$ORBUILD_PROJECT_DIR/GenerateOr1200Config.pl" "$ORPSOCV2_CHECKOUT_DIR/rtl/verilog/include/or1200_defines.v" \
-                                               "$TEMP_SUBDIR/or1200_defines.v" \
-                                               "$CONFIG"
+"$ORBUILD_PROJECT_DIR/Tools/GenerateOr1200Config.pl" "$ORPSOCV2_CHECKOUT_DIR/rtl/verilog/include/or1200_defines.v" \
+                                                     "$TEMP_SUBDIR/or1200_defines.v" \
+                                                     "$CONFIG"
 
 VERILATOR_LINT_FAILED=0
 

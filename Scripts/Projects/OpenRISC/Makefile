@@ -354,7 +354,19 @@ endif
 
 ORPSOC_NAME := ORPSOCv2
 
-# Build the documentation.
+# ------- Build the support tools, they are needed when running the Test Suite (see further below).
+
+# Note that this step slightly pollutes the source repository it is run upon.
+$(ORPSOC_NAME)_SW_UTILS_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/sw/utils && make $(FASTER_MAKE) all
+$(ORPSOC_NAME)_SW_UTILS_CMD_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_SW_UTILS_CMD,ORPSoC v2 sw utils,$(SHELL) -c "$(value $(ORPSOC_NAME)_SW_UTILS_CMD)"))
+# These tools are not always needed.
+#   all: $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
+$(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
+
+
+# ------- Build the documentation.
+
 # Note that this step slightly pollutes the source repository it is run upon.
 $(ORPSOC_NAME)_DOCUMENTATION_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/doc && ./configure && make $(FASTER_MAKE) pdf
 $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
@@ -374,7 +386,7 @@ $(ORPSOC_NAME)_LINT_ORPSOC_PREPEND_PATH        := $($(ORPSOC_NAME)_LINT_PREPEND_
 $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_PREPEND_PATH := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
 $(ORPSOC_NAME)_LINT_TESTBENCH_PREPEND_PATH     := $($(ORPSOC_NAME)_LINT_PREPEND_PATH)
 
-$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Orpsocv2Lint.sh \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(LINT_TEMP_DIR)\"
+$(ORPSOC_NAME)_LINT_CMD := $(ORBUILD_PROJECT_DIR)/Tools/Orpsocv2Lint.sh \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(LINT_TEMP_DIR)\"
 
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_OR1200,ORPSoC v2 lint or1200,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) or1200 minimal-features"))
 $(eval $(call run_and_report_template,$(ORPSOC_NAME)_LINT_ORPSOC,ORPSoC v2 lint orpsoc,$(SHELL) -c "$(value $(ORPSOC_NAME)_LINT_CMD) orpsoc maximal-features"))
@@ -389,7 +401,7 @@ $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(VERILOG_TOOLS_PREREQS) $(
 all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
 all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL)
-# TODO: disabled, waiting for fix:
+# TODO: not ready yet, must generate test-defines.v properly:
 #   all: $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)
 
 LINT_GROUP := $(ORPSOC_NAME)_LINT_OR1200
@@ -424,6 +436,9 @@ endif
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 all_tests: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
+# The rtl-tests target builds some of the sw utils. In order to prevent collisions while building,
+# make the tests depend on the full sw utils set.
+$(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 
 
 # ----------- MinSoC -----------
@@ -432,7 +447,7 @@ all_tests: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 # This script downloads a repository and some files automatically, so skip it if we have disabled repository downloading.
 
 MINSOC_INSTALLATION_SCRIPT_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
-MINSOC_INSTALLATION_SCRIPT_CMD := $(ORBUILD_PROJECT_DIR)/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
+MINSOC_INSTALLATION_SCRIPT_CMD := $(ORBUILD_PROJECT_DIR)/Tools/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
 
 MINSOC_INSTALLATION_SCRIPT_MAKEFLAGS_FILTER := clear
 

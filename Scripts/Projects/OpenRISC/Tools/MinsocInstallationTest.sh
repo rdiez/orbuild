@@ -3,7 +3,7 @@
 # Copyright (C) 2011 R. Diez - see the orbuild project for licensing information.
 
 set -o errexit
-source "$(dirname $0)/../../ShellModules/StandardShellHeader.sh"
+source "$(dirname $0)/../../../ShellModules/StandardShellHeader.sh"
 
 
 if [ $# -ne 2 ]; then
