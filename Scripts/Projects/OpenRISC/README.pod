@@ -29,7 +29,7 @@ Under Ubuntu/Debian systems, the following command installs all prerequisites at
 
   sudo apt-get install gcc g++ libmpfr-dev libgmp3-dev libmpc-dev libzip-dev texlive flex bison texinfo libncurses-dev gperf dejagnu verilator iverilog
 
-If your system does not have a package with Verilator or Icarus Verilog, you can enable building them in the Makefile.
+If your system does not have a package with Verilator or Icarus Verilog, you can enable building them in the Makefile, see below.
 
 =head3 Cygwin
 
