@@ -205,7 +205,7 @@ endif
 LOCAL_BINUTILS_SRC := $(GNUSRC_CHECKOUT_DIR)/binutils-2.20.1
 BINUTILS_BIN_DIR := $(BARE_TOOLCHAIN_DIR)
 # TODO: I am not sure whether --enable-fast-install=N/A or --disable-libssp are needed in BINUTILS_EXTRA_CONFIG_ARGS.
-BINUTILS_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET) 
+BINUTILS_EXTRA_CONFIG_ARGS := --target=$(OPENRISC_BARE_TARGET) --enable-werror=no
 BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 # TODO: With the following targets, "make install" fails. I'm not sure which targets are the correct ones:
 #       BINUTILS_MAKE_TARGETS := all-binutils all-gas all-ld all-build
