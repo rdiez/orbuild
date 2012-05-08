@@ -48,7 +48,7 @@ Some of the required package names are:
   bison
 
 Cygwin does not have a package with Verilator or Icarus Verilog. If you have not installed them manually,
-you'll have to enable building them in the Makefile.
+you'll have to enable building them in the Makefile, see below.
 
 =head2 Components built
 
