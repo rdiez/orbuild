@@ -8,7 +8,7 @@ AUTOMAKE_OPTIONS = foreign
 # However, with it, autoreconf does not work if you don't manually create
 # the m4 subdirectory beforehand, even if you add the --install flag here.
 # I have tested with autoconf 2.65 and automake 1.11.1 .
-#   ACLOCAL_AMFLAGS = -I m4
+#   ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 # If you update this line, please update AC_CONFIG_FILES in configure.ac too.
 SUBDIRS = AsmTestCases
