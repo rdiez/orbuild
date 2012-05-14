@@ -34,6 +34,7 @@ ENABLE_PGAVIN := 0
 ENABLE_TESTS  := 0
 ENABLE_ICARUS_VERILOG := 0
 ENABLE_VERILATOR := 0
+ENABLE_OPEN_RISC_TEST_SUITE := $(ENABLE_TESTS)
 
 LINUX_ARCH                    := or32
 OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
@@ -439,6 +440,73 @@ all_tests: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
 # The rtl-tests target builds some of the sw utils. In order to prevent collisions while building,
 # make the tests depend on the full sw utils set.
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
+
+
+# ----------- OpenRISC Test Suite -----------
+
+# ----- Build the test suite for a generic reference system.
+
+# Note: The Test Suite was forked from or1ksim's Test Suite on 2012-04-21. Some tests
+#       were taken from ORPSoC V2, a few are new.
+
+ORTS_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
+
+ORTS_EXES_INSTALL_MAKEFLAGS_FILTER := pass-j
+# Add --enable-debug=yes here in order to enable debug builds.
+ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(OPENRISC_BARE_TARGET)
+ORTS_EXES_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+ORTS_EXES_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
+
+$(eval $(call autotool_project_template,ORTS_EXES,OpenRISC Test Suite executables,$(ORTS_DIR)))
+$(ORTS_EXES_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
+
+ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh
+$(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables))
+
+# ----- Run the test suite against different targets.
+
+ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)  $(OR1KSIM_BIN_DIR)/bin $(BARE_TOOLCHAIN_DIR)/bin
+ORTS_PREPEND_PATH := $(subst $(SPACE_CHAR),$(COLON_CHAR),$(strip $(ORTS_PREPEND_PATH_LIST)))
+
+ORTS_ORK1SIM_PREPEND_PATH          := $(OR1KSIM_BIN_DIR)/bin
+ORTS_ORPSOC_IVERILOG_PREPEND_PATH  := $(ORTS_PREPEND_PATH)
+ORTS_MINSOC_VERILATOR_PREPEND_PATH := $(ORTS_PREPEND_PATH)
+
+ORTS_COMMON_CMD := \"$(ORBUILD_PROJECT_DIR)/Tools/RunTestSuite.sh\" OrtsPublicReports TestReport.html \"$(ORTS_EXES_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\" $(OPENRISC_BARE_TARGET)
+
+ORTS_ORK1SIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORK1SIM
+ORTS_ORK1SIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORK1SIM_OBJ_DIR)\" ORTS_ORK1SIM
+ORTS_ORK1SIM_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ORTS_ORK1SIM,Test Suite against or1ksim,$(SHELL) -c "$(ORTS_ORK1SIM_CMD)"))
+
+ORTS_ORPSOC_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORPSOC_IVERILOG
+ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG
+ORTS_ORPSOC_IVERILOG_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ORTS_ORPSOC_IVERILOG,Test Suite against ORPSoC V2 with Icarus Verilog,$(SHELL) -c "$(ORTS_ORPSOC_IVERILOG_CMD)"))
+
+ORTS_MINSOC_VERILATOR_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_MINSOC_VERILATOR
+ORTS_MINSOC_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_VERILATOR_OBJ_DIR)\" ORTS_MINSOC_VERILATOR
+ORTS_MINSOC_VERILATOR_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ORTS_MINSOC_VERILATOR,Test Suite against MINSoC with Verilator,$(SHELL) -c "$(ORTS_MINSOC_VERILATOR_CMD)"))
+
+orts_subproject_files:
+	echo "OpenRISC Test Suite = $(ORTS_EXES_AUTOTOOLS_GROUP) ORTS_ORK1SIM ORTS_ORPSOC_IVERILOG ORTS_MINSOC_VERILATOR " >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "ORTS_ORK1SIM = $(ORTS_ORK1SIM_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
+	echo "ORTS_ORPSOC_IVERILOG = $(ORTS_ORPSOC_IVERILOG_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
+	echo "ORTS_MINSOC_VERILATOR = $(ORTS_MINSOC_VERILATOR_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
+
+$(ORTS_ORK1SIM_SENTINEL)         : $(ORTS_EXES_INSTALL_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
+$(ORTS_ORPSOC_IVERILOG_SENTINEL) : $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
+$(ORTS_MINSOC_VERILATOR_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
+
+ifeq "$(ENABLE_OPEN_RISC_TEST_SUITE)" "1"
+  all: $(ORTS_EXES_INSTALL_SENTINEL)
+  all: $(ORTS_ORK1SIM_SENTINEL)
+  all: $(ORTS_ORPSOC_IVERILOG_SENTINEL)
+  # TODO: The Verilator support is not ready yet:
+  #   all: $(ORTS_MINSOC_VERILATOR_SENTINEL)
+  all: orts_subproject_files
+endif
 
 
 # ----------- MinSoC -----------
