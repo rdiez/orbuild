@@ -1,0 +1,172 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Sequence:
+#   First operand.
+#   Second operand.
+#   Result.
+#   Carry.
+#   Overflow.
+#   Exception triggered.
+
+
+# ----------- Test l.and -----------
+
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);
+report(0xffffffff);
+report(0xffffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0xaaaaaaaa);
+report(0xaaaaaaaa);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x55555555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x55555555);
+report(0x55555555);
+report(0x55555555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0x55555555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x4c70f07c);
+report(0xb38f0f83);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x4c70f07c);
+report(0xc4c70f07);
+report(0x44400004);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xb38f0f83);
+report(0x38f0f83b);
+report(0x30800803);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+# ----------- Test l.andi -----------
+
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);
+report(0x0000ffff);
+report(0x0000ffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0x0000aaaa);
+report(0x0000aaaa);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x55555555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x55555555);
+report(0x00005555);
+report(0x00005555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xaaaaaaaa);
+report(0x00005555);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x4c70f07c);
+report(0x00000f83);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x4c70f07c);
+report(0x00000f07);
+report(0x00000004);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xb38f0f83);
+report(0x0000f83b);
+report(0x00000803);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+exit(0)

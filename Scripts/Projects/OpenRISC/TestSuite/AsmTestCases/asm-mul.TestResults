@@ -1,0 +1,159 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Sequence:
+#   First operand.
+#   Second operand.
+#   Result.
+#   Carry.
+#   Overflow.
+#   Exception triggered.
+
+
+# ----------- Test l.mul -----------
+
+report(0x00000002);
+report(0x00000003);
+report(0x00000006);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00008001);
+report(0x0000fffe);
+report(0x7ffffffe);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00008000);
+report(0x00010000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x00010000);
+#report(0x00010000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000001);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xfffffffe);
+#report(0xfffffffd);
+#report(0x00000006);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff7fff);
+#report(0xffff0002);
+#report(0x7ffffffe);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff7fff);
+#report(0xffff0000);
+#report(0x80010000);
+#report(0x00000001);
+#report(0x00000001);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff0000);
+#report(0xfffeffff);
+#report(0x00010000);
+#report(0x00000001);
+#report(0x00000001);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x00000002);
+#report(0xfffffffd);
+#report(0xfffffffa);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff8000);
+#report(0x00010000);
+#report(0x80000000);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff7fff);
+#report(0x00010000);
+#report(0x7fff0000);
+#report(0x00000001);
+#report(0x00000001);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x80000000);
+#report(0x00000001);
+#report(0x80000000);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000000);
+
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x00008000);
+#report(0x00010000);
+#report(0x80000000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000001);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x00000002);
+#report(0xfffffffd);
+#report(0xfffffffa);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0xffff7fff);
+#report(0xffff0000);
+#report(0x80010000);
+#report(0x00000001);
+#report(0x00000001);
+#report(0x00000001);
+
+
+# ----------- Test l.muli -----------
+
+report(0x00000002);
+report(0x00000003);
+report(0x00000006);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+
+exit(0)

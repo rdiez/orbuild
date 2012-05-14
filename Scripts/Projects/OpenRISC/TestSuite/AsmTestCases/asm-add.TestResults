@@ -1,0 +1,408 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Sequence:
+#   First operand.
+#   Second operand.
+#   Result.
+#   Carry.
+#   Overflow.
+#   Exception triggered.
+
+
+# ----------- Test l.add -----------
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);
+report(0xfffffffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x40000000);
+report(0x3fffffff);
+report(0x7fffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x40000000);
+report(0x40000000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0xc0000000);
+report(0xc0000000);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0xbfffffff);
+report(0xbfffffff);
+report(0x7ffffffe);
+report(0x00000001);
+report(0x00000001);
+report(0x00000000);
+
+# Range exception tests.
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x40000000);
+# report(0x40000000);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+report(0xffffffff);
+report(0xfffffffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0xbfffffff);
+# report(0xbfffffff);
+# report(0x7ffffffe);
+# report(0x00000001);
+# report(0x00000001);
+# report(0x00000001);
+
+
+# ----------- Test l.addc -----------
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);  # -1
+report(0xfffffffe);  # -2
+report(0xfffffffd);  # -3
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x40000000);
+report(0x3fffffff);
+report(0x7fffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x40000000);
+report(0x3fffffff);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0x40000000);
+report(0x40000000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0xffffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000000);
+report(0xffffffff);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0xc0000000);
+report(0xc0000000);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0xc0000000);
+report(0xbfffffff);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0xbfffffff);
+report(0xbfffffff);
+report(0x7ffffffe);
+report(0x00000001);
+report(0x00000001);
+report(0x00000000);
+
+# Range exception tests.
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x40000000);
+# report(0x40000000);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x40000000);
+# report(0x3fffffff);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+report(0xffffffff);
+report(0xfffffffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000000);
+report(0xffffffff);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0xbfffffff);
+# report(0xbfffffff);
+# report(0x7ffffffe);
+# report(0x00000001);
+# report(0x00000001);
+# report(0x00000001);
+
+
+# ----------- Test l.addi -----------
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);
+report(0x0000fffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x7fff8000);
+report(0x00007fff);
+report(0x7fffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x7fffc000);
+report(0x00004000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0x80008000);
+report(0x00008000);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x80007fff);
+report(0x00008000);
+report(0x7fffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000000);
+
+# Range exception tests.
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x7fffc000);
+# report(0x00004000);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+report(0xffffffff);
+report(0x0000fffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x80007fff);
+# report(0x00008000);
+# report(0x7fffffff);
+# report(0x00000001);
+# report(0x00000001);
+# report(0x00000001);
+
+
+# ----------- Test l.addic -----------
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xffffffff);
+report(0x0000fffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x7fff8000);
+report(0x00007fff);
+report(0x7fffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x7fff8000);
+report(0x00007fff);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0x7fffc000);
+report(0x00004000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+
+report(0xffffffff);
+report(0x00000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000000);
+report(0x0000ffff);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x80008000);
+report(0x00008000);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x80007fff);
+report(0x00008000);
+report(0x80000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x80007fff);
+report(0x00008000);
+report(0x7fffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000000);
+
+# Range exception tests.
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x7fffc000);
+# report(0x00004000);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x7fffc000);
+# report(0x00003fff);
+# report(0x80000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000001);
+
+report(0xffffffff);
+report(0x0000fffe);
+report(0xfffffffd);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+report(0x00000000);
+report(0x0000ffff);
+report(0x00000000);
+report(0x00000001);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
+# report(0x80007fff);
+# report(0x00008000);
+# report(0x7fffffff);
+# report(0x00000001);
+# report(0x00000001);
+# report(0x00000001);
+
+exit(0)

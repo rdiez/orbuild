@@ -1,0 +1,206 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Sequence:
+#   First operand.
+#   Second operand.
+#   Result.
+#   Carry.
+#   Overflow.
+#   Exception triggered.
+
+
+# ----------- Test l.div -----------
+
+report(0x0000000c);
+report(0x00000003);
+report(0x00000004);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x0000000b);
+report(0x00000003);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xfffffff4);
+report(0xfffffffd);
+report(0x00000004);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xfffffff5);
+report(0xfffffffd);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xfffffff4);
+report(0x00000003);
+report(0xfffffffc);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xfffffff5);
+report(0x00000003);
+report(0xfffffffd);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x0000000c);
+report(0xfffffffd);
+report(0xfffffffc);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x0000000b);
+report(0xfffffffd);
+report(0xfffffffd);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: temporarily disabled as these tests fail on both or1ksim and or1200
+# report(0x0000000c);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000000);
+# report(0x00000000);
+# 
+# report(0xfffffff4);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000000);
+# report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+# report(0x0000000c);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000000);
+# report(0x00000001);
+# 
+# report(0xfffffff4);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000001);
+# report(0x00000000);
+# report(0x00000001);
+
+# ----------- Test l.divu -----------
+
+report(0x0000000c);
+report(0x00000003);
+report(0x00000004);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0x0000000b);
+report(0x00000003);
+report(0x00000003);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+# report(0xfffffff4);
+# report(0xfffffffd);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000000);
+# 
+# report(0xfffffff5);
+# report(0xfffffffd);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000000);
+# report(0x00000000);
+
+report(0xfffffff4);
+report(0x00000003);
+report(0x55555551);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+report(0xfffffff5);
+report(0x00000003);
+report(0x55555551);
+report(0x00000000);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x0000000c);
+#report(0xfffffffd);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000000);
+#
+#report(0x0000000b);
+#report(0xfffffffd);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: temporarily disabled as these tests fail on both or1ksim and or1200
+#report(0x0000000c);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+#
+#report(0xfffffff4);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000000);
+
+# TODO: disabled, as it fails against ORPSoC V2's or1200
+#report(0x0000000c);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000001);
+#
+#report(0xfffffff4);
+#report(0x00000000);
+#report(0x00000000);
+#report(0x00000001);
+#report(0x00000000);
+#report(0x00000001);
+
+exit(0)

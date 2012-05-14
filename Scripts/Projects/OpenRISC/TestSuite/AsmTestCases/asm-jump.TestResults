@@ -1,0 +1,86 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# A result group contains the following fields:
+# 1) opcode_value
+# 2) dest_register
+# 3) alignment_offset
+# 4) exception triggered (boolean, 0 or 1)
+
+
+# ----------- Test l.jalr -----------
+
+report(0x48000000);
+report(0x00000005);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: some tests disabled, further work is needed
+#report(0x48000000);
+#report(0x00000005);
+#report(0x00000001);
+#report(0x00000001);
+#
+#report(0x48000000);
+#report(0x00000005);
+#report(0x00000002);
+#report(0x00000001);
+#
+#report(0x48000000);
+#report(0x00000005);
+#report(0x00000003);
+#report(0x00000001);
+
+# TODO: disabled
+#report(0x48000000);
+#report();
+#report();
+#report();
+
+
+# ----------- Test l.jr (jump register) -----------
+
+report(0x44000000);
+report(0x00000005);
+report(0x00000000);
+report(0x00000000);
+
+# TODO: some tests disabled, further work is needed
+#report(0x44000000);
+#report(0x00000005);
+#report(0x00000001);
+#report(0x00000001);
+#
+#report(0x44000000);
+#report(0x00000005);
+#report(0x00000002);
+#report(0x00000001);
+#
+#report(0x44000000);
+#report(0x00000005);
+#report(0x00000003);
+#report(0x00000001);
+
+# TODO: disabled
+#report(0x44000000);
+#report();
+#report();
+#report();
+
+
+exit(0)
