@@ -15,7 +15,7 @@ bin_PROGRAMS = asm-basic \
                asm-div   \
                asm-mac   \
                asm-find  \
-               asm-lws   \
+               asm-load   \
                asm-jump  \
                asm-flag
 
@@ -35,7 +35,7 @@ dist_data_DATA = asm-basic.TestResults \
                  asm-div.TestResults   \
                  asm-mac.TestResults   \
                  asm-find.TestResults  \
-                 asm-lws.TestResults   \
+                 asm-load.TestResults   \
                  asm-jump.TestResults  \
                  asm-flag.TestResults
 
@@ -59,5 +59,5 @@ asm_mul_SOURCES   = asm-mul.S
 asm_div_SOURCES   = asm-div.S
 asm_mac_SOURCES   = asm-mac.S
 asm_find_SOURCES  = asm-find.S
-asm_lws_SOURCES   = asm-lws.S
+asm_load_SOURCES  = asm-load.S
 asm_jump_SOURCES  = asm-jump.S
