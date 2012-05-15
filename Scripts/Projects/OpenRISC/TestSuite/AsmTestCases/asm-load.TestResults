@@ -1,0 +1,118 @@
+
+# Copyright (C) 2010 Embecosm Limited
+#   Contributor Jeremy Bennett <jeremy.bennett@embecosm.com>
+# Copyright (C) 2012 R. Diez
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the Free
+# Software Foundation; either version 3 of the License, or (at your option)
+# any later version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+# more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+
+# Test instruction l.lws
+#
+# TODO: The instruction l.lws is not implemeted yet in or1200, search for "l.lws support patch" in the mailing list.
+#report(0xdeadbeef);
+#report(0x00000000);
+#report(0x7fffffff);
+#report(0x80000000);
+#report(0xffffffff);
+#report(0x00000000);
+#report(0x7fffffff);
+#report(0x80000000);
+#report(0xffffffff);
+#report(0xdeadbeef);
+#report(0x00000000);
+#report(0x7fffffff);
+#report(0x80000000);
+
+
+# Test instruction l.lwz
+
+report(0xdeadbeef);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0xdeadbeef);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+
+
+# Test instruction l.lbz
+
+report(0x000000de);
+report(0x000000ad);
+report(0x000000be);
+report(0x000000ef);
+
+report(0x000000ef);
+report(0x000000be);
+report(0x000000ad);
+report(0x000000de);
+
+
+# Test instruction l.lbs
+
+report(0xffffffde);
+report(0xffffffad);
+report(0xffffffbe);
+report(0xffffffef);
+
+report(0xffffffef);
+report(0xffffffbe);
+report(0xffffffad);
+report(0xffffffde);
+
+
+# Test instruction l.lhz
+
+report(0x0000dead);
+report(0x0000beef);
+
+report(0x0000beef);
+report(0x0000dead);
+
+
+# Test instruction l.lhs
+
+report(0xffffdead);
+report(0xffffbeef);
+
+report(0xffffbeef);
+report(0xffffdead);
+
+
+# Test instruction l.sb
+
+report(0xa1a2a3a4);
+report(0xb4b3b2b1);
+
+
+# Test instruction l.sh
+
+report(0x81828384);
+report(0x53545152);
+
+
+# Test instruction l.sw
+
+report(0xa0b0c0d0);
+report(0xa1b1c1d1);
+report(0xa3b3c3d3);
+report(0xa2b2c2d2);
+
+exit(0)
