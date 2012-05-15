@@ -62,6 +62,8 @@ define simulation_files_template_variables_2
 
   ifeq "$(TEST_TYPE)" "ORTS_ORK1SIM"
 
+  else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
+
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
 
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
@@ -106,6 +108,10 @@ define test_case_simulation_template_variables
 
     $(1)_SIMULATION_RUN_CMD += \"$(OPENRISC_BARE_TARGET)-sim\" $(OR1KSIM_TRACE_SWITCH) --nosrv -f \"$(TEST_TOOLS_DIR)/or1ksim.cfg\" \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
 
+  else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
+
+    $(1)_SIMULATION_RUN_CMD += \"or1k-elf-run\" $(OR1KSIM_TRACE_SWITCH) \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
+
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
 
     $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulateWithIcarusVerilog.sh\" \"$(ORPSOCV2_CHECKOUT_DIR)\" \"$(ORTS_EXES_BIN_DIR)/bin\" \"$(VERILOG_INCLUDE_DIR)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\"
@@ -137,6 +143,7 @@ define test_case_simulation_template
 
 
   ifeq "$(TEST_TYPE)" "ORTS_ORK1SIM"
+  else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
     $(value $(1)_SIMULATION_FILES_SENTINEL): $(OR1200_CONFIG_FILE)
   else
@@ -152,3 +159,19 @@ endef
 #
 
 $(eval $(call test_case_simulation_template,ASM_BASIC,asm-basic))
+$(eval $(call test_case_simulation_template,ASM_LOAD,asm-load))
+$(eval $(call test_case_simulation_template,ASM_EXT,asm-ext))
+$(eval $(call test_case_simulation_template,ASM_ADD,asm-add))
+$(eval $(call test_case_simulation_template,ASM_AND,asm-and))
+$(eval $(call test_case_simulation_template,ASM_OR,asm-or))
+$(eval $(call test_case_simulation_template,ASM_SUB,asm-sub))
+$(eval $(call test_case_simulation_template,ASM_XOR,asm-xor))
+$(eval $(call test_case_simulation_template,ASM_MFSPR,asm-mfspr))
+$(eval $(call test_case_simulation_template,ASM_ROR,asm-ror))
+$(eval $(call test_case_simulation_template,ASM_SHIFT,asm-shift))
+$(eval $(call test_case_simulation_template,ASM_MUL,asm-mul))
+$(eval $(call test_case_simulation_template,ASM_DIV,asm-div))
+$(eval $(call test_case_simulation_template,ASM_FIND,asm-find))
+$(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump))
+$(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag))
+$(eval $(call test_case_simulation_template,ASM_MAC,asm-mac))
