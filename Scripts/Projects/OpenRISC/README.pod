@@ -54,6 +54,8 @@ you'll have to enable building them in the Makefile, see below.
 
 This is what the project currently downloads, builds and tests. You can choose what steps are performed
 by editing the F<< Makefile >> next to this README file, see the I<< ENABLE_xxx >> constants at the beginning.
+By default, the framework builds only the most commonly-used components and does not perform any tests,
+in order to generate a useful OpenRISC toolchain as fast as possible.
 
 =over
 
@@ -92,6 +94,38 @@ The PDF documentation is built out of the TeX sources.
 
 An optional step is to run the I<< rtl-tests >>.
 
+=item * OpenRISC Test Suite
+
+I<< orbuild >> includes a port of most of the simple OpenRISC test cases written in assembly
+in the or1ksim and ORPSoC V2 repositories. The test cases were forked in may 2012.
+There are also a few new test cases, like those in file F<< asm-load.S >>.
+
+The motivation behind this fork is to make it easy to run the test cases against
+different OpenRISC implementations and/or simulations.
+Currently, the test suite is run against the I<< or1ksim >> simulator and
+against an Icarus Verilog simulation of ORPSoC V2.
+
+The new test suite should actually live in a separate source repository,
+but it is kept together with I<< orbuild >> for convenience, at least for the time being.
+
+DejaGnu is not used any more to run the tests, there is a new perl script that matches
+the test logs with the expected output. The script is not as tolerant
+as the I<< expect >> tool, which has both advantages and disadvantages.
+The overall implementation is now cleaner, so it should be easier now
+to reroute all test results to a separate log file so that
+they are not mixed together with other log messages.
+
+Note that all test cases run now in parallel in order to take advantage of multiprocessor computers.
+The resulting log files are integrated with I<< orbuild >>'s log system, so you can click through
+from the main HTML report and inspect each individual test log separately.
+
+Many of the tests are actually disabled at the moment, as they fail when run against the Verilog model.
+They will get re-enabled later on when the I<< or1200 >> CPU core gets fixed.
+
+Most of the test cases that deal with the different subsystems have not been ported yet,
+so the following areas are not covered:
+performance counters, MMU, caches, debug unit, power management, PIC and timer.
+
 =item * Peter Gavin's OpenRISC toolchain
 
 Taken from git head at git://github.com/pgavin
@@ -106,8 +140,10 @@ An optional step is to run the Binutils checks.
 
 =item * MinSoC
 
-This step is optional. The MinSoC repository is downloaded. MinSoC's automatic installation script is run, which downloads
+The MinSoC repository is downloaded. MinSoC's automatic installation script is run, which downloads
 the same MinSoC repository again (among many other tools).
+
+This step is optional. If you enable it, beware that the script blindly adds entries to your .bashrc file (as of may 2012).
 
 =item * Icarus Verilog
 
@@ -130,6 +166,9 @@ This step is optional. If not enabled, the currently installed Verilator will be
 Copyright (C) R. Diez 2011,  rdiezmail-openrisc at yahoo.de
 
 The I<< orbuild >> source code is released under the GPL 3 license.
+
+Please note that some of the files under this directory, especially in the OpenRISC test suite,
+have other authors and licenses.
 
 This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
 
