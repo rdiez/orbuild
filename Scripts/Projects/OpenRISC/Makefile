@@ -88,10 +88,12 @@ $(eval $(call subversion_checkout_template,GNUSRC,GNU sources,$(OC_OR_SVN_BASE_U
 all: $(GNUSRC_CHECKOUT_SENTINEL)
 $(GNUSRC_CHECKOUT_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 
+
+$(eval $(call subversion_checkout_template,MINSOC,MinSoC,$(OC_SVN_BASE_URL)/minsoc/minsoc/trunk))
+$(MINSOC_CHECKOUT_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
 ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
-  $(eval $(call subversion_checkout_template,MINSOC,MinSoC,$(OC_SVN_BASE_URL)/minsoc/minsoc/trunk))
-  all: $(MINSOC_CHECKOUT_SENTINEL)
-  $(MINSOC_CHECKOUT_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
+  # Only download the repository if we are going to use it, and we only use it for testing.
+  all_tests: $(MINSOC_CHECKOUT_SENTINEL)
 endif
 
 
@@ -140,7 +142,7 @@ $(eval $(call git_download_serializer_template,JBONN_LINUX,JBONN_UCLIBC))
 
 ICARUS_VERILOG_EXTRA_GIT_CHECKOUT_ARGS := v0_9-branch
 $(eval $(call git_checkout_template,ICARUS_VERILOG,Icarus Verilog,git://github.com/steveicarus/iverilog.git))
-all: $(ICARUS_VERILOG_CHECKOUT_SENTINEL)
+
 # We don't actually need to create a local branch like this, checking out branch origin/v0_9-branch will probably do.
 $(eval $(call git_branch_template,ICARUS_VERILOG,--track v0_9-branch origin/v0_9-branch))
 
@@ -168,14 +170,14 @@ $(eval $(call git_checkout_template,VERILATOR,Verilator,http://git.veripool.org/
 VERILATOR_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 $(eval $(call autotool_project_template,VERILATOR,Verilator,$(VERILATOR_CHECKOUT_DIR)))
 
-ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
-  all: $(VERILATOR_INSTALL_SENTINEL)
-endif
-
 # Before running the standard autoconf project operations, let autoconf generate the necessary files.
 VERILATOR_AUTOGEN_CMD = autoconf --warnings=all
 $(eval $(call autogen_project_template,VERILATOR,Verilator))
 $(VERILATOR_AUTOGEN_SENTINEL): $(VERILATOR_CHECKOUT_SENTINEL)
+
+ifeq "$(ENABLE_VERILATOR)" "1"
+  all: $(VERILATOR_INSTALL_SENTINEL)
+endif
 
 ifeq "0" "1"  # Run Verilator's install tests, disabled at the moment.
   # Verilator's install_test script sets its own -j flag for GNU Make, therefore remove any inherited flags from MAKEFLAGS.
@@ -512,7 +514,6 @@ endif
 # ----------- MinSoC -----------
 
 # Test MinSoC's automatic installation script.
-# This script downloads a repository and some files automatically, so skip it if we have disabled repository downloading.
 
 MINSOC_INSTALLATION_SCRIPT_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
 MINSOC_INSTALLATION_SCRIPT_CMD := $(ORBUILD_PROJECT_DIR)/Tools/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
@@ -523,6 +524,7 @@ $(eval $(call run_and_report_template,MINSOC_INSTALLATION_SCRIPT,MinSoC's instal
 $(MINSOC_INSTALLATION_SCRIPT_SENTINEL): $(MINSOC_CHECKOUT_SENTINEL)
 
 ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
+# MinSoC's installation script downloads a repository and some files automatically, so skip it if we have globally disabled repository downloading.
 ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
 all_tests: $(MINSOC_INSTALLATION_SCRIPT_SENTINEL)
 endif
