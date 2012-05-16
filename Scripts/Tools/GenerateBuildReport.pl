@@ -343,6 +343,8 @@ sub main ()
   if ( 0 != scalar @sortedGroupNames )
   {
     $injectedHtml .= "<br/> <hr/> \n";
+    $injectedHtml .= "<h1>Group report breakdown</h1>\n";
+    $injectedHtml .= "<p>Please note that any build errors beyond this point are also reflected in aggregated form in the summary table above.</p>\n";
   }
 
   foreach my $groupName ( @sortedGroupNames )
@@ -353,7 +355,7 @@ sub main ()
 
     my $anchorName = sanitize_name_for_id_purposes( $groupName );
 
-    $injectedHtml .= qq{ <a name="$anchorName"></a>  <h2> $groupName </h2> };
+    $injectedHtml .= qq{ <a name="$anchorName"></a>  <h2> $groupName </h2> \n };
 
     $injectedHtml .= generate_table_header();
     $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $outputSubDir, $defaultEncoding );
