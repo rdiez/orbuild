@@ -141,7 +141,8 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_MAKE_TARGETS)" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS)" \
+                "$(value $(1)_MAKE_TARGETS)" \
                 "$(value $(1)_MAKE_SENTINEL)"
 
   $(value $(1)_INSTALL_SENTINEL): $(value $(1)_MAKE_SENTINEL)
@@ -172,7 +173,8 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) $(value $(1)_CHECK_TARGETS)" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS)" \
+                "$(value $(1)_CHECK_TARGETS)" \
                 "$(value $(1)_CHECK_SENTINEL)"
 
 
@@ -188,7 +190,8 @@ define autotool_project_template
                     report-always \
         "$(ORBUILD_TOOLS)/AutoconfMake.sh" \
                 "$(value $(1)_OBJ_DIR)" \
-                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS) distcheck" \
+                "$(value $(1)_EXTRA_GLOBAL_MAKE_ARGS)" \
+                "distcheck" \
                 "$(value $(1)_DISTCHECK_SENTINEL)"
 endef
 
