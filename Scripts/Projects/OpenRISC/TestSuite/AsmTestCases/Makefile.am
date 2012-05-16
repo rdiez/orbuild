@@ -61,3 +61,4 @@ asm_mac_SOURCES   = asm-mac.S
 asm_find_SOURCES  = asm-find.S
 asm_load_SOURCES  = asm-load.S
 asm_jump_SOURCES  = asm-jump.S
+asm_flag_SOURCES  = asm-flag.S
