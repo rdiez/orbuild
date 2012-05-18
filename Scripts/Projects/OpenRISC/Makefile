@@ -115,17 +115,13 @@ $(eval $(call git_checkout_template,PGAVIN_UCLIBC,Peter Gavin's uClibc,$(PGAVIN_
 $(eval $(call git_download_serializer_template,PGAVIN_OR1KSIM,PGAVIN_UCLIBC))
 all_pgavin: $(PGAVIN_UCLIBC_CHECKOUT_SENTINEL)
 
-$(eval $(call git_checkout_template,PGAVIN_BINUTILS,Peter Gavin's Binutils,$(PGAVIN_GIT_BASE_URL)/binutils.git))
-$(eval $(call git_download_serializer_template,PGAVIN_UCLIBC,PGAVIN_BINUTILS))
-all_pgavin: $(PGAVIN_BINUTILS_CHECKOUT_SENTINEL)
+$(eval $(call git_checkout_template,PGAVIN_OR1K_SRC,Peter Gavin's or1k-src,$(PGAVIN_GIT_BASE_URL)/or1k-src.git))
+$(eval $(call git_download_serializer_template,PGAVIN_UCLIBC,PGAVIN_OR1K_SRC))
+all_pgavin: $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 
-$(eval $(call git_checkout_template,PGAVIN_NEWLIB,Peter Gavin's Newlib,$(PGAVIN_GIT_BASE_URL)/newlib-1.18.0.git))
-$(eval $(call git_download_serializer_template,PGAVIN_BINUTILS,PGAVIN_NEWLIB))
-all_pgavin: $(PGAVIN_NEWLIB_CHECKOUT_SENTINEL)
-
-$(eval $(call git_checkout_template,PGAVIN_GCC,Peter Gavin's GCC,$(PGAVIN_GIT_BASE_URL)/gcc.git))
-$(eval $(call git_download_serializer_template,PGAVIN_NEWLIB,PGAVIN_GCC))
-all_pgavin: $(PGAVIN_GCC_CHECKOUT_SENTINEL)
+$(eval $(call git_checkout_template,PGAVIN_OR1K_GCC,Peter Gavin's or1k-gcc,$(PGAVIN_GIT_BASE_URL)/or1k-gcc.git))
+$(eval $(call git_download_serializer_template,PGAVIN_OR1K_SRC,PGAVIN_OR1K_GCC))
+all_pgavin: $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 
 # ----------- Jonas Bonn's repositories -----------
@@ -491,33 +487,48 @@ $(OC_BLD_ALL_SENTINEL): $(OR1KSIM_INSTALL_SENTINEL) $(GNUSRC_CHECKOUT_SENTINEL) 
 all_tests: $(OC_BLD_ALL_SENTINEL)
 
 
-# ----------- Peter Gavin's Binutils -----------
+# ----------- Peter Gavin's Binutils and other tools, common settings -----------
 
-# Build Binutils as a standard autoconf project.
 PGAVIN_BINUTILS_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
-# TODO: I am not sure whether --enable-fast-install=N/A or --disable-libssp are needed in PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS.
+
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET) 
-PGAVIN_BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
-# TODO: With the following targets, "make install" fails. I'm not sure which targets are the correct ones:
-#       PGAVIN_BINUTILS_MAKE_TARGETS := all-binutils all-gas all-ld all-build
-PGAVIN_BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
-$(eval $(call autotool_project_template,PGAVIN_BINUTILS,Peter Gavin's Binutils,$(PGAVIN_BINUTILS_CHECKOUT_DIR)))
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-shared
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-itcl
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tk
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tcl
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-winsup
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-libgui
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-rda
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-sid
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --with-sysroot
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-gdb
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-readline
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --with-system-readline
+# --disable-multilib:  Multilibs have a meaning now: 1) with jump delay slot, 2) without jump delay slot, 3) compatibility (l.nop after every jump instruction).
 
-$(PGAVIN_BINUTILS_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_CHECKOUT_SENTINEL)
 
-all_pgavin: $(PGAVIN_BINUTILS_INSTALL_SENTINEL)
-ifeq "$(ENABLE_PGAVIN)" "1"
-all_tests: $(PGAVIN_BINUTILS_CHECK_SENTINEL)
-endif
+# ----------- Peter Gavin's Binutils and other tools, phase 1 -----------
+
+PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS := $(PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS)
+PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-libgloss
+PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-newlib
+# We could build the CGEN-based simulator in the first phase, but we are using it only after phase 2,
+# when the binutils have settled down, so it's not worth building it in phase 1 too.
+PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-sim
+
+PGAVIN_BINUTILS_PHASE_1_BIN_DIR := $(PGAVIN_BINUTILS_BIN_DIR)
+
+PGAVIN_BINUTILS_PHASE_1_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
+
+$(eval $(call autotool_project_template,PGAVIN_BINUTILS_PHASE_1,Peter Gavin's Binutils etc. phase 1,$(PGAVIN_OR1K_SRC_CHECKOUT_DIR)))
+
+$(PGAVIN_BINUTILS_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 
 
-# ----------- Peter Gavin's GCC cross-compiler for OpenRISC -----------
+# ----------- Peter Gavin's GCC cross-compiler for OpenRISC, common settings -----------
 
 PGAVIN_COMMON_GCC_OPTIONS := --disable-shared
 PGAVIN_COMMON_GCC_OPTIONS += --disable-libssp
-
-PGAVIN_COMMON_GCC_OPTIONS += --disable-multilib
-
 PGAVIN_COMMON_GCC_OPTIONS += --disable-lto
 
 PGAVIN_BARE_COMMON_GCC_OPTIONS := $(PGAVIN_COMMON_GCC_OPTIONS) --with-newlib --target=$(PGAVIN_OPENRISC_BARE_TARGET)
@@ -525,7 +536,7 @@ PGAVIN_BARE_COMMON_GCC_OPTIONS := $(PGAVIN_COMMON_GCC_OPTIONS) --with-newlib --t
 
 # ---------- Peter Gavin's GCC phase 1 (bootstrap) ----------
 
-# In order to build GCC, the OpenRISC binutils binaries are needed.
+# In order to build GCC, the OpenRISC Binutils binaries from phase 1 are needed.
 PGAVIN_GCC_PHASE_1_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
 PGAVIN_GCC_PHASE_1_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
 
@@ -534,27 +545,48 @@ PGAVIN_GCC_PHASE_1_EXTRA_GLOBAL_MAKE_ARGS   := $(FASTER_MAKE)
 PGAVIN_GCC_PHASE_1_MAKE_TARGETS             := all-gcc
 PGAVIN_GCC_PHASE_1_INSTALL_TARGETS          := install-gcc
 
-$(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_1,Peter Gavin's GCC Phase 1,$(PGAVIN_GCC_CHECKOUT_DIR)))
+# I've seen some sporadic error messages like "cannot create regular file '/home/blah blah/bin/or1k-elf-gcc-ar': No such file or directory",
+# and that makes me thing that the install phase breaks when run in parallel mode.
+PGAVIN_GCC_PHASE_1_INSTALL_MAKEFLAGS_FILTER := clear
+
+$(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_1,Peter Gavin's GCC Phase 1,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
 # In order to build GCC, the OpenRISC Binutils binaries are needed.
-$(PGAVIN_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_INSTALL_SENTINEL) $(PGAVIN_GCC_CHECKOUT_SENTINEL)
+$(PGAVIN_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_PHASE_1_INSTALL_SENTINEL) $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 
-# ---------- Peter Gavin's Newlib ----------
+# ----------- Peter Gavin's Binutils and other tools, phase 2 -----------
+# Note that this installs the final Binutils binaries over the ones from phase 1.
+# Although everything should be properly overwritten, this method does not look very clean to me.
 
-PGAVIN_NEWLIB_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
-PGAVIN_NEWLIB_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+# It is rather unfortunate that we have to reconfigure and build all components again.
+# Maybe there is a way to build just newlib, libgloss and the simulator.
 
-PGAVIN_NEWLIB_EXTRA_CONFIG_ARGS :=
-PGAVIN_NEWLIB_EXTRA_CONFIG_ARGS += --target=$(PGAVIN_OPENRISC_BARE_TARGET)
-PGAVIN_NEWLIB_EXTRA_CONFIG_ARGS += --disable-shared
-PGAVIN_NEWLIB_EXTRA_CONFIG_ARGS += --disable-multilib
+PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS := $(PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS)
 
-PGAVIN_NEWLIB_CHECK_TARGETS := check-target-newlib check-target-libgloss
+PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --enable-sim-debug
+PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --disable-sim-cflags
+PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --enable-sim-trace
 
-$(eval $(call autotool_project_template,PGAVIN_NEWLIB,Peter Gavin's Newlib,$(PGAVIN_NEWLIB_CHECKOUT_DIR)))
+PGAVIN_BINUTILS_PHASE_2_BIN_DIR := $(PGAVIN_BINUTILS_BIN_DIR)
 
-$(PGAVIN_NEWLIB_CONFIGURE_SENTINEL): $(PGAVIN_GCC_PHASE_1_INSTALL_SENTINEL) $(PGAVIN_NEWLIB_CHECKOUT_SENTINEL)
+PGAVIN_BINUTILS_PHASE_2_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+
+# At least one of the OpenRISC parts is not compatible with flag --no-builtin-variables:
+#   PGAVIN_BINUTILS_PHASE_2_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
+
+# TODO: These checks are not working properly. I'm also not sure which targets, if any, should be specified here.
+#   PGAVIN_BINUTILS_PHASE_2_CHECK_TARGETS := check-binutils check-gas check-ld
+#   PGAVIN_BINUTILS_PHASE_2_CHECK_TARGETS += check-target-newlib check-target-libgloss
+
+$(eval $(call autotool_project_template,PGAVIN_BINUTILS_PHASE_2,Peter Gavin's Binutils etc. phase 2,$(PGAVIN_OR1K_SRC_CHECKOUT_DIR)))
+
+$(PGAVIN_BINUTILS_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_GCC_PHASE_1_INSTALL_SENTINEL)
+
+ifeq "$(ENABLE_PGAVIN)" "1"
+# Disabled at the moment, see commentabove:
+#    all_tests: $(PGAVIN_BINUTILS_PHASE_2_CHECK_SENTINEL)
+endif
 
 
 # ---------- Peter Gavin's GCC phase 2 ----------
@@ -568,9 +600,9 @@ PGAVIN_GCC_PHASE_2_EXTRA_CONFIG_ARGS := $(PGAVIN_BARE_COMMON_GCC_OPTIONS) --enab
 PGAVIN_GCC_PHASE_2_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 PGAVIN_GCC_PHASE_2_CHECK_TARGETS := check-gcc check-target-libgcc check-target-libstdc++-v3
 
-$(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_2,Peter Gavin's GCC Phase 2,$(PGAVIN_GCC_CHECKOUT_DIR)))
+$(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_2,Peter Gavin's GCC Phase 2,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
-$(PGAVIN_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_NEWLIB_INSTALL_SENTINEL)
+$(PGAVIN_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_PHASE_2_INSTALL_SENTINEL)
 all_pgavin: $(PGAVIN_GCC_PHASE_2_INSTALL_SENTINEL)
 
 
@@ -599,11 +631,12 @@ PGAVIN_LINUX_BINUTILS_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
 PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
 PGAVIN_LINUX_BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 # PGAVIN_LINUX_BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
-$(eval $(call autotool_project_template,PGAVIN_LINUX_BINUTILS,Peter Gavin's Binutils for Linux,$(PGAVIN_BINUTILS_CHECKOUT_DIR)))
+$(eval $(call autotool_project_template,PGAVIN_LINUX_BINUTILS,Peter Gavin's Binutils for Linux,$(PGAVIN_OR1K_SRC_CHECKOUT_DIR)/binutils))
 
-$(PGAVIN_LINUX_BINUTILS_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_CHECKOUT_SENTINEL)
+$(PGAVIN_LINUX_BINUTILS_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 
-all_pgavin: $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL)
+# TODO: disabled:
+#  all_pgavin: $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL)
 # all_pgavin: $(PGAVIN_LINUX_BINUTILS_CHECK_SENTINEL)
 
 
@@ -623,7 +656,7 @@ PGAVIN_LINUX_HEADERS_MAKEFLAGS_FILTER := clear
 
 $(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_HEADERS,Peter Gavin's Linux Headers,$(SHELL) -c "$(PGAVIN_LINUX_HEADERS_CMD)"))
 $(PGAVIN_LINUX_HEADERS_SENTINEL): $(PGAVIN_LINUX_CHECKOUT_SENTINEL)
-all_pgavin: $(PGAVIN_LINUX_HEADERS_SENTINEL)
+# TODO: all_pgavin: $(PGAVIN_LINUX_HEADERS_SENTINEL)
 
 
 # ----------- Peter Gavin's Linux GCC cross-compiler for OpenRISC -----------
@@ -646,10 +679,10 @@ PGAVIN_LINUX_GCC_PHASE_1_EXTRA_GLOBAL_MAKE_ARGS   := $(FASTER_MAKE)
 PGAVIN_LINUX_GCC_PHASE_1_MAKE_TARGETS             := all-gcc
 PGAVIN_LINUX_GCC_PHASE_1_INSTALL_TARGETS          := install-gcc
 
-$(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_1,Peter Gavin's Linux GCC Phase 1,$(PGAVIN_GCC_CHECKOUT_DIR)))
+$(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_1,Peter Gavin's Linux GCC Phase 1,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
-$(PGAVIN_LINUX_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL) $(PGAVIN_GCC_CHECKOUT_SENTINEL)
-all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
+$(PGAVIN_LINUX_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL) $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
+# TODO: all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
 
 
 # ---------- Peter Gavin's uClibc for Linux ----------
@@ -685,7 +718,7 @@ PGAVIN_LINUX_UCLIBC_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
 
 $(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_UCLIBC,Peter Gavin's uClibc for Linux,$(SHELL) -c "$(PGAVIN_LINUX_UCLIBC_CMD)"))
 $(PGAVIN_LINUX_UCLIBC_SENTINEL): $(PGAVIN_UCLIBC_CHECKOUT_SENTINEL) $(PGAVIN_LINUX_HEADERS_SENTINEL) $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
-all_pgavin: $(PGAVIN_LINUX_UCLIBC_SENTINEL)
+# TODO: all_pgavin: $(PGAVIN_LINUX_UCLIBC_SENTINEL)
 
 
 # ---------- Peter Gavin's Linux GCC phase 2 ----------
@@ -702,10 +735,10 @@ PGAVIN_LINUX_GCC_PHASE_2_EXTRA_CONFIG_ARGS += --with-headers=$(PGAVIN_LINUX_HEAD
 
 PGAVIN_LINUX_GCC_PHASE_2_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 
-$(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_2,Peter Gavin's Linux GCC Phase 2,$(PGAVIN_GCC_CHECKOUT_DIR)))
+$(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_2,Peter Gavin's Linux GCC Phase 2,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
 $(PGAVIN_LINUX_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_UCLIBC_SENTINEL)
-all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
+# TODO: all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
 
 # TODO: The bld-all.sh rebuilds uClibc with the final (phase 2) compiler, maybe we should do the same here.
 
@@ -727,7 +760,7 @@ LINUX_GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter Gavin's toolchain,$(LINUX_GDB_SRC_DIR)))
 
 $(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL) $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
-all_pgavin: $(LINUX_GDB_INSTALL_SENTINEL)
+# TODO: all_pgavin: $(LINUX_GDB_INSTALL_SENTINEL)
 
 
 # ---- Build gdbserver ----
@@ -773,6 +806,7 @@ ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)  $(OR1KSIM_BIN_DIR)/bin 
 ORTS_PREPEND_PATH := $(subst $(SPACE_CHAR),$(COLON_CHAR),$(strip $(ORTS_PREPEND_PATH_LIST)))
 
 ORTS_ORK1SIM_PREPEND_PATH          := $(OR1KSIM_BIN_DIR)/bin
+ORTS_PGAVIN_CGEN_PREPEND_PATH      := $(PGAVIN_BINUTILS_PHASE_2_BIN_DIR)/bin
 ORTS_ORPSOC_IVERILOG_PREPEND_PATH  := $(ORTS_PREPEND_PATH)
 ORTS_MINSOC_VERILATOR_PREPEND_PATH := $(ORTS_PREPEND_PATH)
 
@@ -782,6 +816,11 @@ ORTS_ORK1SIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORK1SIM
 ORTS_ORK1SIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORK1SIM_OBJ_DIR)\" ORTS_ORK1SIM
 ORTS_ORK1SIM_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_ORK1SIM,Test Suite against or1ksim,$(SHELL) -c "$(ORTS_ORK1SIM_CMD)"))
+
+ORTS_PGAVIN_CGEN_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_PGAVIN_CGEN
+ORTS_PGAVIN_CGEN_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_PGAVIN_CGEN_OBJ_DIR)\" ORTS_PGAVIN_CGEN
+ORTS_PGAVIN_CGEN_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ORTS_PGAVIN_CGEN,Test Suite against Peter Gavin's CGEN simulator,$(SHELL) -c "$(ORTS_PGAVIN_CGEN_CMD)"))
 
 ORTS_ORPSOC_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORPSOC_IVERILOG
 ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG
@@ -794,12 +833,14 @@ ORTS_MINSOC_VERILATOR_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_MINSOC_VERILATOR,Test Suite against MINSoC with Verilator,$(SHELL) -c "$(ORTS_MINSOC_VERILATOR_CMD)"))
 
 orts_subproject_files:
-	echo "OpenRISC Test Suite = $(ORTS_EXES_AUTOTOOLS_GROUP) ORTS_ORK1SIM ORTS_ORPSOC_IVERILOG ORTS_MINSOC_VERILATOR " >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "OpenRISC Test Suite = $(ORTS_EXES_AUTOTOOLS_GROUP) ORTS_ORK1SIM ORTS_PGAVIN_CGEN ORTS_ORPSOC_IVERILOG ORTS_MINSOC_VERILATOR " >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "ORTS_ORK1SIM = $(ORTS_ORK1SIM_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
+	echo "ORTS_PGAVIN_CGEN = $(ORTS_PGAVIN_CGEN_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
 	echo "ORTS_ORPSOC_IVERILOG = $(ORTS_ORPSOC_IVERILOG_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
 	echo "ORTS_MINSOC_VERILATOR = $(ORTS_MINSOC_VERILATOR_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
 
 $(ORTS_ORK1SIM_SENTINEL)         : $(ORTS_EXES_INSTALL_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
+$(ORTS_PGAVIN_CGEN_SENTINEL)     : $(ORTS_EXES_INSTALL_SENTINEL) $(PGAVIN_BINUTILS_PHASE_2_INSTALL_SENTINEL)
 $(ORTS_ORPSOC_IVERILOG_SENTINEL) : $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 $(ORTS_MINSOC_VERILATOR_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 
@@ -808,6 +849,9 @@ ifeq "$(ENABLE_OPEN_RISC_TEST_SUITE)" "1"
   all: $(ORTS_ORPSOC_IVERILOG_SENTINEL)
   # TODO: The Verilator support is not ready yet:
   #   all: $(ORTS_MINSOC_VERILATOR_SENTINEL)
+  ifeq "$(ENABLE_PGAVIN)" "1"
+    all: $(ORTS_PGAVIN_CGEN_SENTINEL)
+  endif
   all: orts_subproject_files
 endif
 
@@ -832,9 +876,9 @@ VERILOG_TOOLS_GROUP += $(VERILATOR_AUTOTOOLS_GROUP)
 
 PGAVIN_TOOLCHAIN_GROUP := PGAVIN_LINUX_HEADERS
 PGAVIN_TOOLCHAIN_GROUP += PGAVIN_LINUX_UCLIBC
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_AUTOTOOLS_GROUP)
+PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
+PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_1_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_NEWLIB_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_OR1KSIM_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_BINUTILS_AUTOTOOLS_GROUP)
@@ -846,9 +890,8 @@ PGAVIN_TOOLCHAIN_GROUP += $(GDBSERVER_AUTOTOOLS_GROUP)
 PGAVIN_GIT_GROUP := $(PGAVIN_LINUX_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_OR1KSIM_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_UCLIBC_GIT_GROUP)
-PGAVIN_GIT_GROUP += $(PGAVIN_BINUTILS_GIT_GROUP)
-PGAVIN_GIT_GROUP += $(PGAVIN_NEWLIB_GIT_GROUP)
-PGAVIN_GIT_GROUP += $(PGAVIN_GCC_GIT_GROUP)
+PGAVIN_GIT_GROUP += $(PGAVIN_OR1K_SRC_GIT_GROUP)
+PGAVIN_GIT_GROUP += $(PGAVIN_OR1K_GCC_GIT_GROUP)
 
 GIT_GROUP := $(JBONN_LINUX_GIT_GROUP)
 GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
