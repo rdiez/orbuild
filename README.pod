@@ -130,6 +130,14 @@ Some of the required package names are:
 
 Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
+=head2 About I<< orbuild >> versioning
+
+I<< orbuild >> follows a L<< rolling release model|http://en.wikipedia.org/wiki/Rolling_release >>: there are no official releases,
+you just get the current I<< head >> status from the git repository.
+
+Every now and then the main F<< orbuild >> script version number gets updated,
+in order to provide some lose reference point.
+
 =head2 Usage scenarios
 
 =head3 How to get and build the OpenRISC components for the first time
