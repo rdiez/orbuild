@@ -344,6 +344,10 @@ sub main ()
   {
     $injectedHtml .= "<br/> <hr/> \n";
     $injectedHtml .= "<h1>Group report breakdown</h1>\n";
+
+    # Alternative text:
+    #   "Anything else below is a break-down of the overall build results above."
+    #   "In order to find out if anything failed at all, you only need to look at the top-level results."
     $injectedHtml .= "<p>Please note that any build errors beyond this point are also reflected in aggregated form in the summary table above.</p>\n";
   }
 
