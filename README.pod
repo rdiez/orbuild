@@ -41,7 +41,7 @@ where you can click through to view each component build log separately.
 
 Note that I<< orbuild >>'s framework is sufficiently generic so that it can be easily repurposed to build other projects.
 
-=head1 Motivation
+=head3 Motivation
 
 The OpenRISC project has grown and is now made up of many different components
 that need to be separately downloaded, configured and built. To many people,
@@ -65,7 +65,7 @@ was developed, and the first task it was actually used for.
 The daily build can also take on the job of generating software releases,
 as manual release procedures often result in human error.
 
-=head1 Objectives
+=head3 Objectives
 
 =over
 
@@ -82,7 +82,7 @@ Components are automatically packaged for off-line installation.
 
 =back
 
-=head1 Audience
+=head3 Audience
 
 =over
 
@@ -94,7 +94,7 @@ Components are automatically packaged for off-line installation.
 
 =back
 
-=head1 Prerequisites
+=head2 Prerequisites
 
 I<< orbuild >> runs on Unix-like systems as well as in the Cygwin environment on Microsoft Windows.
 However, the most thoroughly tested platform is Linux.
@@ -104,7 +104,7 @@ GNU Make (tested with version 3.81).
 
 Perl module XML::Parser is also required by the HTML report generator perl script.
 
-=head2 Ubuntu/Debian Linux
+=head3 Ubuntu/Debian Linux
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites (for the basic I<< orbuild >> framework only) at once:
 
@@ -112,7 +112,7 @@ Under Ubuntu/Debian systems, the following command installs all prerequisites (f
 
 Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
-=head2 Cygwin
+=head3 Cygwin
 
 Please make sure that your Cygwin is up to date. If you step through Cygwin's installation program without making any changes,
 all installed components will be upgraded to their latest versions.
@@ -130,9 +130,9 @@ Some of the required package names are:
 
 Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
-=head1 Usage scenarios
+=head2 Usage scenarios
 
-=head2 How to get and build the OpenRISC components for the first time
+=head3 How to get and build the OpenRISC components for the first time
 
 The steps are (this example is for the bash shell):
 
@@ -162,7 +162,7 @@ Run the following command for quick help text:
 
   ./orbuild --help      # Alternative:  perl orbuild --help
 
-=head2 How to update and rebuild the OpenRISC components
+=head3 How to update and rebuild the OpenRISC components
 
 There are several alternatives:
 
@@ -197,7 +197,7 @@ of all repositories. The steps are:
 
 =back
 
-=head2 Setting up a daily build server
+=head3 Setting up a daily build server
 
 The server administrator will probbly have to edit the F<< orbuild.conf >> file
 and the project F<< Makefile >> extensively in order to generate non-standard builds.
@@ -206,7 +206,7 @@ In addition to generating HTML report files, the server will probably want to se
 a notification e-mail to some mailing list at the end of the build. See file
 F<< orbuild.conf >> for details.
 
-=head2 How to resume a failed build
+=head3 How to resume a failed build
 
 The build is designed to be a one-shot process:
 components are built just once, from beginning to end. However, if the build fails,
@@ -215,7 +215,7 @@ by issuing an I<< ./orbuild --resume >> command.
 Resuming a build can save some time but is not always reliable. Therefore, when the resumed build completes successfully,
 you should re-build from scratch in order to make sure that those successful results are repeatable.
 
-=head3 Why resuming is not reliable
+=head4 Why resuming is not reliable
 
 When resuming, I<< orbuild >> only moves forwards: components that were successfully built the last time
 around will never be rebuilt. There is no dependency checking at source-code level, and
@@ -237,7 +237,7 @@ The next time around, those files will not be recompiled, and the linking phase 
 Note that the I<< --resume >> switch will not update the source code repositories. If you want to build
 the most up-to-date components, you need to start the build from scratch.
 
-=head3 Resuming a build while developing I<< orbuid >> itself
+=head4 Resuming a build while developing I<< orbuid >> itself
 
 If you are developing the I<< orbuild >> makefiles themselves, keep in mind that
 a change in those makefiles will not trigger a rebuild of any affected components.
@@ -265,7 +265,7 @@ to handle components and its dependencies. That's also the reason why, when the 
 I<< orbuild >> will report all succeeded and failed components, but not
 those that were not even tried because some of their dependencies had already failed to build.
 
-=head1 Directory structure
+=head2 Directory structure
 
 This is what the directory structure looks like:
 
@@ -294,9 +294,9 @@ This is what the directory structure looks like:
                        # the new layout may no longer be compatible with the existing one.
     README.pod         # This file.
 
-=head1 The F<< orbuild.conf >> configuration file
+=head2 The F<< orbuild.conf >> configuration file
 
-=head2 Why a configuration file is needed
+=head3 Why a configuration file is needed
 
 Unfortunately, the user often needs to edit the configuration file, if only for the first time.
 For example, the Subversion repositories on the opencores.org web site
@@ -314,16 +314,16 @@ version if the latest one is known to be broken.
 A graphical user interface able to edit the config file would be
 a nice addition to this project.
 
-=head2 Configuration file format
+=head3 Configuration file format
 
 F<< orbuild.conf >> is a text file in simplified .INI file format. There are no [sections],
 all entries have the form "key = value", and lines starting with # are considered comments.
 
 Please see the configuration file (which is well commented) for more information.
 
-=head1 Caveats
+=head2 Caveats
 
-=head2 About interactive builds and Subversion credentials
+=head3 About interactive builds and Subversion credentials
 
 Normally, a build process should be completely automated, but often some sort of human interaction is needed,
 especially the very first time. For example, most Subversion repositories on the L<< http://opencores.org/ >> web site
@@ -341,7 +341,7 @@ Running the build in interactive mode disables parallel compilation, which will 
 Therefore, once all the passwords are cached, you will probably want to run the build in non-interactive mode
 the next time around.
 
-=head2 Parallel builds can overload the computer
+=head3 Parallel builds can overload the computer
 
 A parallel build process can easily overload the system, cause thrashing and render the computer
 unresponsive for long periods of time. I<< orbuild >>'s efforts to prevent that from happening
@@ -349,7 +349,7 @@ are rudimentary at best. If you are serious about constraining your system load,
 resort to more powerful methods like I<< cgroups >> under Linux, or running the build
 inside a virtual PC.
 
-=head3 How to write sub-makefiles with regards to parallel builds
+=head4 How to write sub-makefiles with regards to parallel builds
 
 Configuration setting I<< Makefile = xxx >> in file F<< orbuild.conf >> specifies the top-level makefile that
 will be driving the build. In order to avoid overloading the computer (which would cause thrashing),
@@ -420,7 +420,7 @@ the calling makefile/script should filter the "--jobserver-fds=x,y -j" informati
 (the easiest way is to clear MAKEFLAGS completely). Without that information, the makefile will run sequentially.
 Explicitly specifying "-j 1" has no further effect but does not harm either.
 
-=head2 Repository skew
+=head3 Repository skew
 
 At the beginning of the daily build, all source code repositories are updated in order
 to downloada the latest file versions. The update itself is not atomic: if a developer
@@ -466,11 +466,11 @@ with "git log -1 --first-parent --until=...".
 
 =back
 
-=head2 Year 2038 compliance
+=head3 Year 2038 compliance
 
 Some of the perl scripts use mktime and the like and are not year 2038 compliant on 32-bit Linux systems and on Cygwin.
 
-=head1 Why I<< orbuild >> is written in perl, bash and make
+=head2 Why I<< orbuild >> is written in perl, bash and make
 
 There are a number of open-source build frameworks (see section "Alternatives to I<< orbuild >>" below)
 that could take on the task of building software components. However, at the time I<< orbuild >> was developed,
@@ -491,12 +491,12 @@ in order to keep his PC responsive for other tasks.
 The I<< orbuild >> tools are written so that they can be easily reused or adapted for other projects. In fact,
 most of them have evolved over the years in other unrelated projects.
 
-=head1 GitSvnMirror
+=head2 GitSvnMirror
 
 This project contains a set of tools to create and maintain a collection of read-only Git mirrors
 of Subversion repositories, see subdirectory I<< Scripts/GitSvnMirror >> for more information.
 
-=head1 Alternatives to I<< orbuild >>
+=head2 Alternatives to I<< orbuild >>
 
 =over
 
@@ -509,13 +509,13 @@ but without any further build steps.
 
 =back
 
-=head1 Feedback
+=head2 Feedback
 
 Please send feedback to rdiezmail-openrisc at yahoo.de
 
 The project's official web site is L<< https://github.com/rdiez/orbuild >>
 
-=head1 License
+=head2 License
 
 Copyright (C) R. Diez 2011,  rdiezmail-openrisc at yahoo.de
 
