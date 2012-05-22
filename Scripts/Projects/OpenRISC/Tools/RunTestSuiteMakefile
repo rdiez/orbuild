@@ -16,6 +16,8 @@ TEST_SUITE_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 # Set this variable to --trace in order to turn on or1ksim's tracing.
 OR1KSIM_TRACE_SWITCH :=
 
+REQUIRED_FILES_GROUP :=
+SIMULATIONS_GROUP    :=
 
 # ---- Generate a common or1200_config.v file for all the or1200 RTL model simulations.
 
@@ -87,7 +89,9 @@ define simulation_files_template
 
   $(eval $(call simulation_files_template_variables_2,$(1),$(2)))
 
-  $(eval $(call run_and_report_template,$(1)_SIMULATION_FILES,$2 Simulation Files,$(SHELL) -c "$(value $(1)_SIMULATION_FILES_CMD)"))
+  $(eval $(call run_and_report_template,$(1)_SIMULATION_FILES,$2 required files,$(SHELL) -c "$(value $(1)_SIMULATION_FILES_CMD)"))
+
+  REQUIRED_FILES_GROUP += $(1)_SIMULATION_FILES
 
 endef
 
@@ -136,7 +140,7 @@ define test_case_simulation_template
 
   $(eval $(call test_case_simulation_template_variables,$(1),$(2)))
 
-  $(eval $(call run_and_report_template,$(1)_SIMULATION_RUN,$(2) Simulation Run,$(SHELL) -c "$(value $(1)_SIMULATION_RUN_CMD)"))
+  $(eval $(call run_and_report_template,$(1)_SIMULATION_RUN,$(2) simulation,$(SHELL) -c "$(value $(1)_SIMULATION_RUN_CMD)"))
 
   all: $(value $(1)_SIMULATION_RUN_SENTINEL)
   $(value $(1)_SIMULATION_RUN_SENTINEL): $(value $(1)_SIMULATION_FILES_SENTINEL)
@@ -149,6 +153,8 @@ define test_case_simulation_template
   else
     $(value $(1)_SIMULATION_FILES_SENTINEL): error_unknown_test_type
   endif
+
+  SIMULATION_GROUP += $(1)_SIMULATION_RUN
 
 endef
 
@@ -175,3 +181,10 @@ $(eval $(call test_case_simulation_template,ASM_FIND,asm-find))
 $(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump))
 $(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag))
 $(eval $(call test_case_simulation_template,ASM_MAC,asm-mac))
+
+
+generate_groups_file:
+	echo "Required Files = $(REQUIRED_FILES_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Simulations = $(SIMULATION_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+
+all: generate_groups_file
