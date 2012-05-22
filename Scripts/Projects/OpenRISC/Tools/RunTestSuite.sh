@@ -43,6 +43,10 @@ create_dir_if_not_exists "$ORBUILD_PUBLIC_REPORTS_DIR"
 create_dir_if_not_exists "$ORBUILD_INTERNAL_REPORTS_DIR"
 create_dir_if_not_exists "$ORBUILD_COMMAND_SENTINELS_DIR"
 
+ORBUILD_COMPONENT_GROUPS_FILENAME="$ORBUILD_INTERNAL_REPORTS_DIR/ComponentGroups.lst"
+# Truncate the file if it already exists.
+printf "" > "$ORBUILD_COMPONENT_GROUPS_FILENAME"
+
 if [ $ORBUILD_STOP_ON_FIRST_ERROR -eq 0 ]; then
   K_FLAG=-k
 else
@@ -59,6 +63,7 @@ make $K_FLAG --no-builtin-variables --warn-undefined-variables \
      TEST_TYPE="$TEST_TYPE" \
      ORPSOCV2_CHECKOUT_DIR="$ORPSOCV2_CHECKOUT_DIR" \
      OPENRISC_BARE_TARGET="$OPENRISC_BARE_TARGET" \
+     ORBUILD_COMPONENT_GROUPS_FILENAME="$ORBUILD_COMPONENT_GROUPS_FILENAME" \
      -f RunTestSuiteMakefile \
      all
 
@@ -70,6 +75,7 @@ set -o errexit
 perl "$ORBUILD_TOOLS/GenerateBuildReport.pl" \
      --title "Test suite run $TEST_TYPE report" \
      --startTimeUtc "$START_TIME_UTC" \
+     --componentGroupsFilename "$ORBUILD_COMPONENT_GROUPS_FILENAME" \
      "$ORBUILD_INTERNAL_REPORTS_DIR" \
      "$OUTPUT_DIR/$REPORTS_BASEDIR" \
      "$REPORTS_SUBDIR" \
