@@ -211,7 +211,6 @@ BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
 $(eval $(call autotool_project_template,BINUTILS,Binutils,$(LOCAL_BINUTILS_SRC)))
 
-all: $(BINUTILS_INSTALL_SENTINEL)
 $(BINUTILS_CONFIGURE_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
 
 # TODO: Some checks fail, investigate why.
@@ -489,9 +488,7 @@ all_tests: $(OC_BLD_ALL_SENTINEL)
 
 # ----------- Peter Gavin's Binutils and other tools, common settings -----------
 
-PGAVIN_BINUTILS_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
-
-PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET) 
+PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET)
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-shared
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-itcl
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tk
@@ -507,7 +504,7 @@ PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --with-system-readline
 # --disable-multilib:  Multilibs have a meaning now: 1) with jump delay slot, 2) without jump delay slot, 3) compatibility (l.nop after every jump instruction).
 
 
-# ----------- Peter Gavin's Binutils and other tools, phase 1 -----------
+# ----------- Peter Gavin's Binutils and other tools (bare), phase 1 -----------
 
 PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS := $(PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS)
 PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-libgloss
@@ -516,7 +513,7 @@ PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-newlib
 # when the binutils have settled down, so it's not worth building it in phase 1 too.
 PGAVIN_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-sim
 
-PGAVIN_BINUTILS_PHASE_1_BIN_DIR := $(PGAVIN_BINUTILS_BIN_DIR)
+PGAVIN_BINUTILS_PHASE_1_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
 
 PGAVIN_BINUTILS_PHASE_1_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 
@@ -525,11 +522,15 @@ $(eval $(call autotool_project_template,PGAVIN_BINUTILS_PHASE_1,Peter Gavin's Bi
 $(PGAVIN_BINUTILS_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 
 
-# ----------- Peter Gavin's GCC cross-compiler for OpenRISC, common settings -----------
+# ----------- Peter Gavin's GCC cross-compiler for OpenRISC (bare), common settings -----------
 
 PGAVIN_COMMON_GCC_OPTIONS := --disable-shared
 PGAVIN_COMMON_GCC_OPTIONS += --disable-libssp
 PGAVIN_COMMON_GCC_OPTIONS += --disable-lto
+PGAVIN_COMMON_GCC_OPTIONS += --disable-libgomp
+PGAVIN_COMMON_GCC_OPTIONS += --disable-libmudflap
+PGAVIN_COMMON_GCC_OPTIONS += --enable-threads=single
+PGAVIN_COMMON_GCC_OPTIONS += --disable-libquadmath
 
 PGAVIN_BARE_COMMON_GCC_OPTIONS := $(PGAVIN_COMMON_GCC_OPTIONS) --with-newlib --target=$(PGAVIN_OPENRISC_BARE_TARGET)
 
@@ -555,7 +556,7 @@ $(eval $(call autotool_project_template,PGAVIN_GCC_PHASE_1,Peter Gavin's GCC Pha
 $(PGAVIN_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_BINUTILS_PHASE_1_INSTALL_SENTINEL) $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 
-# ----------- Peter Gavin's Binutils and other tools, phase 2 -----------
+# ----------- Peter Gavin's Binutils and other tools (bare), phase 2 -----------
 # Note that this installs the final Binutils binaries over the ones from phase 1.
 # Although everything should be properly overwritten, this method does not look very clean to me.
 
@@ -568,7 +569,7 @@ PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --enable-sim-debug
 PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --disable-sim-cflags
 PGAVIN_BINUTILS_PHASE_2_EXTRA_CONFIG_ARGS += --enable-sim-trace
 
-PGAVIN_BINUTILS_PHASE_2_BIN_DIR := $(PGAVIN_BINUTILS_BIN_DIR)
+PGAVIN_BINUTILS_PHASE_2_BIN_DIR := $(PGAVIN_BARE_TOOLCHAIN_DIR)
 
 PGAVIN_BINUTILS_PHASE_2_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
 
@@ -624,20 +625,38 @@ $(PGAVIN_OR1KSIM_CONFIGURE_SENTINEL): $(PGAVIN_OR1KSIM_CHECKOUT_SENTINEL) $(PGAV
 all_pgavin: $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
 
 
-# ----------- Peter Gavin's Binutils for Linux -----------
+# ----------- Peter Gavin's Binutils and other tools for Linux, common settings -----------
 
-# Build Binutils as a standard autoconf project.
-PGAVIN_LINUX_BINUTILS_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
 PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
-PGAVIN_LINUX_BINUTILS_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
-# PGAVIN_LINUX_BINUTILS_CHECK_TARGETS := check-binutils check-gas check-ld
-$(eval $(call autotool_project_template,PGAVIN_LINUX_BINUTILS,Peter Gavin's Binutils for Linux,$(PGAVIN_OR1K_SRC_CHECKOUT_DIR)/binutils))
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-shared
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-itcl
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tk
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tcl
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-winsup
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-libgui
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-rda
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-sid
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --with-sysroot
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-gdb
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --disable-readline
+PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --with-system-readline
 
-$(PGAVIN_LINUX_BINUTILS_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
+# ----------- Peter Gavin's Binutils and other tools for Linux, phase 1 -----------
 
-# TODO: disabled:
-#  all_pgavin: $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL)
-# all_pgavin: $(PGAVIN_LINUX_BINUTILS_CHECK_SENTINEL)
+PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS := $(PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS)
+
+# TODO: we are using uclibc, right?
+PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-libgloss
+PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-newlib
+PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-sim
+
+PGAVIN_LINUX_BINUTILS_PHASE_1_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
+
+PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
+
+$(eval $(call autotool_project_template,PGAVIN_LINUX_BINUTILS_PHASE_1,Peter Gavin's Linux Binutils etc. phase 1,$(PGAVIN_OR1K_SRC_CHECKOUT_DIR)))
+
+$(PGAVIN_LINUX_BINUTILS_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 
 
 # ---------- Peter Gavin's Linux Headers ----------
@@ -656,17 +675,18 @@ PGAVIN_LINUX_HEADERS_MAKEFLAGS_FILTER := clear
 
 $(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_HEADERS,Peter Gavin's Linux Headers,$(SHELL) -c "$(PGAVIN_LINUX_HEADERS_CMD)"))
 $(PGAVIN_LINUX_HEADERS_SENTINEL): $(PGAVIN_LINUX_CHECKOUT_SENTINEL)
-# TODO: all_pgavin: $(PGAVIN_LINUX_HEADERS_SENTINEL)
 
 
-# ----------- Peter Gavin's Linux GCC cross-compiler for OpenRISC -----------
+# ----------- Peter Gavin's Linux GCC cross-compiler for OpenRISC, common settings -----------
 
 PGAVIN_LINUX_COMMON_GCC_OPTIONS := --disable-shared
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libssp
-PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-multilib
+PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-multilib  # TODO: should we remove this?
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-lto
 PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libgomp
-PGAVIN_LINUX_COMMON_GCC_OPTIONS += $(PGAVIN_LINUX_COMMON_GCC_OPTIONS) --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
+PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libmudflap
+PGAVIN_LINUX_COMMON_GCC_OPTIONS += --disable-libquadmath
+PGAVIN_LINUX_COMMON_GCC_OPTIONS += --target=$(PGAVIN_OPENRISC_LINUX_TARGET)
 
 
 # ---------- Peter Gavin's Linux GCC phase 1 (bootstrap) ----------
@@ -681,8 +701,7 @@ PGAVIN_LINUX_GCC_PHASE_1_INSTALL_TARGETS          := install-gcc
 
 $(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_1,Peter Gavin's Linux GCC Phase 1,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
-$(PGAVIN_LINUX_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_BINUTILS_INSTALL_SENTINEL) $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
-# TODO: all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
+$(PGAVIN_LINUX_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_BINUTILS_PHASE_1_INSTALL_SENTINEL) $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 
 # ---------- Peter Gavin's uClibc for Linux ----------
@@ -881,7 +900,7 @@ PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_1_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_OR1KSIM_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_BINUTILS_AUTOTOOLS_GROUP)
+PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_1_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(LINUX_GDB_AUTOTOOLS_GROUP)
