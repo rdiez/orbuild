@@ -42,7 +42,7 @@ else
 
   echo "Merging any changes from upstream git..."
   CURRENT_BRANCH="$(git name-rev --name-only HEAD)"
-  git merge "$CURRENT_BRANCH"
+  git merge "origin/$CURRENT_BRANCH"
 
 fi
 
