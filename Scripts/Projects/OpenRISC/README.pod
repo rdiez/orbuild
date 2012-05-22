@@ -130,7 +130,7 @@ performance counters, MMU, caches, debug unit, power management, PIC and timer.
 
 Taken from git head at git://github.com/pgavin
 
-Both the "bare" toolchain with Newlib and the Linux toolchain with uClibc are built.
+Both the "bare" toolchain with Newlib and the Linux toolchain (BEWARE: this is broken at the moment) with uClibc are built.
 
 The Binutils test suite is also run for the "bare" toolchain.
 
