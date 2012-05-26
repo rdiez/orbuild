@@ -53,11 +53,11 @@ PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kBare
 PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kLinux
 PGAVIN_LINUX_TOOLCHAIN_PREFIX := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/$(PGAVIN_OPENRISC_LINUX_TARGET)
 
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
 all: all_pgavin
 endif
 
-ifeq "$(ENABLE_TESTS)" "1"
+ifeq "$(strip $(ENABLE_TESTS))" "1"
 all: all_tests
 endif
 
@@ -91,7 +91,7 @@ $(GNUSRC_CHECKOUT_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 
 $(eval $(call subversion_checkout_template,MINSOC,MinSoC,$(OC_SVN_BASE_URL)/minsoc/minsoc/trunk))
 $(MINSOC_CHECKOUT_SENTINEL): $(GNUSRC_CHECKOUT_SENTINEL)
-ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
+ifeq "$(strip $(ONLY_ANONYMOUS_CHECKOUTS))" "0"
   # Only download the repository if we are going to use it, and we only use it for testing.
   all_tests: $(MINSOC_CHECKOUT_SENTINEL)
 endif
@@ -153,7 +153,7 @@ ICARUS_VERILOG_AUTOGEN_CMD = $(SHELL) autoconf.sh
 $(eval $(call autogen_project_template,ICARUS_VERILOG,Icarus Verilog))
 $(ICARUS_VERILOG_AUTOGEN_SENTINEL): $(ICARUS_VERILOG_CHECKOUT_SENTINEL)
 
-ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
   all: $(ICARUS_VERILOG_INSTALL_SENTINEL)
 endif
 
@@ -171,7 +171,7 @@ VERILATOR_AUTOGEN_CMD = autoconf --warnings=all
 $(eval $(call autogen_project_template,VERILATOR,Verilator))
 $(VERILATOR_AUTOGEN_SENTINEL): $(VERILATOR_CHECKOUT_SENTINEL)
 
-ifeq "$(ENABLE_VERILATOR)" "1"
+ifeq "$(strip $(ENABLE_VERILATOR))" "1"
   all: $(VERILATOR_INSTALL_SENTINEL)
 endif
 
@@ -337,12 +337,12 @@ SPACE_CHAR := $(EMPTY_VAR_TRICK) $(EMPTY_VAR_TRICK)
 VERILOG_TOOLS_PREPEND_PATH :=
 VERILOG_TOOLS_PREREQS      :=
 
-ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
   VERILOG_TOOLS_PREREQS += $(ICARUS_VERILOG_INSTALL_SENTINEL)
   VERILOG_TOOLS_PREPEND_PATH += $(ICARUS_VERILOG_BIN_DIR)/bin
 endif
 
-ifeq "$(ENABLE_VERILATOR)" "1"
+ifeq "$(strip $(ENABLE_VERILATOR))" "1"
   VERILOG_TOOLS_PREREQS += $(VERILATOR_INSTALL_SENTINEL)
   VERILOG_TOOLS_PREPEND_PATH += $(VERILATOR_BIN_DIR)/bin
 endif
@@ -421,13 +421,13 @@ $(ORPSOC_NAME)_RTL_TESTS_MAKEFLAGS_FILTER := clear
 
 $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
 
-ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
   $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$($(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH)
 endif
 
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,$(SHELL) -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
 
-ifeq "$(ENABLE_ICARUS_VERILOG)" "1"
+ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
   $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL)
 endif
 
@@ -451,9 +451,9 @@ MINSOC_INSTALLATION_SCRIPT_MAKEFLAGS_FILTER := clear
 $(eval $(call run_and_report_template,MINSOC_INSTALLATION_SCRIPT,MinSoC's installation script,$(SHELL) -c "$(MINSOC_INSTALLATION_SCRIPT_CMD)"))
 $(MINSOC_INSTALLATION_SCRIPT_SENTINEL): $(MINSOC_CHECKOUT_SENTINEL)
 
-ifeq "$(ONLY_ANONYMOUS_CHECKOUTS)" "0"
+ifeq "$(strip $(ONLY_ANONYMOUS_CHECKOUTS))" "0"
 # MinSoC's installation script downloads a repository and some files automatically, so skip it if we have globally disabled repository downloading.
-ifeq "$(SKIP_REPOSITORY_UPDATE)" "0"
+ifeq "$(strip $(SKIP_REPOSITORY_UPDATE))" "0"
 all_tests: $(MINSOC_INSTALLATION_SCRIPT_SENTINEL)
 endif
 endif
@@ -584,7 +584,7 @@ $(eval $(call autotool_project_template,PGAVIN_BINUTILS_PHASE_2,Peter Gavin's Bi
 
 $(PGAVIN_BINUTILS_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_GCC_PHASE_1_INSTALL_SENTINEL)
 
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
 # Disabled at the moment, see commentabove:
 #    all_tests: $(PGAVIN_BINUTILS_PHASE_2_CHECK_SENTINEL)
 endif
@@ -812,7 +812,7 @@ ORTS_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 ORTS_EXES_INSTALL_MAKEFLAGS_FILTER := pass-j
 
 # Add --enable-debug=yes to ORTS_EXES_EXTRA_CONFIG_ARGS in order to enable debug builds.
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(PGAVIN_OPENRISC_BARE_TARGET)
   ORTS_EXES_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
 else
@@ -832,7 +832,7 @@ $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables
 
 ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)
 
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_ORK1SIM_PREPEND_PATH := $(PGAVIN_OR1KSIM_BIN_DIR)/bin
   ORTS_PREPEND_PATH_LIST    += $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
 else
@@ -848,7 +848,7 @@ ORTS_MINSOC_VERILATOR_PREPEND_PATH := $(ORTS_PREPEND_PATH)
 
 ORTS_COMMON_CMD := \"$(ORBUILD_PROJECT_DIR)/Tools/RunTestSuite.sh\" OrtsPublicReports TestReport.html \"$(ORTS_EXES_BIN_DIR)\" \"$(ORPSOCV2_CHECKOUT_DIR)\"
 
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_COMMON_CMD += $(PGAVIN_OPENRISC_BARE_TARGET)
 else
   ORTS_COMMON_CMD += $(OPENRISC_BARE_TARGET)
@@ -881,7 +881,7 @@ orts_subproject_files:
 	echo "ORTS_ORPSOC_IVERILOG = $(ORTS_ORPSOC_IVERILOG_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
 	echo "ORTS_MINSOC_VERILATOR = $(ORTS_MINSOC_VERILATOR_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
 
-ifeq "$(ENABLE_PGAVIN)" "1"
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   $(ORTS_ORK1SIM_SENTINEL)       : $(ORTS_EXES_INSTALL_SENTINEL) $(PGAVIN_OR1KSIM_INSTALL_SENTINEL)
 else
   $(ORTS_ORK1SIM_SENTINEL)       : $(ORTS_EXES_INSTALL_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
@@ -890,12 +890,12 @@ $(ORTS_PGAVIN_CGEN_SENTINEL)     : $(ORTS_EXES_INSTALL_SENTINEL) $(PGAVIN_BINUTI
 $(ORTS_ORPSOC_IVERILOG_SENTINEL) : $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 $(ORTS_MINSOC_VERILATOR_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS_PREREQS) $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 
-ifeq "$(ENABLE_OPEN_RISC_TEST_SUITE)" "1"
+ifeq "$(strip $(ENABLE_OPEN_RISC_TEST_SUITE))" "1"
   all: $(ORTS_ORK1SIM_SENTINEL)
   all: $(ORTS_ORPSOC_IVERILOG_SENTINEL)
   # TODO: The Verilator support is not ready yet:
   #   all: $(ORTS_MINSOC_VERILATOR_SENTINEL)
-  ifeq "$(ENABLE_PGAVIN)" "1"
+  ifeq "$(strip $(ENABLE_PGAVIN))" "1"
     all: $(ORTS_PGAVIN_CGEN_SENTINEL)
   endif
   all: orts_subproject_files
