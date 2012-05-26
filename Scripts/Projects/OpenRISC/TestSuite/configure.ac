@@ -48,6 +48,6 @@ fi
 
 
 # If you update this line, please update SUBDIRS in Makefile.am too.
-AC_CONFIG_FILES([Makefile AsmTestCases/Makefile])
+AC_CONFIG_FILES([Makefile AsmTestCases/Makefile LibcBare/Makefile CTestCases/Makefile])
 
 AC_OUTPUT

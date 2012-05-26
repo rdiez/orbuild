@@ -11,4 +11,5 @@ AUTOMAKE_OPTIONS = foreign
 #   ACLOCAL_AMFLAGS = -I m4 ${ACLOCAL_FLAGS}
 
 # If you update this line, please update AC_CONFIG_FILES in configure.ac too.
-SUBDIRS = AsmTestCases
+# Warning: the order here is important, LibcBare must come before the CTestCases.
+SUBDIRS = AsmTestCases LibcBare CTestCases
