@@ -53,7 +53,7 @@ else
   K_FLAG=
 fi
 
-# Even if the make invokation fails, we should try to generate the report nevertheless.
+# Even if the make invocation fails, we should try to generate the report nevertheless.
 set +o errexit
 
 make $K_FLAG --no-builtin-variables --warn-undefined-variables \
