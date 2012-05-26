@@ -52,6 +52,8 @@ START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
     echo "Current directory: $PWD"
     echo "This file's character encoding: ${LANG:-(unknown, the LANG environment variable is not set)}"
     echo "Start time:  Local: $START_TIME_LOCAL, UTC: $START_TIME_UTC"
+    echo "Environment variables:"
+    export
     echo
 } >"$LOG_FILENAME"
 
