@@ -15,6 +15,8 @@ TEST_SUITE_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 
 # Set this variable to --trace in order to turn on or1ksim's tracing.
 OR1KSIM_TRACE_SWITCH :=
+# Set this variable to --trace-insn=on in order to turn on or1k-elf-run's tracing.
+OR1KELFRUN_TRACE_SWITCH :=
 
 REQUIRED_FILES_GROUP :=
 SIMULATIONS_GROUP    :=
@@ -114,7 +116,7 @@ define test_case_simulation_template_variables
 
   else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
 
-    $(1)_SIMULATION_RUN_CMD += \"or1k-elf-run\" $(OR1KSIM_TRACE_SWITCH) \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
+    $(1)_SIMULATION_RUN_CMD += \"or1k-elf-run\" $(OR1KELFRUN_TRACE_SWITCH) \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
 
