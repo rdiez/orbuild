@@ -803,14 +803,23 @@ endif
 
 # ----------- OpenRISC Test Suite -----------
 
+# NOTE: If PGAVIN is enabled, the Test Suite uses that toolchain instead of the standard one.
+
 # ----- Build the test suite for a generic reference system.
 
 ORTS_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 
 ORTS_EXES_INSTALL_MAKEFLAGS_FILTER := pass-j
-# Add --enable-debug=yes here in order to enable debug builds.
-ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(OPENRISC_BARE_TARGET)
-ORTS_EXES_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+
+# Add --enable-debug=yes to ORTS_EXES_EXTRA_CONFIG_ARGS in order to enable debug builds.
+ifeq "$(ENABLE_PGAVIN)" "1"
+  ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(PGAVIN_OPENRISC_BARE_TARGET)
+  ORTS_EXES_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+else
+  ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(OPENRISC_BARE_TARGET)
+  ORTS_EXES_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+endif
+
 ORTS_EXES_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
 
 $(eval $(call autotool_project_template,ORTS_EXES,OpenRISC Test Suite executables,$(ORTS_DIR)))
@@ -820,8 +829,6 @@ ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh
 $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables))
 
 # ----- Run the test suite against different targets.
-
-# NOTE: If PGAVIN is enabled, the Test Suite uses that toolchain instead of the standard one.
 
 ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)
 
