@@ -130,7 +130,15 @@ define test_case_simulation_template_variables
 
   $(1)_SIMULATION_RUN_CMD += 2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
 
-  $(1)_SIMULATION_RUN_CMD += && \"$(TEST_TOOLS_DIR)/AnalyseLog.pl\" \"$(value $(1)_SIMULATION_LOG_FILENAME)\" \"$(ORTS_EXES_BIN_DIR)/share/$(2).TestResults\"
+  $(1)_SIMULATION_RUN_CMD += && \"$(TEST_TOOLS_DIR)/AnalyseLog.pl\" \"$(value $(1)_SIMULATION_LOG_FILENAME)\"
+
+  ifeq "$(3)" "own-test-results"
+    $(1)_SIMULATION_RUN_CMD += \"$(ORTS_EXES_BIN_DIR)/share/$(2).TestResults\"
+  else ifeq "$(3)" "single-exit-0-test-results"
+    $(1)_SIMULATION_RUN_CMD += \"$(ORTS_EXES_BIN_DIR)/share/single-exit-0.TestResults\"
+  else
+    $(1)_SIMULATION_RUN_CMD += && echo \"Unknown test result type $(3)\" && exit 1
+  endif
 
   $(1)_SIMULATION_RUN_MAKEFLAGS_FILTER := clear
 
@@ -140,13 +148,12 @@ define test_case_simulation_template
 
   $(eval $(call simulation_files_template,$(1),$(2)))
 
-  $(eval $(call test_case_simulation_template_variables,$(1),$(2)))
+  $(eval $(call test_case_simulation_template_variables,$(1),$(2),$(3)))
 
   $(eval $(call run_and_report_template,$(1)_SIMULATION_RUN,$(2) simulation,$(SHELL) -c "$(value $(1)_SIMULATION_RUN_CMD)"))
 
   all: $(value $(1)_SIMULATION_RUN_SENTINEL)
   $(value $(1)_SIMULATION_RUN_SENTINEL): $(value $(1)_SIMULATION_FILES_SENTINEL)
-
 
   ifeq "$(TEST_TYPE)" "ORTS_ORK1SIM"
   else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
@@ -166,23 +173,23 @@ endef
 # The test cases.
 #
 
-$(eval $(call test_case_simulation_template,ASM_BASIC,asm-basic))
-$(eval $(call test_case_simulation_template,ASM_LOAD,asm-load))
-$(eval $(call test_case_simulation_template,ASM_EXT,asm-ext))
-$(eval $(call test_case_simulation_template,ASM_ADD,asm-add))
-$(eval $(call test_case_simulation_template,ASM_AND,asm-and))
-$(eval $(call test_case_simulation_template,ASM_OR,asm-or))
-$(eval $(call test_case_simulation_template,ASM_SUB,asm-sub))
-$(eval $(call test_case_simulation_template,ASM_XOR,asm-xor))
-$(eval $(call test_case_simulation_template,ASM_MFSPR,asm-mfspr))
-$(eval $(call test_case_simulation_template,ASM_ROR,asm-ror))
-$(eval $(call test_case_simulation_template,ASM_SHIFT,asm-shift))
-$(eval $(call test_case_simulation_template,ASM_MUL,asm-mul))
-$(eval $(call test_case_simulation_template,ASM_DIV,asm-div))
-$(eval $(call test_case_simulation_template,ASM_FIND,asm-find))
-$(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump))
-$(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag))
-$(eval $(call test_case_simulation_template,ASM_MAC,asm-mac))
+$(eval $(call test_case_simulation_template,ASM_BASIC,asm-basic,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_LOAD,asm-load,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_EXT,asm-ext,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_ADD,asm-add,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_AND,asm-and,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_OR,asm-or,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_SUB,asm-sub,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_XOR,asm-xor,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_MFSPR,asm-mfspr,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_ROR,asm-ror,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_SHIFT,asm-shift,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_MUL,asm-mul,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_DIV,asm-div,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_FIND,asm-find,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_MAC,asm-mac,own-test-results))
 
 
 generate_groups_file:
