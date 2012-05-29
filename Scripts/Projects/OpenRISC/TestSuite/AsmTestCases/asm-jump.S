@@ -50,17 +50,17 @@
         MOVE_TO_SPR  SPR_EPCR_BASE, ZERO_R0
 
         // Generate the jump opcode.
-    50: .word  ( \opcode_value | (\dest_register_number << 11) )
+  \@1$: .word  ( \opcode_value | (\dest_register_number << 11) )
         EMPTY_DELAY_SLOT
 
-        // If the jump failed, we land here.
-        REPORT_IMMEDIATE_TO_CONSOLE 1
+        // If the jump fails, we land here.
+        REPORT_EXCEPTION \@1$
 
         l.j 52f
         EMPTY_DELAY_SLOT
 
         // If the jump succeeds, we land here.
-    51: REPORT_IMMEDIATE_TO_CONSOLE 0
+    51: REPORT_IMMEDIATE_TO_CONSOLE 2
         
     52:
 
@@ -69,14 +69,39 @@
 
         STANDARD_TEST_ENVIRONMENT
 
-
         .section .exception_vectors
-        
+
         // Alignment exception.
 	    .org	0x600
-        // TODO: We need to patch the instruction here before returning, or we need to return
-        //       to the next instruction. But beware that the or1200 implementation does not behave like the or1ksim simulator.
-	    l.rfe
+alignment_exception:
+        PUSH r2
+        PUSH r3
+
+        // Overwrite the exception-triggering instruction with an l.nop.
+        // Note that this could cause cache-coherency issues between the instruction and the data caches.
+        // Note also that this does not work properly if the instruction that triggered the exception
+        // is in a jump delay slot.
+        //
+        // As an alternative we could increment the SPR_EPCR_BASE register by 4 before returning from the exception,
+        // which would skip the instruction that triggered it.
+        
+        MOVE_FROM_SPR  r2, SPR_EPCR_BASE  // Address of the instruction that triggered the exception.
+        LOAD_IMMEDIATE r3, 0x15000000     // Opcode for l.nop
+        l.sw    0(r2), r3
+
+        POP r3
+        POP r2
+
+        l.rfe
+
+
+        // Illegal instruction exception.
+        //
+        // At the moment it behaves exactly like the alignment exception.
+        // It would be best to differentiate, in order to make sure that the right exception gets triggered.
+	    .org	0x700
+        l.j alignment_exception
+        EMPTY_DELAY_SLOT
         
 
         .section .text
@@ -87,27 +112,26 @@ start_tests:
         // Test l.jalr (jump and link register)
 
         TEST_JUMP 0x48000000, 5, 0
-        // TODO: some tests disabled, further work is needed
+        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
         // TEST_JUMP 0x48000000, 5, 1
         // TEST_JUMP 0x48000000, 5, 2
         // TEST_JUMP 0x48000000, 5, 3
         
-        // Test with link register as the destination
-        // TODO: disabled, need to add support for the ILLEGAL INSTRUCTION exception:
-        // TEST_JUMP (0x48000000, 9, 0)
+        // Test with link register (R9) as the destination.
+        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
+        // TEST_JUMP 0x48000000, 9, 0
         
 
         // Test l.jr (jump register)
         
         TEST_JUMP 0x44000000, 5, 0
-        // TODO: some tests disabled, further work is needed
+        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
         // TEST_JUMP 0x44000000, 5, 1
         // TEST_JUMP 0x44000000, 5, 2
         // TEST_JUMP 0x44000000, 5, 3
 
-        // Test with link register as the destination (OK here)
-        // TODO: disabled, need to add support for the ILLEGAL INSTRUCTION exception:
-        // TEST_JUMP 0x44000000, 9, 0
+        // Test with link register (R9) as the destination (OK here).
+        TEST_JUMP 0x44000000, 9, 0
 
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9

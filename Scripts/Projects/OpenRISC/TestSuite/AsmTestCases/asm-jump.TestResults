@@ -20,7 +20,10 @@
 # 1) opcode_value
 # 2) dest_register
 # 3) alignment_offset
-# 4) exception triggered (boolean, 0 or 1)
+# 4) exception triggered:
+#    0 = jump skipped, no exception (should never happen)
+#    1 = jump skipped because of alignment or illegal instruction exception
+#    2 = jump taken
 
 
 # ----------- Test l.jalr -----------
@@ -28,9 +31,9 @@
 report(0x48000000);
 report(0x00000005);
 report(0x00000000);
-report(0x00000000);
+report(0x00000002);
 
-# TODO: some tests disabled, further work is needed
+# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
 #report(0x48000000);
 #report(0x00000005);
 #report(0x00000001);
@@ -46,11 +49,11 @@ report(0x00000000);
 #report(0x00000003);
 #report(0x00000001);
 
-# TODO: disabled
+# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
 #report(0x48000000);
-#report();
-#report();
-#report();
+#report(0x00000009);  # R9 is invalid as destination register for l.jalr
+#report(0x00000000);
+#report(0x00000001);
 
 
 # ----------- Test l.jr (jump register) -----------
@@ -58,9 +61,9 @@ report(0x00000000);
 report(0x44000000);
 report(0x00000005);
 report(0x00000000);
-report(0x00000000);
+report(0x00000002);
 
-# TODO: some tests disabled, further work is needed
+# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
 #report(0x44000000);
 #report(0x00000005);
 #report(0x00000001);
@@ -76,11 +79,10 @@ report(0x00000000);
 #report(0x00000003);
 #report(0x00000001);
 
-# TODO: disabled
-#report(0x44000000);
-#report();
-#report();
-#report();
+report(0x44000000);
+report(0x00000009);  # R9 is OK as destination register for l.jr
+report(0x00000000);
+report(0x00000002);
 
 
 exit(0)
