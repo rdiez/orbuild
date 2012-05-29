@@ -815,9 +815,11 @@ ORTS_EXES_INSTALL_MAKEFLAGS_FILTER := pass-j
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(PGAVIN_OPENRISC_BARE_TARGET)
   ORTS_EXES_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+  ORTS_EXES_AUTOGEN_PARAM := $(PGAVIN_OPENRISC_BARE_TARGET)
 else
   ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(OPENRISC_BARE_TARGET)
   ORTS_EXES_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+  ORTS_EXES_AUTOGEN_PARAM := $(OPENRISC_BARE_TARGET)
 endif
 
 ORTS_EXES_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
@@ -825,7 +827,7 @@ ORTS_EXES_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
 $(eval $(call autotool_project_template,ORTS_EXES,OpenRISC Test Suite executables,$(ORTS_DIR)))
 $(ORTS_EXES_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
 
-ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh
+ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh $(ORTS_EXES_AUTOGEN_PARAM)
 $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables))
 
 # ----- Run the test suite against different targets.
