@@ -5,12 +5,14 @@
 #include "AsmTestEnvironment.inc"
 
 
-.macro REPORT_EXCEPTION  reg, instruction_addr
+// Reports either 0x00000000 or 0x00000001.
+
+.macro REPORT_EXCEPTION  instruction_addr
 
     PUSH r2
     PUSH r3
 
-    MOVE_REG r2, \reg
+    MOVE_FROM_SPR r2, SPR_EPCR_BASE  // Save the exception address.
 
     LOAD_IMMEDIATE r3, \instruction_addr
 
@@ -47,23 +49,16 @@
     SET_SPR_SR_FLAGS   \flags_to_set  , r2, r3
     CLEAR_SPR_SR_FLAGS \flags_to_clear, r2, r3
 
-    l.nop 0  // TODO: temporary, remove at the end
-    l.nop 0  // TODO: temporary, remove at the end
-
 \@1$: \opcode r4, r5, r6
 
-    l.nop 0  // TODO: temporary, remove at the end
-    l.nop 0  // TODO: temporary, remove at the end
-
     MOVE_FROM_SPR r2, SPR_SR         // Save the flags.
-    MOVE_FROM_SPR r5, SPR_EPCR_BASE  // Save the exception address.
 
     REPORT_REG_TO_CONSOLE r4
 
     REPORT_BIT_TO_CONSOLE r2, SPR_SR_CY
     REPORT_BIT_TO_CONSOLE r2, SPR_SR_OV
 
-    REPORT_EXCEPTION r5, \@1$
+    REPORT_EXCEPTION \@1$
 
     PRINT_NEWLINE_TO_CONSOLE
         
@@ -86,14 +81,13 @@
 \@1$: \opcode r4, r5, \op2
 
     MOVE_FROM_SPR r2, SPR_SR         // Save the flags.
-    MOVE_FROM_SPR r5, SPR_EPCR_BASE  // Save the exception address.
 
     REPORT_REG_TO_CONSOLE r4
 
     REPORT_BIT_TO_CONSOLE r2, SPR_SR_CY
     REPORT_BIT_TO_CONSOLE r2, SPR_SR_OV
 
-    REPORT_EXCEPTION r5, \@1$
+    REPORT_EXCEPTION \@1$
 
     PRINT_NEWLINE_TO_CONSOLE
         
@@ -132,5 +126,17 @@
 
 .endm
 
+.macro SET_SR_FLAGS_FOR_RANGE_EXCEPTION overwritten_reg1, overwritten_reg2
+
+    // When running under the or1ksim simulator, the range exception is triggered on a positive edge
+    // (when the overflow flag changes from 0 to 1).
+    // However, when running the or1200 Verilog code included with ORPSoC V2 under the Icarus Verilog simulator,
+    // the exception is trigged on a level basis.
+    // Therefore, we need to clear the OV (overflow) flag before setting the OVE (overflow exception) flag.
+
+    CLEAR_SPR_SR_FLAGS SPR_SR_OV , \overwritten_reg1, \overwritten_reg2
+    SET_SPR_SR_FLAGS   SPR_SR_OVE, \overwritten_reg1, \overwritten_reg2
+
+.endm
 
 #endif  // Include this file only once.
