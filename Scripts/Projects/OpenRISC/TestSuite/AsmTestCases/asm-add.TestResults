@@ -78,13 +78,12 @@ report(0x00000000);
 
 # Range exception tests.
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x40000000);
-# report(0x40000000);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x40000000);
+report(0x40000000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
 report(0xffffffff);
 report(0xfffffffe);
@@ -93,13 +92,12 @@ report(0x00000001);
 report(0x00000000);
 report(0x00000000);
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0xbfffffff);
-# report(0xbfffffff);
-# report(0x7ffffffe);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000001);
+report(0xbfffffff);
+report(0xbfffffff);
+report(0x7ffffffe);
+report(0x00000001);
+report(0x00000001);
+report(0x00000001);
 
 
 # ----------- Test l.addc -----------
@@ -176,21 +174,19 @@ report(0x00000000);
 
 # Range exception tests.
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x40000000);
-# report(0x40000000);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x40000000);
+report(0x40000000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x40000000);
-# report(0x3fffffff);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x40000000);
+report(0x3fffffff);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
 report(0xffffffff);
 report(0xfffffffe);
@@ -206,13 +202,12 @@ report(0x00000001);
 report(0x00000000);
 report(0x00000000);
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0xbfffffff);
-# report(0xbfffffff);
-# report(0x7ffffffe);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000001);
+report(0xbfffffff);
+report(0xbfffffff);
+report(0x7ffffffe);
+report(0x00000001);
+report(0x00000001);
+report(0x00000001);
 
 
 # ----------- Test l.addi -----------
@@ -268,13 +263,12 @@ report(0x00000000);
 
 # Range exception tests.
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x7fffc000);
-# report(0x00004000);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x7fffc000);
+report(0x00004000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
 report(0xffffffff);
 report(0x0000fffe);
@@ -283,14 +277,12 @@ report(0x00000001);
 report(0x00000000);
 report(0x00000000);
 
-
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x80007fff);
-# report(0x00008000);
-# report(0x7fffffff);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000001);
+report(0x80007fff);
+report(0x00008000);
+report(0x7fffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000001);
 
 
 # ----------- Test l.addic -----------
@@ -367,21 +359,19 @@ report(0x00000000);
 
 # Range exception tests.
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x7fffc000);
-# report(0x00004000);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x7fffc000);
+report(0x00004000);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x7fffc000);
-# report(0x00003fff);
-# report(0x80000000);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x7fffc000);
+report(0x00003fff);
+report(0x80000000);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
 report(0xffffffff);
 report(0x0000fffe);
@@ -397,12 +387,11 @@ report(0x00000001);
 report(0x00000000);
 report(0x00000000);
 
-# TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-# report(0x80007fff);
-# report(0x00008000);
-# report(0x7fffffff);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000001);
+report(0x80007fff);
+report(0x00008000);
+report(0x7fffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000001);
 
 exit(0)

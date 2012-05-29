@@ -31,37 +31,47 @@
 
         .section .exception_vectors
         
-        // Alignment exception.
-	    .org	0x600
-        // TODO: print out address of instruction that caused the problem
-        
         // Range exception.
-	    .org	0xb00
+        .org    0xb00
 
         // TODO: The stack safety zone is not taken into consideration.
-        
-        // The handling is a bit dubious at present. We just patch the instruction with l.nop and
-        // restart. This will go wrong in branch delay slots. Really we need to single
-
-        // step past and then continue.
-
-
-        // TODO: do we need to patch the instruction? Can we not skip it somehow?
 
         PUSH r2
         PUSH r3
 
-        MOVE_FROM_SPR r2, SPR_EPCR_BASE  // Address of the instruction that caused the problem.
+        // Overwrite the exception-triggering instruction with an l.nop.
+        // Note that this could cause cache-coherency issues between the instruction and the data caches.
+        // Note also that this does not work properly if the instruction that triggered the exception
+        // is in a jump delay slot.
+        //
+        // As an alternative we could increment the SPR_EPCR_BASE register by 4 before returning from the exception,
+        // which would skip the instruction that triggered it.
+        
+        MOVE_FROM_SPR  r2, SPR_EPCR_BASE  // Address of the instruction that triggered the exception.
+        LOAD_IMMEDIATE r3, 0x15000000     // Opcode for l.nop
+        l.sw    0(r2), r3
 
-	    LOAD_IMMEDIATE r3, 0x15000000	// Opcode for l.nop
-	    l.sw	-4(r2), r3  // TODO: temporary, remove at the end
-	    l.sw	 0(r2), r3
-	    l.sw	+4(r2), r3  // TODO: temporary, remove at the end
-
+        // When running under the or1ksim simulator, the range exception is triggered on a positive edge
+        // (when the overflow flag changes from 0 to 1).
+        // However, when running the or1200 Verilog code included with ORPSoC V2 under the Icarus Verilog simulator,
+        // the exception is trigged on a level basis. As a result, as soon as l.rfe returns from the exception,
+        // the range exception triggers again, causing an infinite loop.
+        // Therefore, we need to clear the OVE (overflow exception) flag in the SPR_ESR_BASE register
+        // before returning from the exception. We could clear the OV (overflow) flag instead,
+        // but the test cases check that flag as part of the expected results.
+        // This issue was discussed in the mailing list, see the following thread:
+        //  "Different SPR_EPCR_BASE address on range exception with or1ksim and with or1200"
+        //  http://lists.openrisc.net/pipermail/openrisc/2012-April/001052.html
+        
+        MOVE_FROM_SPR r2, SPR_ESR_BASE
+        LOAD_IMMEDIATE r3, ~SPR_SR_OVE
+        l.and  r2, r2, r3
+        MOVE_TO_SPR SPR_ESR_BASE, r2
+        
         POP r3
         POP r2
 
-	    l.rfe
+        l.rfe
         
 
         .section .text
@@ -94,19 +104,18 @@ start_tests:
 
         
         // ------ Check that range exceptions are triggered.
-        
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that an overflow alone causes a RANGE Exception.
-        // TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.add, 0x40000000, 0x40000000
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.add, 0x40000000, 0x40000000
 
         // Check that a carry alone does not cause a RANGE Exception.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.add, 0xffffffff, 0xfffffffe
 
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that carry and overflow together cause an exception.
-        // TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.add, 0xbfffffff, 0xbfffffff
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.add, 0xbfffffff, 0xbfffffff
 
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
@@ -130,7 +139,6 @@ start_tests:
 
         // Add the largest unsigned value to zero with a carry. This potentially can break a
         // simplistic test for carry that does not  consider the carry flag properly. Do it both ways around.
-        // TODO: investigate why this test is failing
         TEST_INST_FF_I32_I32 SPR_SR_CY, SPR_SR_OV, l.addc, -1,  0
         TEST_INST_FF_I32_I32 SPR_SR_CY, SPR_SR_OV, l.addc,  0, -1
 
@@ -147,21 +155,24 @@ start_tests:
 
         // ------ Check that range exceptions are triggered.
 
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
-
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that an overflow alone causes a RANGE Exception, even when it
         // is the carry that causes the overflow.
-        // TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.addc, 0x40000000, 0x40000000
-        // TEST_INST_FF_I32_I32 SPR_SR_CY, SPR_SR_OV, l.addc, 0x40000000, 0x3fffffff
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.addc, 0x40000000, 0x40000000
+        
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I32 SPR_SR_CY, SPR_SR_OV, l.addc, 0x40000000, 0x3fffffff
 
         // Check that a carry alone does not cause a RANGE Exception, even when it is the carry that causes the overflow.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.addc, 0xffffffff, 0xfffffffe
+
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I32 SPR_SR_CY, SPR_SR_OV, l.addc, 0x00000000, 0xffffffff
 
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that carry and overflow together cause an exception.
-        // TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.addc, 0xbfffffff, 0xbfffffff
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I32 0, SPR_SR_CY | SPR_SR_OV, l.addc, 0xbfffffff, 0xbfffffff
 
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
@@ -191,18 +202,17 @@ start_tests:
 
         // ------ Check that range exceptions are triggered.
 
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
-
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that an overflow alone causes a RANGE Exception.
-        // TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addi, 0x7fffc000, 0x4000
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addi, 0x7fffc000, 0x4000
 
         // Check that a carry alone does not cause a RANGE Exception.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addi, 0xffffffff, 0xfffe
 
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
         // Check that carry and overflow together cause an exception.
-        // TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addi, 0x80007fff, 0x8000
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addi, 0x80007fff, 0x8000
 
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
@@ -241,21 +251,25 @@ start_tests:
 
         // ------ Check that range exceptions are triggered.
 
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
-        
         // Check that an overflow alone causes a RANGE Exception, even when it
         //   is the carry that causes the overflow.
-        // TODO: Disabled at the moment, as this test fails against the ORPSoC V2 core.
-        // TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addic, 0x7fffc000, 0x4000
-        // TEST_INST_FF_I32_I16 SPR_SR_CY, SPR_SR_OV, l.addic, 0x7fffc000, 0x3fff
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addic, 0x7fffc000, 0x4000
+
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I16 SPR_SR_CY, SPR_SR_OV, l.addic, 0x7fffc000, 0x3fff
 
         // Check that a carry alone does not cause a RANGE Exception, even
         // when it is the carry that causes the overflow.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addic, 0xffffffff, 0xfffe
+        
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_FF_I32_I16 SPR_SR_CY, SPR_SR_OV, l.addic, 0x00000000, 0xffff
 
         // Check that carry and overflow together cause an exception.
-        // TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addic, 0x80007fff, 0x8000
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        TEST_INST_FF_I32_I16 0, SPR_SR_CY | SPR_SR_OV, l.addic, 0x80007fff, 0x8000
         
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
