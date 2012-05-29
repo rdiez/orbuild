@@ -82,6 +82,8 @@ Optional steps are:
 
 =item * The F<< bld-all.sh >> script, which automatically builds most of the components together, is also run separately.
 
+BEWARE: The F<< bld-all.sh >> is broken at the moment, probably because it cannot cope with spaces in the PATH.
+
 =back
 
 =item * ORPSoC v2
