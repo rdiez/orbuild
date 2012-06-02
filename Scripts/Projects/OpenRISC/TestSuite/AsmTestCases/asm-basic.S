@@ -473,7 +473,7 @@ _T6:    l.movhi r3,hi(_T7)
 _T7:    REPORT_REG_TO_CONSOLE r8  // Should be 0x000000009
 
         l.lwz   r9,0(r31)
-        l.add   r8,r9,r8
+        l.addi  r8,r9,0x00000009  // Avoid reusing the 0x00000009 in r8 from the previous test, as it will be moved to another file.
         l.sw    0(r31),r8
 
         l.lwz   r9,0(r31)
