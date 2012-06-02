@@ -24,8 +24,7 @@ pushd "$OBJ_DIR" >/dev/null
 
 CMD="$SRC_DIR/configure  --prefix=$PREFIX_DIR  $EXTRA_CONFIG_FLAGS"
 print_command $CMD
-
-$CMD
+eval "$CMD"
 
 echo "Done" >"$SENTINEL_FILENAME"
 

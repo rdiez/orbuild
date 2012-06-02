@@ -19,8 +19,7 @@ pushd "$OBJ_DIR" >/dev/null
 
 CMD="make -s $EXTRA_MAKE_ARGS"
 print_command $CMD
-
-$CMD
+eval "$CMD"
 
 echo "Done" >"$SENTINEL_FILENAME"
 

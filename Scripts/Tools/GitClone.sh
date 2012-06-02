@@ -31,7 +31,7 @@ echo "Cloning git repository at URL \"$GIT_URL\"..."
 
 CMD="git clone --no-checkout $GIT_URL $DEST_DIR"
 print_command $CMD
-$CMD
+eval "$CMD"
 
 if ! [ -d "$REPO_DIR" ]; then
   abort "The git repository \"$GIT_URL\" has not created the expected subdirectory \"$DEST_DIR\" when checking out in directory \"$BASE_DIR\"."

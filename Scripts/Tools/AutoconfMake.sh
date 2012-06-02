@@ -22,7 +22,7 @@ pushd "$OBJ_DIR" >/dev/null
 
 CMD="make $EXTRA_MAKE_ARGS $MAKE_TARGETS"
 print_command $CMD
-$CMD
+eval "$CMD"
 
 echo "Done" >"$SENTINEL_FILENAME"
 
