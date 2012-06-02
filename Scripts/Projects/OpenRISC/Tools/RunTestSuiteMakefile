@@ -216,6 +216,8 @@ else
 endif
 
 $(eval $(call test_case_simulation_template,C_BASIC,c-basic,single-exit-0-test-results))
+$(eval $(call test_case_simulation_template,C_BASIC_NEWLIB,c-basic-newlib,single-exit-0-test-results))
+$(eval $(call test_case_simulation_template,CPP_BASIC_NEWLIB,cpp-basic-newlib,single-exit-0-test-results))
 
 generate_groups_file:
 	echo "Required Files = $(REQUIRED_FILES_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)

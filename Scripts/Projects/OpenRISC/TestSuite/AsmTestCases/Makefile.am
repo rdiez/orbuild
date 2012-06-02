@@ -1,6 +1,8 @@
 
 # Copyright (C) 2012 R. Diez - see the orbuild project for licensing information.
 
+AM_CFLAGS = -nostdlib -T $(srcdir)/../AsmTestEnvironment/LinkerScript.ld
+
 bin_PROGRAMS = asm-basic \
                asm-basic-with-jump-delay-slot \
                asm-basic-without-jump-delay-slot \

@@ -10,12 +10,20 @@ LT_INIT
 #   m4_ifdef([AM_SILENT_RULES],[AM_SILENT_RULES([yes])])
 
 
-# These compilation flags must be set before AC_PROG_CC/CXX, or you'll get the default "-g -O2".
-CFLAGS="${CFLAGS=} -g -Wall -mhard-div -mhard-mul -nostdlib -T $srcdir/AsmTestEnvironment/LinkerScript.ld"
+# These compilation flags must be set before AC_PROG_CC/CXX, or you'll get the default "-g -O2" at the end.
+COMMON_FLAGS="-g -Wall -mhard-div -mhard-mul"
+
+COMMON_FLAGS+=" -Wl,--gc-sections"
+# COMMON_FLAGS+=" -Wl,--print-gc-sections"  # For troubleshooting purposes, print which sections were discarded.
+# COMMON_FLAGS+=" -Wl,-verbose"  # For troubleshooting purposes, prints the contents of the linker script file used.
+
+CFLAGS="${CFLAGS=} $COMMON_FLAGS"
+CXXFLAGS="${CXXFLAGS=} $COMMON_FLAGS"
 CPPFLAGS="-I$srcdir/AsmTestEnvironment"
 
 AM_PROG_AS
 AC_PROG_CC_STDC  # AC_PROG_CC would probably be fine too.
+AC_PROG_CXX
 AC_PROG_INSTALL
 
 AC_CONFIG_MACRO_DIR([m4])

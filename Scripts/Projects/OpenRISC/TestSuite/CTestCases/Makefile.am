@@ -1,9 +1,16 @@
 
 # Copyright (C) 2012 R. Diez - see the orbuild project for licensing information.
 
-bin_PROGRAMS = c-basic
+dist_data_DATA = single-exit-0.TestResults
 
-c_basic_SOURCES  = c-basic.c
+AM_CPPFLAGS = -I$(srcdir)/../LibcBare
+
+bin_PROGRAMS = c-basic c-basic-newlib cpp-basic-newlib
+
+c_basic_SOURCES          = c-basic.c
+c_basic_newlib_SOURCES   = c-basic-newlib.c
+cpp_basic_newlib_SOURCES = cpp-basic-newlib.cpp
+
 
 # With Peter Gavin's toolchain based on GCC 4.8.0, the ENTRY(_start) command in the linker script file
 # is apparently not enough for the linker to pull startup.o from the libc-bare.a library.
@@ -22,5 +29,8 @@ c_basic_SOURCES  = c-basic.c
 #
 #   c_basic_LDADD = ../LibcBare/libc-bare.a
 c_basic_LDADD = ../LibcBare/startup.o
+c_basic_LDFLAGS = -nostdlib -T $(srcdir)/../AsmTestEnvironment/LinkerScript.ld
 
-dist_data_DATA = single-exit-0.TestResults
+# Newlib test cases.
+c_basic_newlib_LDFLAGS   = -mboard=or1ksim
+cpp_basic_newlib_LDFLAGS = -mboard=or1ksim
