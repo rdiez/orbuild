@@ -490,7 +490,7 @@ sub build_command ( $ $ $ )
   }
   else
   {
-    $reportFileMsg = "$reportFilePathOverLatestBuildDirLink\n";
+    $reportFileMsg = "  $reportFilePathOverLatestBuildDirLink\n";
   }
 
   my $error;
