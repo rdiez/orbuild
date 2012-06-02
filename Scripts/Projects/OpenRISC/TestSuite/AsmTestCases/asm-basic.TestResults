@@ -16,13 +16,28 @@
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
+# Early test, uses all registers.
 report(0xffff0012);
+
+# Read and write from RAM.
 report(0x12352af7);
+
+# Some arithmetic operations.
 report(0x7ffffffe);
+
+# Some logical operations.
 report(0xffffa5a7);
+
+# Some shifting operations.
 report(0x000fffff);
+
+# Test the CPU flag.
 report(0x00002800);
+
+# Test the jump instructions.
 report(0x00000009);
+
+# I'm not sure what this tests.
 report(0xdeaddead);
 
 # Test l.movhi
