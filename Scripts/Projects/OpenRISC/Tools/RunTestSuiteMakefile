@@ -18,6 +18,20 @@ OR1KSIM_TRACE_SWITCH :=
 # Set this variable to --trace-insn=on in order to turn on or1k-elf-run's tracing.
 OR1KELFRUN_TRACE_SWITCH :=
 
+ifeq "$(strip $(JUMP_DELAY_SLOT))" "with-jump-delay-slot"
+
+  OR1KSIM_CFG_FILENAME := $(TEST_TOOLS_DIR)/or1ksim-with-jump-delay-slot.cfg
+
+else ifeq "$(strip $(JUMP_DELAY_SLOT))" "without-jump-delay-slot"
+
+  OR1KSIM_CFG_FILENAME := $(TEST_TOOLS_DIR)/or1ksim-without-jump-delay-slot.cfg
+
+else
+
+  OR1KSIM_CFG_FILENAME := <unknown jump delay slot $(JUMP_DELAY_SLOT) && exit 1
+
+endif
+
 REQUIRED_FILES_GROUP :=
 SIMULATIONS_GROUP    :=
 
@@ -66,7 +80,11 @@ define simulation_files_template_variables_2
 
   ifeq "$(TEST_TYPE)" "ORTS_ORK1SIM"
 
+    $(1)_SIMULATION_FILES_CMD += && echo \"No simulation files required by this kind of simulation.\"
+
   else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
+
+    $(1)_SIMULATION_FILES_CMD += && echo \"No simulation files required by this kind of simulation.\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
 
@@ -112,7 +130,7 @@ define test_case_simulation_template_variables
 
   ifeq "$(TEST_TYPE)" "ORTS_ORK1SIM"
 
-    $(1)_SIMULATION_RUN_CMD += \"$(OPENRISC_BARE_TARGET)-sim\" $(OR1KSIM_TRACE_SWITCH) --nosrv -f \"$(TEST_TOOLS_DIR)/or1ksim.cfg\" \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
+    $(1)_SIMULATION_RUN_CMD += \"$(OPENRISC_BARE_TARGET)-sim\" $(OR1KSIM_TRACE_SWITCH) --nosrv -f \"$(OR1KSIM_CFG_FILENAME)\" \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
 
@@ -190,6 +208,12 @@ $(eval $(call test_case_simulation_template,ASM_FIND,asm-find,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_MAC,asm-mac,own-test-results))
+
+ifeq "$(strip $(JUMP_DELAY_SLOT))" "with-jump-delay-slot"
+  $(eval $(call test_case_simulation_template,ASM_BASIC_WITH_JUMP_DELAY_SLOT,asm-basic-with-jump-delay-slot,own-test-results))
+else
+  $(eval $(call test_case_simulation_template,ASM_BASIC_WITHOUT_JUMP_DELAY_SLOT,asm-basic-without-jump-delay-slot,own-test-results))
+endif
 
 $(eval $(call test_case_simulation_template,C_BASIC,c-basic,single-exit-0-test-results))
 

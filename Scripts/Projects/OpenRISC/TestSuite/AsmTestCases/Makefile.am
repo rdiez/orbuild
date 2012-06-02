@@ -2,6 +2,8 @@
 # Copyright (C) 2012 R. Diez - see the orbuild project for licensing information.
 
 bin_PROGRAMS = asm-basic \
+               asm-basic-with-jump-delay-slot \
+               asm-basic-without-jump-delay-slot \
                asm-add   \
                asm-ext   \
                asm-and   \
@@ -22,6 +24,8 @@ bin_PROGRAMS = asm-basic \
 # Unfortunately, we cannot use the patsubst function in Makefile.am, so we have
 # to manually type a similar file list here:
 dist_data_DATA = asm-basic.TestResults \
+                 asm-basic-with-jump-delay-slot.TestResults \
+                 asm-basic-without-jump-delay-slot.TestResults \
                  asm-add.TestResults   \
                  asm-ext.TestResults   \
                  asm-and.TestResults   \
@@ -46,6 +50,8 @@ dist_data_DATA = asm-basic.TestResults \
 
 
 asm_basic_SOURCES = asm-basic.S
+asm_basic_with_jump_delay_slot_SOURCES = asm-basic-with-jump-delay-slot.S
+asm_basic_without_jump_delay_slot_SOURCES = asm-basic-without-jump-delay-slot.S
 asm_add_SOURCES   = asm-add.S
 asm_ext_SOURCES   = asm-ext.S
 asm_and_SOURCES   = asm-and.S

@@ -426,51 +426,9 @@ start_tests:
 
 
         // ------ Test the jump instructions -----
+        // The tests here have been moved to separate files, as at least the results
+        // are different depending on whether the jump delay slot is present or not.
         
-        l.addi  r8,r0,0
-
-        l.j _T1
-        l.addi  r8,r8,1
-
-_T2:    l.jr    r9
-        l.addi  r8,r8,1
-
-_T1:    l.jal   _T2
-        l.addi  r8,r8,1
-
-        l.sfeqi r0,0
-        l.bf    _T3
-        l.addi  r8,r8,1
-
-_T3:    l.sfeqi r0,1
-        l.bf    _T4
-        l.addi  r8,r8,1
-    
-        l.addi  r8,r8,1
-
-_T4:    l.sfeqi r0,0
-        l.bnf    _T5
-        l.addi  r8,r8,1
-
-        l.addi  r8,r8,1
-
-_T5:    l.sfeqi r0,1
-        l.bnf    _T6
-        l.addi  r8,r8,1
- 
-        l.addi  r8,r8,1
-
-_T6:    l.movhi r3,hi(_T7)
-        l.ori  r3,r3,lo(_T7)
-        l.mtspr r0,r3,32
-        l.mfspr r5,r0,17
-        l.mtspr r0,r5,64
-        l.rfe
-        l.addi  r8,r8,1     // l.rfe should not have a delay slot
-
-        l.addi  r8,r8,1
-
-_T7:    REPORT_REG_TO_CONSOLE r8  // Should be 0x000000009
 
         l.lwz   r9,0(r31)
         l.addi  r8,r9,0x00000009  // Avoid reusing the 0x00000009 in r8 from the previous test, as it will be moved to another file.

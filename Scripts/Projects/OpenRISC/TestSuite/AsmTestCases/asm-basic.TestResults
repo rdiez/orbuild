@@ -34,9 +34,6 @@ report(0x000fffff);
 # Test the CPU flag.
 report(0x00002800);
 
-# Test the jump instructions.
-report(0x00000009);
-
 # I'm not sure what this tests.
 report(0xdeaddead);
 

@@ -489,6 +489,16 @@ all_tests: $(OC_BLD_ALL_SENTINEL)
 # ----------- Peter Gavin's Binutils and other tools, common settings -----------
 
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS := --target=$(PGAVIN_OPENRISC_BARE_TARGET)
+
+# Note about target compilation flags:
+#   We don't need to specify any flags like -mcompat-delay here, as newlib gets built in all 3 multilib variants
+#   (with jump delay slot, without jump delay slot and compatible with both).
+#   If you ever want to specify target compilation flags, use this syntax:
+#     PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += CFLAGS_FOR_TARGET=\"-some-flag -g -O2\"
+#   Keep in mind that the default flags get lost, so you would have to specify "-g -O" manually at this point.
+#   Beware that other components, like libgcc, need to get built with compatible flags,
+#   as they all get linked together at the end.
+
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-shared
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-itcl
 PGAVIN_BINUTILS_EXTRA_CONFIG_ARGS += --disable-tk
@@ -814,6 +824,8 @@ ORTS_EXES_INSTALL_MAKEFLAGS_FILTER := pass-j
 # Add --enable-debug=yes to ORTS_EXES_EXTRA_CONFIG_ARGS in order to enable debug builds.
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_EXES_EXTRA_CONFIG_ARGS := --build=$$$$($(ORTS_DIR)/config.guess) --host=$(PGAVIN_OPENRISC_BARE_TARGET)
+  # The 3 alternatives are: -mno-delay, -mdelay and -mcompat-delay
+  ORTS_EXES_EXTRA_CONFIG_ARGS +=  CFLAGS="-mcompat-delay"  CXXFLAGS="-mcompat-delay"
   ORTS_EXES_AUTOCONF_PREPEND_PATH := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
   ORTS_EXES_AUTOGEN_PARAM := $(PGAVIN_OPENRISC_BARE_TARGET)
 else
@@ -825,7 +837,11 @@ endif
 ORTS_EXES_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
 
 $(eval $(call autotool_project_template,ORTS_EXES,OpenRISC Test Suite executables,$(ORTS_DIR)))
-$(ORTS_EXES_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
+ifeq "$(strip $(ENABLE_PGAVIN))" "1"
+  $(ORTS_EXES_CONFIGURE_SENTINEL): $(PGAVIN_GCC_PHASE_2_INSTALL_SENTINEL)
+else
+  $(ORTS_EXES_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
+endif
 
 ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh $(ORTS_EXES_AUTOGEN_PARAM)
 $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables))
@@ -835,11 +851,17 @@ $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables
 ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)
 
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
-  ORTS_ORK1SIM_PREPEND_PATH := $(PGAVIN_OR1KSIM_BIN_DIR)/bin
-  ORTS_PREPEND_PATH_LIST    += $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+  ORTS_ORK1SIM_PREPEND_PATH    := $(PGAVIN_OR1KSIM_BIN_DIR)/bin
+  ORTS_PREPEND_PATH_LIST       += $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
+  # Use without-jump-delay-slot here in order to test in that mode.
+  # One of the assembler test cases is chose based on that mode. The C/C++ test cases
+  # are all compiled with -mcompat-delay (see above), but they can manually be compiled
+  # in other modes by modifying this makefile.
+  ORTS_OR1KSIM_JUMP_DELAY_SLOT := with-jump-delay-slot
 else
-  ORTS_ORK1SIM_PREPEND_PATH := $(OR1KSIM_BIN_DIR)/bin
-  ORTS_PREPEND_PATH_LIST    += $(BARE_TOOLCHAIN_DIR)/bin
+  ORTS_ORK1SIM_PREPEND_PATH    := $(OR1KSIM_BIN_DIR)/bin
+  ORTS_PREPEND_PATH_LIST       += $(BARE_TOOLCHAIN_DIR)/bin
+  ORTS_OR1KSIM_JUMP_DELAY_SLOT := with-jump-delay-slot
 endif
 
 ORTS_PREPEND_PATH := $(subst $(SPACE_CHAR),$(COLON_CHAR),$(strip $(ORTS_PREPEND_PATH_LIST)))
@@ -857,22 +879,22 @@ else
 endif
 
 ORTS_ORK1SIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORK1SIM
-ORTS_ORK1SIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORK1SIM_OBJ_DIR)\" ORTS_ORK1SIM
+ORTS_ORK1SIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORK1SIM_OBJ_DIR)\" ORTS_ORK1SIM $(ORTS_OR1KSIM_JUMP_DELAY_SLOT)
 ORTS_ORK1SIM_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_ORK1SIM,Test Suite against or1ksim,$(SHELL) -c "$(ORTS_ORK1SIM_CMD)"))
 
 ORTS_PGAVIN_CGEN_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_PGAVIN_CGEN
-ORTS_PGAVIN_CGEN_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_PGAVIN_CGEN_OBJ_DIR)\" ORTS_PGAVIN_CGEN
+ORTS_PGAVIN_CGEN_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_PGAVIN_CGEN_OBJ_DIR)\" ORTS_PGAVIN_CGEN with-jump-delay-slot
 ORTS_PGAVIN_CGEN_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_PGAVIN_CGEN,Test Suite against Peter Gavin's CGEN simulator,$(SHELL) -c "$(ORTS_PGAVIN_CGEN_CMD)"))
 
 ORTS_ORPSOC_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORPSOC_IVERILOG
-ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG
+ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG with-jump-delay-slot
 ORTS_ORPSOC_IVERILOG_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_ORPSOC_IVERILOG,Test Suite against ORPSoC V2 with Icarus Verilog,$(SHELL) -c "$(ORTS_ORPSOC_IVERILOG_CMD)"))
 
 ORTS_MINSOC_VERILATOR_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_MINSOC_VERILATOR
-ORTS_MINSOC_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_VERILATOR_OBJ_DIR)\" ORTS_MINSOC_VERILATOR
+ORTS_MINSOC_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_VERILATOR_OBJ_DIR)\" ORTS_MINSOC_VERILATOR with-jump-delay-slot
 ORTS_MINSOC_VERILATOR_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_MINSOC_VERILATOR,Test Suite against MINSoC with Verilator,$(SHELL) -c "$(ORTS_MINSOC_VERILATOR_CMD)"))
 

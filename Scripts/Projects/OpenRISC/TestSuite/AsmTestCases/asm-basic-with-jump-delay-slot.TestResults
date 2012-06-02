@@ -1,0 +1,5 @@
+
+# Test the jump instructions.
+report(0x00000009);
+
+exit(0)
