@@ -853,10 +853,10 @@ ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_ORK1SIM_PREPEND_PATH    := $(PGAVIN_OR1KSIM_BIN_DIR)/bin
   ORTS_PREPEND_PATH_LIST       += $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
-  # Use without-jump-delay-slot here in order to test in that mode.
-  # One of the assembler test cases is chose based on that mode. The C/C++ test cases
-  # are all compiled with -mcompat-delay (see above), but they can manually be compiled
-  # in other modes by modifying this makefile.
+  # The following setting can be set to either 'with-jump-delay-slot' or 'without-jump-delay-slot'.
+  # The or1ksim simulator is started in the given mode, and one of the assembler test cases
+  # is chosen based on this setting. The C/C++ test cases are all compiled with -mcompat-delay (see above),
+  # but they can manually be compiled in other modes by modifying this makefile.
   ORTS_OR1KSIM_JUMP_DELAY_SLOT := with-jump-delay-slot
 else
   ORTS_ORK1SIM_PREPEND_PATH    := $(OR1KSIM_BIN_DIR)/bin
