@@ -1,5 +1,6 @@
 GitSvnMirrors/
 Builds/
 Repositories/
+DownloadCache/
 orbuild.status
 orbuild.version
