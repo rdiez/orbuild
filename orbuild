@@ -430,7 +430,7 @@ sub build_command ( $ $ $ )
 
   my $cmd = "@{[SHELL_INTERPRETER]} @{[TOOLS_DIR]}/RunAndReport.sh " .
                         "TOP_LEVEL_MAKEFILE " .
-                        "\"top-level makefile\" " .
+                        "\"top-level makefile (all log files combined)\" " .
                         "$makefileLogFile " . 
                         "$makefileReportFile " .
                         "report-always " .
