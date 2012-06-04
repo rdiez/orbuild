@@ -1,0 +1,6 @@
+
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+
+exit(0)

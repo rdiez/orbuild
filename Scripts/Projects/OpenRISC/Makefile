@@ -34,7 +34,9 @@ ENABLE_PGAVIN := 0
 ENABLE_TESTS  := 0
 ENABLE_ICARUS_VERILOG := 0
 ENABLE_VERILATOR := 0
-ENABLE_OPEN_RISC_TEST_SUITE := $(ENABLE_TESTS)
+ENABLE_OPEN_RISC_TEST_SUITE := 0
+ENABLE_ECOS := 0
+ENABLE_ECOS_TEST := 0
 
 LINUX_ARCH                    := or32
 OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
@@ -81,12 +83,20 @@ $(eval $(call subversion_checkout_template,ORPSOCV2,ORPSoC v2,$(OC_OR_SVN_BASE_U
 all: $(ORPSOCV2_CHECKOUT_SENTINEL)
 $(ORPSOCV2_CHECKOUT_SENTINEL): $(DOCS_CHECKOUT_SENTINEL)
 
+$(eval $(call subversion_checkout_template,ECOS,eCos realtime operating system,$(OC_OR_SVN_BASE_URL)/rtos/ecos-3.0))
+ifeq "$(strip $(ENABLE_ECOS))" "1"
+  all: $(ECOS_CHECKOUT_SENTINEL)
+  $(ECOS_CHECKOUT_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
+  PREV_SVN_REPO_SENTINEL := $(ECOS_CHECKOUT_SENTINEL)
+else
+  PREV_SVN_REPO_SENTINEL := $(ORPSOCV2_CHECKOUT_SENTINEL)
+endif
 
 # This is the biggest repository by far, so it's the last one to be checked out from OpenCores.
 # WARNING: The OC_BLD_ALL task cleans the whole repository every time it runs.
 $(eval $(call subversion_checkout_template,GNUSRC,GNU sources,$(OC_OR_SVN_BASE_URL)/gnu-src))
 all: $(GNUSRC_CHECKOUT_SENTINEL)
-$(GNUSRC_CHECKOUT_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
+$(GNUSRC_CHECKOUT_SENTINEL): $(PREV_SVN_REPO_SENTINEL)
 
 
 $(eval $(call subversion_checkout_template,MINSOC,MinSoC,$(OC_SVN_BASE_URL)/minsoc/minsoc/trunk))
@@ -926,6 +936,38 @@ ifeq "$(strip $(ENABLE_OPEN_RISC_TEST_SUITE))" "1"
 endif
 
 
+# -------------- eCos realtime operating system --------------
+
+# I'm getting sporadic errors like this:
+#   mkdir: cannot create directory `cyg': File exists
+# I suspect the config tool's makefile breaks when running in parallel mode.
+ECOS_CONFIG_TOOL_MAKEFLAGS_FILTER := clear
+$(eval $(call autotool_project_template,ECOS_CONFIG_TOOL,eCos config tool,$(ECOS_CHECKOUT_DIR)/host))
+$(ECOS_CONFIG_TOOL_CONFIGURE_SENTINEL): $(ECOS_CHECKOUT_SENTINEL)
+
+ECOS_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS
+ECOS_BUILD_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+ECOS_BUILD_CMD := $(ORBUILD_PROJECT_DIR)/Tools/BuildEcos.sh \"$(ECOS_CHECKOUT_DIR)\" \"$(ECOS_CONFIG_TOOL_BIN_DIR)\" \"$(ECOS_OBJ_DIR)\"
+ECOS_BUILD_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ECOS_BUILD,eCos build,$(SHELL) -c "$(ECOS_BUILD_CMD)"))
+$(ECOS_BUILD_SENTINEL): $(ECOS_CONFIG_TOOL_INSTALL_SENTINEL)
+
+ifeq "$(strip $(ENABLE_ECOS))" "1"
+  all: $(ECOS_BUILD_SENTINEL)
+endif
+
+ECOS_TEST_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS_TEST
+ECOS_TEST_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin:$(OR1KSIM_BIN_DIR)/bin
+ECOS_TEST_CMD := $(ORBUILD_PROJECT_DIR)/Tools/TestEcos.sh \"$(ECOS_OBJ_DIR)\" \"$(ECOS_TEST_OBJ_DIR)\"
+ECOS_TEST_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ECOS_TEST,eCos simple test,$(SHELL) -c "$(ECOS_TEST_CMD)"))
+
+ifeq "$(strip $(ENABLE_ECOS_TEST))" "1"
+  $(ECOS_TEST_SENTINEL): $(ECOS_BUILD_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
+  all: $(ECOS_TEST_SENTINEL)
+endif
+
+
 # -------------- Report grouping --------------
 
 SVN_CHECKOUT_GROUP := OR1KSIM_SVN_CHECKOUT
@@ -933,6 +975,7 @@ SVN_CHECKOUT_GROUP += DOCS_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += ORPSOCV2_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += GNUSRC_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += MINSOC_SVN_CHECKOUT
+SVN_CHECKOUT_GROUP += ECOS_SVN_CHECKOUT
 
 BARE_TOOLCHAIN_GROUP := $(BINUTILS_AUTOTOOLS_GROUP)
 BARE_TOOLCHAIN_GROUP += $(GCC_PHASE_1_AUTOTOOLS_GROUP)
@@ -963,18 +1006,23 @@ PGAVIN_GIT_GROUP += $(PGAVIN_UCLIBC_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_OR1K_SRC_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_OR1K_GCC_GIT_GROUP)
 
+ECOS_GROUP := $(ECOS_CONFIG_TOOL_AUTOTOOLS_GROUP)
+ECOS_GROUP += ECOS_BUILD
+ECOS_GROUP += ECOS_TEST
+
 GIT_GROUP := $(JBONN_LINUX_GIT_GROUP)
 GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
 GIT_GROUP += $(ICARUS_VERILOG_GIT_GROUP)
 GIT_GROUP += $(VERILATOR_GIT_GROUP)
 
 generate_groups_file:
-	echo "Subversion Repositories    = $(SVN_CHECKOUT_GROUP)"     >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Bare Toolchain             = $(BARE_TOOLCHAIN_GROUP)"   >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Verilog Tools              = $(VERILOG_TOOLS_GROUP)"    >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Peter Gavin's Toolchain    = $(PGAVIN_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Peter Gavin's Repositories = $(PGAVIN_GIT_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Lint results               = $(LINT_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Git Repositories           = $(GIT_GROUP)"              >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Subversion Repositories        = $(SVN_CHECKOUT_GROUP)"     >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Bare Toolchain                 = $(BARE_TOOLCHAIN_GROUP)"   >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Verilog Tools                  = $(VERILOG_TOOLS_GROUP)"    >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Peter Gavin's Toolchain        = $(PGAVIN_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Peter Gavin's Repositories     = $(PGAVIN_GIT_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Lint results                   = $(LINT_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "eCos realtime operating system = $(ECOS_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Git Repositories               = $(GIT_GROUP)"              >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 
 all: generate_groups_file
