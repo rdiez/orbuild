@@ -5,11 +5,13 @@
 __inline__ void simulation_report ( const unsigned int value )
 {
   __asm__ __volatile__ ( "l.addi r3, %0, 0 \n"
-                         "l.nop %1": : "r" (value), "K" ( 2 /* NOP_REPORT */ ) );
+                         "l.nop %1"
+                         : : "r" (value), "K" ( 2 /* NOP_REPORT */ ) : "r3" );
 }
 
 __inline__ void simulation_exit ( const unsigned int exit_code )
 {
   __asm__ __volatile__ ( "l.addi r3, %0, 0 \n"
-                         "l.nop %1": : "r" (exit_code), "K" ( 1 /* NOP_EXIT */ ) );
+                         "l.nop %1"
+                         : : "r" (exit_code), "K" ( 1 /* NOP_EXIT */ ) : "r3" );
 }
