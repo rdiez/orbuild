@@ -32,9 +32,14 @@ define autotool_project_template_variables_1
     $(1)_EXTRA_INSTALL_ARGS :=
   endif
 
-  # How to filter the MAKEFLAGS variable for the 'make install' phase.
+  # How to filter the MAKEFLAGS variable for the 'make install' and 'make distcheck' phases.
   ifeq ($(origin $(1)_INSTALL_MAKEFLAGS_FILTER), undefined)
     $(1)_INSTALL_MAKEFLAGS_FILTER := pass-j
+  endif
+
+  # How to filter the MAKEFLAGS variable for the 'make' phase.
+  ifeq ($(origin $(1)_MAKE_MAKEFLAGS_FILTER), undefined)
+    $(1)_MAKE_MAKEFLAGS_FILTER := pass-j
   endif
 
   # Path prefix to prepend for all phases.
@@ -87,6 +92,7 @@ define autotool_project_template_variables_1
 endef
 
 define autotool_project_template_variables_2
+
   ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "clear"
     $(1)_INSTALL_MAKEFLAGS_VALUE :=
   else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-j"
@@ -94,11 +100,25 @@ define autotool_project_template_variables_2
   else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-all"
     $(1)_INSTALL_MAKEFLAGS_VALUE := $$$$(MAKEFLAGS)
   endif
+
+  ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "clear"
+    $(1)_MAKE_MAKEFLAGS_VALUE :=
+  else ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "pass-j"
+    $(1)_MAKE_MAKEFLAGS_VALUE := $$$$(filter --jobserver-fds=%,$$$$(MAKEFLAGS)) $$$$(filter -j,$$$$(MAKEFLAGS))
+  else ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "pass-all"
+    $(1)_MAKE_MAKEFLAGS_VALUE := $$$$(MAKEFLAGS)
+  endif
+
 endef
 
 define autotool_project_template_variables_3
+
   $(if $(filter undefined,$(origin $(1)_INSTALL_MAKEFLAGS_VALUE)),$(error Invalid $(1)_INSTALL_MAKEFLAGS_FILTER value of "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)"))
   $(if $(filter pass-all,$(value $(1)_INSTALL_MAKEFLAGS_FILTER)),$(error Variable $(1)_INSTALL_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
+
+  $(if $(filter undefined,$(origin $(1)_MAKE_MAKEFLAGS_VALUE)),$(error Invalid $(1)_MAKE_MAKEFLAGS_FILTER value of "$(value $(1)_MAKE_MAKEFLAGS_FILTER)"))
+  $(if $(filter pass-all,$(value $(1)_MAKE_MAKEFLAGS_FILTER)),$(error Variable $(1)_MAKE_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
+
 endef
 
 define autotool_project_template
@@ -131,7 +151,7 @@ define autotool_project_template
 
   $(value $(1)_MAKE_SENTINEL): $(value $(1)_CONFIGURE_SENTINEL)
 	+echo "Making $(2)..." && \
-    export MAKEFLAGS="$$(filter --jobserver-fds=%,$$(MAKEFLAGS)) $$(filter -j,$$(MAKEFLAGS))" && \
+    export MAKEFLAGS="$(value $(1)_MAKE_MAKEFLAGS_VALUE)" && \
     PATH="$(value $(1)_AUTOCONF_PATH_TO_USE)" \
 	  "$(ORBUILD_TOOLS)/RunAndReport.sh" \
                     "$(1)_MAKE" \
