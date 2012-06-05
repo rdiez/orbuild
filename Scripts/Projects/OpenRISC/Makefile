@@ -940,8 +940,9 @@ endif
 
 # I'm getting sporadic errors like this:
 #   mkdir: cannot create directory `cyg': File exists
-# I suspect the config tool's makefile breaks when running in parallel mode.
-ECOS_CONFIG_TOOL_MAKEFLAGS_FILTER := clear
+# I suspect the config tool's makefile breaks in the 'make' phase when running in parallel mode.
+ECOS_CONFIG_TOOL_MAKE_MAKEFLAGS_FILTER    := clear
+ECOS_CONFIG_TOOL_INSTALL_MAKEFLAGS_FILTER := clear
 $(eval $(call autotool_project_template,ECOS_CONFIG_TOOL,eCos config tool,$(ECOS_CHECKOUT_DIR)/host))
 $(ECOS_CONFIG_TOOL_CONFIGURE_SENTINEL): $(ECOS_CHECKOUT_SENTINEL)
 
