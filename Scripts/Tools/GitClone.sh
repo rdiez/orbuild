@@ -26,6 +26,13 @@ if [ -d "$REPO_DIR" ]; then
   rm -rf "$REPO_DIR"
 fi
 
+
+# Possible optimisation:
+#  We may save bandwidth and time by creating a shallow clone of the repository, see the --depth parameter.
+#  I also found this on the Internet:
+#    The upcoming git1.7.10 (April 2012) will actually allow you to clone only one branch:
+#    git clone --single-branch
+
 echo "Cloning git repository at URL \"$GIT_URL\"..."
 
 CMD="git clone --no-checkout $GIT_URL $DEST_DIR"
