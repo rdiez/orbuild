@@ -8,7 +8,7 @@ SANDBOX_DIR="$(readlink -f "$(dirname "$0")/../../../..")"
 source "$SANDBOX_DIR/Scripts/ShellModules/StandardShellHeader.sh"
 source "$SANDBOX_DIR/Scripts/ShellModules/FileUtils.sh"
 
-if [ $# -ne 8 ]; then
+if [ $# -ne 9 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
@@ -19,6 +19,8 @@ shift
 REPORT_FILENAME="$1"
 shift
 ORTS_EXES_BIN_DIR="$1"
+shift
+ORTS_EXES_INSTALL_SENTINEL="$1"
 shift
 ORPSOCV2_CHECKOUT_DIR="$1"
 shift
@@ -62,6 +64,7 @@ make $K_FLAG --no-builtin-variables --warn-undefined-variables \
      -C "$(dirname $0)" \
      OUTPUT_DIR="$OUTPUT_DIR" \
      ORTS_EXES_BIN_DIR="$ORTS_EXES_BIN_DIR" \
+     ORTS_EXES_INSTALL_SENTINEL="$ORTS_EXES_INSTALL_SENTINEL" \
      TEST_TYPE="$TEST_TYPE" \
      JUMP_DELAY_SLOT="$JUMP_DELAY_SLOT" \
      ORPSOCV2_CHECKOUT_DIR="$ORPSOCV2_CHECKOUT_DIR" \

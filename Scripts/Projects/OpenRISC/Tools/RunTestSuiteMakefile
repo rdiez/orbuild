@@ -35,6 +35,14 @@ endif
 REQUIRED_FILES_GROUP :=
 SIMULATIONS_GROUP    :=
 
+
+# $(ORTS_EXES_INSTALL_SENTINEL) is the top-level dependency for all ruls in this makefile.
+# While not strictly necessary, it is very convenient during development of the test suite:
+# if the calling makefile rebuilds the test cases, that dependency makes sure that all the tests
+# are run again. Note that we wouldn't need to pass $(ORTS_EXES_INSTALL_SENTINEL) down if
+# this weren't a separate makefile.
+
+
 # ---- Generate a common or1200_config.v file for all the or1200 RTL model simulations.
 
 VERILOG_INCLUDE_DIR := $(OUTPUT_DIR)/verilog/include
@@ -51,6 +59,8 @@ ORTS_OR1200_CONFIG_CMD +=    \"maximal-features\"
 ORTS_OR1200_CONFIG_MAKEFLAGS_FILTER := clear
 
 $(eval $(call run_and_report_template,ORTS_OR1200_CONFIG,or1200 configuration,$(SHELL) -c "$(ORTS_OR1200_CONFIG_CMD)"))
+
+$(ORTS_OR1200_CONFIG_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
 
 $(OR1200_CONFIG_FILE): $(ORTS_OR1200_CONFIG_SENTINEL)
 
@@ -180,6 +190,8 @@ define test_case_simulation_template
   else
     $(value $(1)_SIMULATION_FILES_SENTINEL): error_unknown_test_type
   endif
+
+  $(value $(1)_SIMULATION_FILES_SENTINEL) : $(ORTS_EXES_INSTALL_SENTINEL)
 
   SIMULATION_GROUP += $(1)_SIMULATION_RUN
 
