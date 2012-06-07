@@ -856,6 +856,14 @@ endif
 ORTS_EXES_AUTOGEN_CMD = $(SHELL) autogen.sh $(ORTS_EXES_AUTOGEN_PARAM)
 $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables))
 
+# During development, it's quite convenient to rerun the tests without rebuilding
+# all other components. Uncomment one of the following lines to reconfigure, rebuild and rerun just the tests
+# on each "./orbuild --resume" run:
+# Just rebuild and rerun:
+#   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Make.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+# Reconfigure, rebuild and rerun:
+#   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Autogen.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+
 # ----- Run the test suite against different targets.
 
 ORTS_PREPEND_PATH_LIST := $(VERILOG_TOOLS_PREPEND_PATH)
