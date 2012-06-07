@@ -412,7 +412,7 @@ sub build_command ( $ $ $ )
 
   $ENV{ ORBUILD_CHECKOUT_SENTINELS_DIR } = FileUtils::cat_path( $buildDir, BUILD_CHECKOUT_SENTINELS_SUBDIR );
   $ENV{ ORBUILD_UNPACK_SENTINELS_DIR   } = FileUtils::cat_path( $buildDir, BUILD_UNPACK_SENTINELS_SUBDIR );
-  $ENV{ ORBUILD_BUILD_SENTINELS_DIR    } = FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR );
+  $ENV{ ORBUILD_AUTOCONF_SENTINELS_DIR } = FileUtils::cat_path( $buildDir, BUILD_AUTOCONF_SENTINELS_SUBDIR );
   $ENV{ ORBUILD_COMMAND_SENTINELS_DIR  } = FileUtils::cat_path( $buildDir, BUILD_COMMAND_SENTINELS_SUBDIR );
 
   $ENV{ ORBUILD_IS_INTERACTIVE_BUILD      } = ( lc($configEntries->{ "InteractiveBuild" }) eq "yes" ) ? "1" : "0";
