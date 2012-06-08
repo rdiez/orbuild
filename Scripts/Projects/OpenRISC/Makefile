@@ -11,8 +11,6 @@ include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RepositoryCheckoutTemplates.mk
 include $(ORBUILD_SANDBOX)/Scripts/MakeModules/AutotoolsTemplates.mk
 include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 
-.PHONY: all generate_groups_file all_pgavin
-
 
 # ----------- General options -----------
 
@@ -31,12 +29,13 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 # ----------- OpenRISC-specific options -----------
 
 ENABLE_PGAVIN := 0
-ENABLE_TESTS  := 0
 ENABLE_ICARUS_VERILOG := 0
 ENABLE_VERILATOR := 0
 ENABLE_OPEN_RISC_TEST_SUITE := 0
 ENABLE_ECOS := 0
 ENABLE_ECOS_TEST := 0
+ENABLE_ORPSOC_RTL_TESTS := 0
+ENABLE_OTHER_TESTS := 0
 
 LINUX_ARCH                    := or32
 OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
@@ -55,11 +54,13 @@ PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kBare
 PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kLinux
 PGAVIN_LINUX_TOOLCHAIN_PREFIX := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/$(PGAVIN_OPENRISC_LINUX_TARGET)
 
+.PHONY: all all_tests all_pgavin
+
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
 all: all_pgavin
 endif
 
-ifeq "$(strip $(ENABLE_TESTS))" "1"
+ifeq "$(strip $(ENABLE_OTHER_TESTS))" "1"
 all: all_tests
 endif
 
@@ -443,7 +444,10 @@ endif
 
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL)
 
-all_tests: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
+ifeq "$(strip $(ENABLE_ORPSOC_RTL_TESTS))" "1"
+  all: $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL)
+endif
+
 # The rtl-tests target builds some of the sw utils. In order to prevent collisions while building,
 # make the tests depend on the full sw utils set.
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
@@ -921,6 +925,7 @@ ORTS_MINSOC_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_VERILATOR_OBJ_DI
 ORTS_MINSOC_VERILATOR_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_MINSOC_VERILATOR,Test Suite against MINSoC with Verilator,$(SHELL) -c "$(ORTS_MINSOC_VERILATOR_CMD)"))
 
+.PHONY: orts_subproject_files
 orts_subproject_files:
 	echo "OpenRISC Test Suite = $(ORTS_EXES_AUTOTOOLS_GROUP) ORTS_OR1KSIM ORTS_PGAVIN_CGEN ORTS_ORPSOC_IVERILOG ORTS_MINSOC_VERILATOR " >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "ORTS_OR1KSIM = $(ORTS_OR1KSIM_OBJ_DIR)/OrtsPublicReports/TestReport.html" >>$(ORBUILD_SUBPROJECTS_FILENAME)
@@ -1029,6 +1034,7 @@ GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
 GIT_GROUP += $(ICARUS_VERILOG_GIT_GROUP)
 GIT_GROUP += $(VERILATOR_GIT_GROUP)
 
+.PHONY: generate_groups_file
 generate_groups_file:
 	echo "Subversion Repositories        = $(SVN_CHECKOUT_GROUP)"     >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Bare Toolchain                 = $(BARE_TOOLCHAIN_GROUP)"   >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
