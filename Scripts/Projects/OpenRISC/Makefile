@@ -34,6 +34,10 @@ ENABLE_VERILATOR := 0
 ENABLE_OPEN_RISC_TEST_SUITE := 0
 ENABLE_ECOS := 0
 ENABLE_ECOS_TEST := 0
+ENABLE_ECOS_REDBOOT := 0
+ENABLE_ECOS_REDBOOT_TEST_OR1KSIM   := 0  # Warning: This test never ends (it hangs).
+ENABLE_ECOS_REDBOOT_TEST_VERILATOR := 0  # Warning: This test never ends (it hangs).
+
 ENABLE_ORPSOC_RTL_TESTS := 0
 ENABLE_OTHER_TESTS := 0
 
@@ -956,6 +960,8 @@ endif
 
 # -------------- eCos realtime operating system --------------
 
+# Build eCos with a simple "Hello World" application.
+
 # I'm getting sporadic errors like this:
 #   mkdir: cannot create directory `cyg': File exists
 # I suspect the config tool's makefile breaks in the 'make' phase when running in parallel mode.
@@ -975,15 +981,63 @@ ifeq "$(strip $(ENABLE_ECOS))" "1"
   all: $(ECOS_BUILD_SENTINEL)
 endif
 
+
+# Run the eCos-based "Hello World" application on the or1ksim simulator.
+
 ECOS_TEST_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS_TEST
 ECOS_TEST_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin:$(OR1KSIM_BIN_DIR)/bin
 ECOS_TEST_CMD := $(ORBUILD_PROJECT_DIR)/Tools/TestEcos.sh \"$(ECOS_OBJ_DIR)\" \"$(ECOS_TEST_OBJ_DIR)\"
 ECOS_TEST_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ECOS_TEST,eCos simple test,$(SHELL) -c "$(ECOS_TEST_CMD)"))
 
+$(ECOS_TEST_SENTINEL): $(ECOS_BUILD_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
+
 ifeq "$(strip $(ENABLE_ECOS_TEST))" "1"
-  $(ECOS_TEST_SENTINEL): $(ECOS_BUILD_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
   all: $(ECOS_TEST_SENTINEL)
+endif
+
+
+# -------------- eCos' Redboot with Ethernet support --------------
+
+# Build eCos' Redboot bootloader, which has a serial-port debug console and an ethernet interface.
+
+ECOS_REDBOOT_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS_REDBOOT
+ECOS_REDBOOT_BUILD_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
+ECOS_REDBOOT_BUILD_CMD := $(ORBUILD_PROJECT_DIR)/Tools/BuildEcosRedboot.sh \"$(ECOS_CHECKOUT_DIR)\" \"$(ECOS_CONFIG_TOOL_BIN_DIR)\" \"$(ECOS_REDBOOT_OBJ_DIR)\"
+ECOS_REDBOOT_BUILD_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,ECOS_REDBOOT_BUILD,eCos Redboot build,$(SHELL) -c "$(ECOS_REDBOOT_BUILD_CMD)"))
+$(ECOS_REDBOOT_BUILD_SENTINEL): $(ECOS_CONFIG_TOOL_INSTALL_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
+
+ifeq "$(strip $(ENABLE_ECOS_REDBOOT))" "1"
+  all: $(ECOS_REDBOOT_BUILD_SENTINEL)
+endif
+
+
+# Run eCos' Redboot bootloader on the or1ksim simulator.
+
+ECOS_REDBOOT_TEST_OR1KSIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS_REDBOOT_TEST_OR1KSIM
+ECOS_REDBOOT_TEST_OR1KSIM_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin:$(OR1KSIM_BIN_DIR)/bin
+ECOS_REDBOOT_TEST_OR1KSIM_CMD := $(ORBUILD_PROJECT_DIR)/Tools/TestEcosRedbootOr1ksim.sh \"$(ECOS_REDBOOT_OBJ_DIR)\" \"$(ECOS_REDBOOT_TEST_OR1KSIM_OBJ_DIR)\"
+ECOS_REDBOOT_TEST_OR1KSIM_MAKEFLAGS_FILTER := clear
+$(eval $(call run_and_report_template,ECOS_REDBOOT_TEST_OR1KSIM,eCos Redboot or1ksim test,$(SHELL) -c "$(ECOS_REDBOOT_TEST_OR1KSIM_CMD)"))
+
+$(ECOS_REDBOOT_TEST_OR1KSIM_SENTINEL): $(ECOS_REDBOOT_BUILD_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
+ifeq "$(strip $(ENABLE_ECOS_REDBOOT_TEST_OR1KSIM))" "1"
+  all: $(ECOS_REDBOOT_TEST_OR1KSIM_SENTINEL)
+endif
+
+
+# Run eCos' Redboot bootloader on a Verilator simulation.
+ECOS_REDBOOT_TEST_VERILATOR_OBJ_DIR := $(ORBUILD_BUILD_DIR)/bin/ECOS_REDBOOT_TEST_VERILATOR
+# TODO: adjust this path:
+ECOS_REDBOOT_TEST_VERILATOR_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin:$(OR1KSIM_BIN_DIR)/bin
+ECOS_REDBOOT_TEST_VERILATOR_CMD := $(ORBUILD_PROJECT_DIR)/Tools/TestEcosRedbootVerilator.sh \"$(ECOS_REDBOOT_OBJ_DIR)\" \"$(ECOS_REDBOOT_TEST_VERILATOR_OBJ_DIR)\"
+ECOS_REDBOOT_TEST_VERILATOR_MAKEFLAGS_FILTER := clear
+$(eval $(call run_and_report_template,ECOS_REDBOOT_TEST_VERILATOR,eCos Redboot verilator test,$(SHELL) -c "$(ECOS_REDBOOT_TEST_VERILATOR_CMD)"))
+
+$(ECOS_REDBOOT_TEST_VERILATOR_SENTINEL): $(ECOS_REDBOOT_BUILD_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)  # TODO: adjust
+ifeq "$(strip $(ENABLE_ECOS_REDBOOT_TEST_VERILATOR))" "1"
+  all: $(ECOS_REDBOOT_TEST_VERILATOR_SENTINEL)
 endif
 
 
@@ -1028,6 +1082,9 @@ PGAVIN_GIT_GROUP += $(PGAVIN_OR1K_GCC_GIT_GROUP)
 ECOS_GROUP := $(ECOS_CONFIG_TOOL_AUTOTOOLS_GROUP)
 ECOS_GROUP += ECOS_BUILD
 ECOS_GROUP += ECOS_TEST
+ECOS_GROUP += ECOS_REDBOOT_BUILD
+ECOS_GROUP += ECOS_REDBOOT_TEST_OR1KSIM
+ECOS_GROUP += ECOS_REDBOOT_TEST_VERILATOR
 
 GIT_GROUP := $(JBONN_LINUX_GIT_GROUP)
 GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
