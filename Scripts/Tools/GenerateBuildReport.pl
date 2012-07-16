@@ -390,7 +390,12 @@ sub main ()
   ReportUtils::replace_marker( \$htmlText, "REPORT_BODY"      , $injectedHtml );
 
   my $statusMsg;
-  if ( $failedCount == 0 )
+
+  if ( $componentCount == 0 )
+  {
+    $statusMsg = "ERROR: The top-level makefile did not build any components.";
+  }
+  elsif ( $failedCount == 0 )
   {
     $statusMsg = "All $componentCount components were built successfully.";
   }
