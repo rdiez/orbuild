@@ -97,21 +97,19 @@ report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
-# TODO: disabled, as it fails against ORPSoC V2
-# report(0x7fffffff);
-# report(0x80000000);
-# report(0xffffffff);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000000);
 
-# TODO: disabled, as it fails against ORPSoC V2
-# report(0x80000000);
-# report(0x7fffffff);
-# report(0x00000001);
-# report(0x00000000);
-# report(0x00000001);
-# report(0x00000001);
+report(0x80000000);
+report(0x7fffffff);
+report(0x00000001);
+report(0x00000000);
+report(0x00000001);
+report(0x00000001);
 
 report(0x3fffffff);
 report(0x40000000);
@@ -120,12 +118,11 @@ report(0x00000001);
 report(0x00000000);
 report(0x00000000);
 
-# TODO: disabled, as it fails against ORPSoC V2
-# report(0x7fffffff);
-# report(0x80000000);
-# report(0xffffffff);
-# report(0x00000001);
-# report(0x00000001);
-# report(0x00000001);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0x00000001);
+report(0x00000001);
+report(0x00000001);
 
 exit(0)
