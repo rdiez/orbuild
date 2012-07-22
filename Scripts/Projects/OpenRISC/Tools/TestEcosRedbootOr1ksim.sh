@@ -24,7 +24,7 @@ create_dir_if_not_exists "$ECOS_REDBOOT_TEST_OBJ_DIR"
 pushd "$ECOS_REDBOOT_TEST_OBJ_DIR" >/dev/null
 
 echo
-echo "------- Running redboot -------"
+echo "------- Running Redboot on or1ksim simulator -------"
 
 SIMULATION_LOG_FILENAME="$ECOS_REDBOOT_TEST_OBJ_DIR/Simulation.log"
 
