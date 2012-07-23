@@ -150,11 +150,20 @@ start_tests:
         l.sub   r7,r5,r3
         l.sub   r8,r3,r5
         l.add   r8,r8,r7
-    
-        l.div   r7,r7,r4
-        l.add   r9,r3,r4
-        l.mul   r7,r9,r7
-        l.divu  r7,r7,r4
+
+        // Note that R8 should be 0 at this point.
+
+        // Skip the execution of mul and div instructions here,
+        // so that this test batch can run on CPU implementations
+        // without hardware multiplier and divider.
+        
+        // l.div   r7,r7,r4
+        // l.add   r9,r3,r4
+        // l.mul   r7,r9,r7
+        // l.divu  r7,r7,r4
+        // Replacement for the commented-out instructions above.
+           LOAD_IMMEDIATE r7, 0x7ffffffe
+        
         l.add   r8,r8,r7
 
         REPORT_REG_TO_CONSOLE r8  // Should be 0x7ffffffe
