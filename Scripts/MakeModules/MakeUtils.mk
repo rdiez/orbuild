@@ -10,5 +10,7 @@ MAKE_UTILS_INCLUDED := "file already included"
 
 verify_variable_is_defined = $(if $(filter undefined,$(origin $(1))),$(error "The variable '$(1)' is not defined, but it should be at this point."))
 
+assertion_failure = $(error Assertion failed: $1)
+
 
 endif  # Include this file only once.
