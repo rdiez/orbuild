@@ -295,15 +295,24 @@ $(eval $(call test_case_simulation_template,ASM_AND,asm-and,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_OR,asm-or,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_SUB,asm-sub,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_XOR,asm-xor,own-test-results))
-$(eval $(call test_case_simulation_template,ASM_MFSPR,asm-mfspr,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_MFSPR_WITHOUT_MAC_SUPPORT,asm-mfspr-without-mac-support,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_ROR,asm-ror,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_SHIFT,asm-shift,own-test-results))
-$(eval $(call test_case_simulation_template,ASM_MUL,asm-mul,own-test-results))
-$(eval $(call test_case_simulation_template,ASM_DIV,asm-div,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FIND,asm-find,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag,own-test-results))
-$(eval $(call test_case_simulation_template,ASM_MAC,asm-mac,own-test-results))
+
+ifeq "$(strip $(MUL_INSTRUCTIONS))" "with-mul-instructions"
+  $(eval $(call test_case_simulation_template,ASM_MFSPR_WITH_MAC_SUPPORT,asm-mfspr-with-mac-support,own-test-results))
+  $(eval $(call test_case_simulation_template,ASM_MUL,asm-mul,own-test-results))
+  $(eval $(call test_case_simulation_template,ASM_DIV,asm-div,own-test-results))
+  $(eval $(call test_case_simulation_template,ASM_MAC,asm-mac,own-test-results))
+else ifeq "$(strip $(MUL_INSTRUCTIONS))" "without-mul-instructions"
+  # No extra tests to do here.
+else
+  $(call assertion_failure,Variable MUL_INSTRUCTIONS has an invalid value of "$(MUL_INSTRUCTIONS)")
+endif
+
 
 ifeq "$(strip $(JUMP_DELAY_SLOT))" "with-jump-delay-slot"
   $(eval $(call test_case_simulation_template,ASM_BASIC_WITH_JUMP_DELAY_SLOT,asm-basic-with-jump-delay-slot,own-test-results))

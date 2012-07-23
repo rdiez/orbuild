@@ -12,14 +12,15 @@ bin_PROGRAMS = asm-basic \
                asm-or    \
                asm-sub   \
                asm-xor   \
-               asm-mfspr \
+               asm-mfspr-with-mac-support \
+               asm-mfspr-without-mac-support \
                asm-ror   \
                asm-shift \
                asm-mul   \
                asm-div   \
                asm-mac   \
                asm-find  \
-               asm-load   \
+               asm-load  \
                asm-jump  \
                asm-flag
 
@@ -34,14 +35,15 @@ dist_data_DATA = asm-basic.TestResults \
                  asm-or.TestResults    \
                  asm-sub.TestResults   \
                  asm-xor.TestResults   \
-                 asm-mfspr.TestResults \
+                 asm-mfspr-with-mac-support.TestResults \
+                 asm-mfspr-without-mac-support.TestResults \
                  asm-ror.TestResults   \
                  asm-shift.TestResults \
                  asm-mul.TestResults   \
                  asm-div.TestResults   \
                  asm-mac.TestResults   \
                  asm-find.TestResults  \
-                 asm-load.TestResults   \
+                 asm-load.TestResults  \
                  asm-jump.TestResults  \
                  asm-flag.TestResults
 
@@ -60,7 +62,8 @@ asm_and_SOURCES   = asm-and.S
 asm_or_SOURCES    = asm-or.S
 asm_sub_SOURCES   = asm-sub.S
 asm_xor_SOURCES   = asm-xor.S
-asm_mfspr_SOURCES = asm-mfspr.S
+asm_mfspr_with_mac_support_SOURCES = asm-mfspr-with-mac-support.S
+asm_mfspr_without_mac_support_SOURCES = asm-mfspr-without-mac-support.S
 asm_ror_SOURCES   = asm-ror.S
 asm_shift_SOURCES = asm-shift.S
 asm_mul_SOURCES   = asm-mul.S
