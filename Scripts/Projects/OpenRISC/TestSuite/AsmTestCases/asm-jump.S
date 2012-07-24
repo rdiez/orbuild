@@ -112,26 +112,31 @@ start_tests:
         // Test l.jalr (jump and link register)
 
         TEST_JUMP 0x48000000, 5, 0
-        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-        // TEST_JUMP 0x48000000, 5, 1
-        // TEST_JUMP 0x48000000, 5, 2
-        // TEST_JUMP 0x48000000, 5, 3
+        TEST_JUMP 0x48000000, 5, 1
+        TEST_JUMP 0x48000000, 5, 2
+        TEST_JUMP 0x48000000, 5, 3
         
         // Test with link register (R9) as the destination.
-        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-        // TEST_JUMP 0x48000000, 9, 0
+        TEST_JUMP 0x48000000, 9, 0
         
 
         // Test l.jr (jump register)
         
         TEST_JUMP 0x44000000, 5, 0
-        // TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-        // TEST_JUMP 0x44000000, 5, 1
-        // TEST_JUMP 0x44000000, 5, 2
-        // TEST_JUMP 0x44000000, 5, 3
+        TEST_JUMP 0x44000000, 5, 1
+        TEST_JUMP 0x44000000, 5, 2
+        TEST_JUMP 0x44000000, 5, 3
 
         // Test with link register (R9) as the destination (OK here).
         TEST_JUMP 0x44000000, 9, 0
+
+
+        // -----------------------------------------------
+        
+        // Now that we have the handy TEST_JUMP macro available,
+        // test some illegal instruction opcode which has nothing to do with jump instructions.
+        TEST_JUMP (0x10 << 26), 5, 2
+        
 
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9

@@ -33,27 +33,25 @@ report(0x00000005);
 report(0x00000000);
 report(0x00000002);
 
-# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-#report(0x48000000);
-#report(0x00000005);
-#report(0x00000001);
-#report(0x00000001);
-#
-#report(0x48000000);
-#report(0x00000005);
-#report(0x00000002);
-#report(0x00000001);
-#
-#report(0x48000000);
-#report(0x00000005);
-#report(0x00000003);
-#report(0x00000001);
+report(0x48000000);
+report(0x00000005);
+report(0x00000001);
+report(0x00000001);
 
-# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-#report(0x48000000);
-#report(0x00000009);  # R9 is invalid as destination register for l.jalr
-#report(0x00000000);
-#report(0x00000001);
+report(0x48000000);
+report(0x00000005);
+report(0x00000002);
+report(0x00000001);
+
+report(0x48000000);
+report(0x00000005);
+report(0x00000003);
+report(0x00000001);
+
+report(0x48000000);
+report(0x00000009);  # R9 is invalid as destination register for l.jalr
+report(0x00000000);
+report(0x00000001);
 
 
 # ----------- Test l.jr (jump register) -----------
@@ -63,26 +61,32 @@ report(0x00000005);
 report(0x00000000);
 report(0x00000002);
 
-# TODO: disabled, as it fails against ORPSoC V2's or1200 core.
-#report(0x44000000);
-#report(0x00000005);
-#report(0x00000001);
-#report(0x00000001);
-#
-#report(0x44000000);
-#report(0x00000005);
-#report(0x00000002);
-#report(0x00000001);
-#
-#report(0x44000000);
-#report(0x00000005);
-#report(0x00000003);
-#report(0x00000001);
+report(0x44000000);
+report(0x00000005);
+report(0x00000001);
+report(0x00000001);
+
+report(0x44000000);
+report(0x00000005);
+report(0x00000002);
+report(0x00000001);
+
+report(0x44000000);
+report(0x00000005);
+report(0x00000003);
+report(0x00000001);
 
 report(0x44000000);
 report(0x00000009);  # R9 is OK as destination register for l.jr
 report(0x00000000);
 report(0x00000002);
 
+
+# ----------- Illegal instruction opcode (nothing to do with the jump instructions) -----------
+
+report(0x40000000);
+report(0x00000005);
+report(0x00000002);
+report(0x00000001);
 
 exit(0)
