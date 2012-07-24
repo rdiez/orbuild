@@ -36,6 +36,50 @@
 
         STANDARD_TEST_ENVIRONMENT
 
+        .section .exception_vectors
+
+
+        // Bus error exception.
+        .org	0x200
+bus_error_exception:
+
+        // Skip the offending instruction.
+        
+        MOVE_FROM_SPR  r4, SPR_EPCR_BASE  // Address of the instruction that triggered the exception.
+        
+        l.addi r4, r4, 4
+        
+        MOVE_TO_SPR    SPR_EPCR_BASE, r4
+
+        // Leave in R4 an indication that the bus error exception was run.
+
+        LOAD_IMMEDIATE r4, 0x12345678
+
+        l.rfe
+
+        
+        // Alignment exception.
+        .org	0x600
+alignment_exception:
+
+        // Skip the offending instruction.
+        
+        MOVE_FROM_SPR  r4, SPR_EPCR_BASE  // Address of the instruction that triggered the exception.
+        
+        l.addi r4, r4, 4
+        
+        MOVE_TO_SPR    SPR_EPCR_BASE, r4
+
+        // Leave in R4 just the alignment offset part to indicate that the alignment exception was run.
+
+        MOVE_FROM_SPR  r4, SPR_EEAR_BASE  // Unaligned address that triggered the exception.
+
+        l.andi r4, r4, 3
+        
+
+        l.rfe
+        
+
         .section .rodata
         .balign 4
         
@@ -62,8 +106,8 @@ start_tests:
 
 
         // Test instruction l.lws
-        /* TODO: The instruction l.lws is not implemeted yet in or1200, search for "l.lws support patch" in the mailing list.
-                 Note that this instruction is redundant, as l.lwz does exactly the same.
+        // NOTE: The instruction l.lws is not implemeted yet in or1200 (as of july 2012), search for "l.lws support patch" in the mailing list.
+        //       Note that this instruction is redundant, as l.lwz does exactly the same.
 
         // Load with zero offset
         TEST_LW l.lws 50b, 0
@@ -84,9 +128,11 @@ start_tests:
         TEST_LW l.lws 54b,  -8
         TEST_LW l.lws 54b,  -4
 
-        add here test cases to cover unaligned memory accesses with l.lws
-        */
-
+        // Test the unaligned memory access exception.
+        TEST_LW l.lws 50b, 1
+        TEST_LW l.lws 50b, 2
+        TEST_LW l.lws 50b, 3
+        
 
         // ---------- Test instruction l.lwz ----------
         // Same tests as above. The instruction l.lwz does the same as l.lws (it is a redundant instruction).
@@ -110,7 +156,11 @@ start_tests:
         TEST_LW l.lwz 54b,  -8
         TEST_LW l.lwz 54b,  -4
         
-        // TODO: add here test cases to cover unaligned memory accesses with l.lwz
+        // Test the unaligned memory access exception.
+        TEST_LW l.lwz 50b, 1
+        TEST_LW l.lwz 50b, 2
+        TEST_LW l.lwz 50b, 3
+        
 
         // ---------- Test instruction l.lbz ----------
         
@@ -201,8 +251,9 @@ start_tests:
         l.lhz r3, -4(r31)
         REPORT_REG_TO_CONSOLE r3
         
-        // TODO: add here test cases to cover unaligned memory accesses with l.lhz
-
+        // Test the unaligned memory access exception.
+        TEST_LW l.lhz 50b, 1
+        TEST_LW l.lhz 50b, 3
         
         // ---------- Test instruction l.lhs ----------
 
@@ -225,7 +276,9 @@ start_tests:
         l.lhs r3, -4(r31)
         REPORT_REG_TO_CONSOLE r3
         
-        // TODO: add here test cases to cover unaligned memory accesses with l.lhs
+        // Test the unaligned memory access exception.
+        TEST_LW l.lhs 50b, 1
+        TEST_LW l.lhs 50b, 3
 
 
         // ---------- Test instruction l.sb ----------
@@ -264,8 +317,6 @@ start_tests:
         l.lwz r3, 0(r5)
         REPORT_REG_TO_CONSOLE r3
         
-        // TODO: add here test cases to cover unaligned memory accesses with l.sb
-
         
         // ---------- Test instruction l.sh ----------
 
@@ -295,9 +346,19 @@ start_tests:
 
         l.lwz r3, 0(r5)
         REPORT_REG_TO_CONSOLE r3
-        
-        // TODO: add here test cases to cover unaligned memory accesses with l.sh
 
+        
+        // Test the unaligned memory access exception.
+        
+        CLEAR_REG r4
+        l.sh -1(ZERO_R0), ZERO_R0
+        REPORT_REG_TO_CONSOLE r4
+
+        CLEAR_REG r4
+        l.sh -3(ZERO_R0), ZERO_R0
+        REPORT_REG_TO_CONSOLE r4
+        
+        
         
         // ---------- Test instruction l.sw ----------
 
@@ -319,8 +380,29 @@ start_tests:
         TEST_LW l.lwz buffer3, 0
         TEST_LW l.lwz buffer4, 0
 
-        // TODO: add here test cases to cover unaligned memory accesses with l.sw
         
+        // Test the unaligned memory access exception.
+        
+        CLEAR_REG r4
+        l.sw 1(ZERO_R0), ZERO_R0
+        REPORT_REG_TO_CONSOLE r4
+
+        CLEAR_REG r4
+        l.sw 2(ZERO_R0), ZERO_R0
+        REPORT_REG_TO_CONSOLE r4
+
+        CLEAR_REG r4
+        l.sw 3(ZERO_R0), ZERO_R0
+        REPORT_REG_TO_CONSOLE r4
+
+        
+        // ---------- Test reading from an out-of-range memory address (Wishbone bus error) ----------
+
+        LOAD_IMMEDIATE r5, 0x00F00000  // This address should generate an access violation.
+        CLEAR_REG r4
+        l.lbs r4, 0(r5)
+        REPORT_REG_TO_CONSOLE r4
+
         
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9

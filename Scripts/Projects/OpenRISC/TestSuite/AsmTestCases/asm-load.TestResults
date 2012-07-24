@@ -18,21 +18,25 @@
 
 
 # Test instruction l.lws
-#
-# TODO: The instruction l.lws is not implemeted yet in or1200, search for "l.lws support patch" in the mailing list.
-#report(0xdeadbeef);
-#report(0x00000000);
-#report(0x7fffffff);
-#report(0x80000000);
-#report(0xffffffff);
-#report(0x00000000);
-#report(0x7fffffff);
-#report(0x80000000);
-#report(0xffffffff);
-#report(0xdeadbeef);
-#report(0x00000000);
-#report(0x7fffffff);
-#report(0x80000000);
+
+report(0xdeadbeef);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+report(0xffffffff);
+report(0xdeadbeef);
+report(0x00000000);
+report(0x7fffffff);
+report(0x80000000);
+
+# Alignment exceptions.
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
 
 
 # Test instruction l.lwz
@@ -50,6 +54,11 @@ report(0xdeadbeef);
 report(0x00000000);
 report(0x7fffffff);
 report(0x80000000);
+
+# Alignment exceptions.
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
 
 
 # Test instruction l.lbz
@@ -86,6 +95,10 @@ report(0x0000beef);
 report(0x0000beef);
 report(0x0000dead);
 
+# Alignment exceptions.
+report(0x00000001);
+report(0x00000003);
+
 
 # Test instruction l.lhs
 
@@ -94,6 +107,10 @@ report(0xffffbeef);
 
 report(0xffffbeef);
 report(0xffffdead);
+
+# Alignment exceptions.
+report(0x00000001);
+report(0x00000003);
 
 
 # Test instruction l.sb
@@ -107,6 +124,10 @@ report(0xb4b3b2b1);
 report(0x81828384);
 report(0x53545152);
 
+# Alignment exceptions.
+report(0x00000003);
+report(0x00000001);
+
 
 # Test instruction l.sw
 
@@ -114,5 +135,14 @@ report(0xa0b0c0d0);
 report(0xa1b1c1d1);
 report(0xa3b3c3d3);
 report(0xa2b2c2d2);
+
+# Alignment exceptions.
+report(0x00000001);
+report(0x00000002);
+report(0x00000003);
+
+# Test reading from an out-of-range memory address (Wishbone bus error)
+report(0x12345678);
+
 
 exit(0)
