@@ -31,7 +31,7 @@
 
         .section .exception_vectors
 
-        // Range exception.  // TODO: common up this exception handler with the code in asm-add and so on.
+        // Range exception.
         .org    0xb00
 
         // TODO: The stack safety zone is not taken into consideration.
