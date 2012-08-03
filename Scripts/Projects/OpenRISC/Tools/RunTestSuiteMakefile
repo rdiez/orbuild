@@ -300,6 +300,8 @@ $(eval $(call test_case_simulation_template,ASM_ROR,asm-ror,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_SHIFT,asm-shift,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FIND,asm-find,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_EXCEPTIONS,asm-exceptions,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_TICK_TIMER,asm-tick-timer,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag,own-test-results))
 
 ifeq "$(strip $(MUL_INSTRUCTIONS))" "with-mul-instructions"

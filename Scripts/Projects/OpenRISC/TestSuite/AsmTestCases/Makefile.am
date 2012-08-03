@@ -22,6 +22,8 @@ bin_PROGRAMS = asm-basic \
                asm-find  \
                asm-load  \
                asm-jump  \
+               asm-exceptions  \
+               asm-tick-timer  \
                asm-flag
 
 # Unfortunately, we cannot use the patsubst function in Makefile.am, so we have
@@ -45,6 +47,8 @@ dist_data_DATA = asm-basic.TestResults \
                  asm-find.TestResults  \
                  asm-load.TestResults  \
                  asm-jump.TestResults  \
+                 asm-exceptions.TestResults  \
+                 asm-tick-timer.TestResults  \
                  asm-flag.TestResults
 
 # Unfortunately, if you wish to create a map file per program, you have
@@ -72,4 +76,6 @@ asm_mac_SOURCES   = asm-mac.S
 asm_find_SOURCES  = asm-find.S
 asm_load_SOURCES  = asm-load.S
 asm_jump_SOURCES  = asm-jump.S
+asm_exceptions_SOURCES  = asm-exceptions.S
+asm_tick_timer_SOURCES  = asm-tick-timer.S
 asm_flag_SOURCES  = asm-flag.S
