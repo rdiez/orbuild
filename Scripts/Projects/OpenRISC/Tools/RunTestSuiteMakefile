@@ -64,6 +64,7 @@ ORPSOC_DEFINES_MAKEFLAGS_FILTER := clear
 $(eval $(call run_and_report_template,ORPSOC_DEFINES,test bench defines,$(SHELL) -c "$(ORPSOC_DEFINES_CMD)"))
 
 $(ORPSOC_DEFINES_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
+$(ORPSOC_DEFINES_SENTINEL): $(ORTS_ORPSOC_OR1200_CONFIG_SENTINEL)  # So that the "$(OUTPUT_DIR)/verilog/include" dir gets created beforehand.
 
 
 # ---- Generate a common or1200_defines.v file for all the ORPSoC model simulations.
