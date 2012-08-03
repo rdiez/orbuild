@@ -18,7 +18,7 @@
 // ----------- Load/move/clear helpers -----------
 
 .macro LOAD_IMMEDIATE  reg, val
-    l.movhi \reg,       hi( \val ) 
+    l.movhi \reg,       hi( \val )
     l.ori   \reg, \reg, lo( \val )
 .endm
 
@@ -42,26 +42,36 @@
 .endm
 
 
-.macro SET_SPR_SR_FLAGS flag_mask, scratch_reg_1, scratch_reg_2
+.macro SET_SPR_FLAGS spr_reg, flag_mask, scratch_reg_1, scratch_reg_2
     // We cannot use PUSH and POP here because some flags like Carry would get overwritten.
 
     // We could optimise this routine, as instruction l.mtspr already does a logical OR.
-    MOVE_FROM_SPR \scratch_reg_2, SPR_SR
+    MOVE_FROM_SPR \scratch_reg_2, \spr_reg
     LOAD_IMMEDIATE \scratch_reg_1, \flag_mask
     l.or    \scratch_reg_2, \scratch_reg_2, \scratch_reg_1
-    MOVE_TO_SPR SPR_SR, \scratch_reg_2
+    MOVE_TO_SPR \spr_reg, \scratch_reg_2
 
 .endm
 
-.macro CLEAR_SPR_SR_FLAGS flag_mask, scratch_reg_1, scratch_reg_2
+.macro CLEAR_SPR_FLAGS spr_reg, flag_mask, scratch_reg_1, scratch_reg_2
     // We cannot use PUSH and POP here because some flags like Carry would get overwritten.
 
-    MOVE_FROM_SPR \scratch_reg_2, SPR_SR
+    MOVE_FROM_SPR \scratch_reg_2, \spr_reg
     LOAD_IMMEDIATE \scratch_reg_1, ~\flag_mask
     l.and   \scratch_reg_2, \scratch_reg_2, \scratch_reg_1
-    MOVE_TO_SPR SPR_SR, \scratch_reg_2
-        
-.endm        
+    MOVE_TO_SPR \spr_reg, \scratch_reg_2
+
+.endm
+
+
+.macro SET_SPR_SR_FLAGS flag_mask, scratch_reg_1, scratch_reg_2
+    SET_SPR_FLAGS SPR_SR, \flag_mask, \scratch_reg_1, \scratch_reg_2
+.endm
+
+.macro CLEAR_SPR_SR_FLAGS flag_mask, scratch_reg_1, scratch_reg_2
+    CLEAR_SPR_FLAGS SPR_SR, \flag_mask, \scratch_reg_1, \scratch_reg_2
+    // We cannot use PUSH and POP here because some flags like Carry would get overwritten.
+.endm
 
 
 // ----------- Stack helpers -----------
@@ -85,7 +95,7 @@
 // WARNING: see the warnings for PUSH.
 .macro POP reg
     l.lwz  \reg, 0(STACK_POINTER_R1)
-    l.addi STACK_POINTER_R1, STACK_POINTER_R1, 4         
+    l.addi STACK_POINTER_R1, STACK_POINTER_R1, 4
 .endm
 
 
@@ -128,7 +138,7 @@
         // Nothing more to do here, R3 is the register that gets printed.
         REPORT_TO_CONSOLE
 
-    .else 
+    .else
 
         PUSH     NOP_REPORT_R3
 
@@ -168,7 +178,7 @@
 
 
 // If SR[F] is set, writes 0x00000001 to the console, otherwise it writes 0x00000000.
-        
+
 .macro REPORT_SRF_TO_CONSOLE
 
     l.bnf \@1$
@@ -182,7 +192,7 @@
     REPORT_IMMEDIATE_TO_CONSOLE 0x00000000
 
 \@2$:
-        
+
 .endm
 
 
@@ -193,7 +203,7 @@
   l.sfne \reg, ZERO_R0
 
   REPORT_SRF_TO_CONSOLE
-        
+
 .endm
 
 
@@ -206,12 +216,12 @@
     PUSH r4
 
     MOVE_REG r2, \reg
-        
+
     LOAD_IMMEDIATE r4, \single_bit_mask
     l.and   r3, r2, r4
 
     REPORT_BOOL_TO_CONSOLE r3
-        
+
     POP r4
     POP r3
     POP r2
@@ -240,7 +250,7 @@
 
 
 // ----------- Clear the BSS section on start-up -----------
-        
+
 .macro CLEAR_BSS overwritten_reg1, overwritten_reg2
 
         LOAD_IMMEDIATE \overwritten_reg1, _bss_begin
