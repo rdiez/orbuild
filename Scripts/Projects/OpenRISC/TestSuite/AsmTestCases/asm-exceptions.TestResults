@@ -1,0 +1,6 @@
+
+report(0x00000700);  # Illegal instruction
+report(0x00000c00);  # l.sys
+report(0x00000e00);  # l.trap
+
+exit(0)
