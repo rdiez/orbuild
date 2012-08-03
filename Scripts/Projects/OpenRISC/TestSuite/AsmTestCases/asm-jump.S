@@ -131,12 +131,5 @@ start_tests:
         TEST_JUMP 0x44000000, 9, 0
 
 
-        // -----------------------------------------------
-        
-        // Now that we have the handy TEST_JUMP macro available,
-        // test some illegal instruction opcode which has nothing to do with jump instructions.
-        TEST_JUMP (0x10 << 26), 5, 2
-        
-
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9
