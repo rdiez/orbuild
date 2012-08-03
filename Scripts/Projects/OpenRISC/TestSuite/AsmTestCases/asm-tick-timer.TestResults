@@ -1,0 +1,11 @@
+
+report(0x00000000);
+report(0x00000001);
+report(0x00000002);
+report(0x00000004);
+report(0x00000003);
+report(0xaaaaaaaa);
+report(0x00000004);
+report(0xbbbbbbbb);
+
+exit(0)
