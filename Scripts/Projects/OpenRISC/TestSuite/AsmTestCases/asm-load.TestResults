@@ -141,8 +141,9 @@ report(0x00000001);
 report(0x00000002);
 report(0x00000003);
 
-# Test reading from an out-of-range memory address (Wishbone bus error)
-report(0x12345678);
+# Test reading from / writing to an out-of-range memory address (Wishbone bus error)
+report(0x12345678);  # Reading.
+report(0x12345678);  # Writing.
 
 
 exit(0)

@@ -396,13 +396,17 @@ start_tests:
         REPORT_REG_TO_CONSOLE r4
 
         
-        // ---------- Test reading from an out-of-range memory address (Wishbone bus error) ----------
+        // ---------- Test reading from and writing to an out-of-range memory address (Wishbone bus error) ----------
 
         LOAD_IMMEDIATE r5, 0x00F00000  // This address should generate an access violation.
         CLEAR_REG r4
         l.lbs r4, 0(r5)
         REPORT_REG_TO_CONSOLE r4
 
+        LOAD_IMMEDIATE r5, 0x00F00000  // This address should generate an access violation.
+        CLEAR_REG r4
+        l.sb 0(r5), r4
+        REPORT_REG_TO_CONSOLE r4
         
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9
