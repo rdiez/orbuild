@@ -56,6 +56,7 @@ OR1200_TEST_DEFINES_FILENAME := $(VERILOG_INCLUDE_DIR)/test-defines.v
 
 # ---- Generate a common test-defines.v file for all the ORPSoC RTL simulations.
 
+ORPSOC_DEFINES_CMD := mkdir --parents \"$(VERILOG_INCLUDE_DIR)\" &&
 ORPSOC_DEFINES_CMD += echo \"Generating $(OR1200_TEST_DEFINES_FILENAME) ...\" &&
 ORPSOC_DEFINES_CMD += \"$(TEST_TOOLS_DIR)/GenerateTestDefinesFile.sh\" \"$(OR1200_TEST_DEFINES_FILENAME)\"
 
@@ -64,13 +65,11 @@ ORPSOC_DEFINES_MAKEFLAGS_FILTER := clear
 $(eval $(call run_and_report_template,ORPSOC_DEFINES,test bench defines,$(SHELL) -c "$(ORPSOC_DEFINES_CMD)"))
 
 $(ORPSOC_DEFINES_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
-$(ORPSOC_DEFINES_SENTINEL): $(ORTS_ORPSOC_OR1200_CONFIG_SENTINEL)  # So that the "$(OUTPUT_DIR)/verilog/include" dir gets created beforehand.
 
 
 # ---- Generate a common or1200_defines.v file for all the ORPSoC model simulations.
 
-ORTS_ORPSOC_OR1200_CONFIG_CMD := if [ -d \"$(VERILOG_INCLUDE_DIR)\" ]; then echo \"Deleting previous verilog include directory $(VERILOG_INCLUDE_DIR)...\" && rm -rf \"$(VERILOG_INCLUDE_DIR)\"; fi &&
-ORTS_ORPSOC_OR1200_CONFIG_CMD += mkdir --parents \"$(VERILOG_INCLUDE_DIR)\" &&
+ORTS_ORPSOC_OR1200_CONFIG_CMD := mkdir --parents \"$(VERILOG_INCLUDE_DIR)\" &&
 ORTS_ORPSOC_OR1200_CONFIG_CMD += echo \"Generating $(OR1200_CONFIG_FILE) ...\" &&
 ORTS_ORPSOC_OR1200_CONFIG_CMD += \"$(TEST_TOOLS_DIR)/GenerateOr1200Config.pl\"
 ORTS_ORPSOC_OR1200_CONFIG_CMD +=    \"$(ORPSOCV2_CHECKOUT_DIR)/rtl/verilog/include/or1200_defines.v\"
@@ -86,8 +85,7 @@ $(ORTS_ORPSOC_OR1200_CONFIG_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
 
 # ---- Generate a common or1200_defines.v file for all the MinSoC model simulations.
 
-ORTS_MINSOC_OR1200_CONFIG_CMD := if [ -d \"$(VERILOG_INCLUDE_DIR)\" ]; then echo \"Deleting previous verilog include directory $(VERILOG_INCLUDE_DIR)...\" && rm -rf \"$(VERILOG_INCLUDE_DIR)\"; fi &&
-ORTS_MINSOC_OR1200_CONFIG_CMD += mkdir --parents \"$(VERILOG_INCLUDE_DIR)\" &&
+ORTS_MINSOC_OR1200_CONFIG_CMD := mkdir --parents \"$(VERILOG_INCLUDE_DIR)\" &&
 ORTS_MINSOC_OR1200_CONFIG_CMD += echo \"Generating $(OR1200_CONFIG_FILE) ...\" &&
 ORTS_MINSOC_OR1200_CONFIG_CMD += \"$(TEST_TOOLS_DIR)/GenerateOr1200Config.pl\"
 ORTS_MINSOC_OR1200_CONFIG_CMD +=    \"$(MINSOC_CHECKOUT_DIR)/rtl/verilog/or1200/rtl/verilog/or1200_defines.v\"
