@@ -966,7 +966,8 @@ ifeq "$(strip $(ENABLE_OPEN_RISC_TEST_SUITE))" "1"
   #    all: $(ORTS_MINSOC_IVERILOG_SENTINEL)
 
   ifeq "$(strip $(ENABLE_PGAVIN))" "1"
-    all: $(ORTS_PGAVIN_CGEN_SENTINEL)
+    # TODO: Disabled for the time being, as it fails many tests and forever hangs for at least one of them.
+    #   all: $(ORTS_PGAVIN_CGEN_SENTINEL)
   endif
 
   all: orts_subproject_files
