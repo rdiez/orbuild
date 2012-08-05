@@ -12,15 +12,12 @@ include $(ORBUILD_SANDBOX)/Scripts/MakeModules/AutotoolsTemplates.mk
 include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 
 
-# ----------- General options -----------
-
-# Option --no-builtin-variables implies --no-builtin-rules, which accelerates GNU Make considerably.
-FASTER_MAKE := --no-builtin-variables
+# ----------- Repository download options -----------
 
 # This flag allows disabling the actual downloading of the source-control repository updates
 # so as to prevent overloading the remote servers during development of this makefile.
 # It must be set before using any of the repository checkout templates.
-# In order for the build to work properly, the repositories must have been checked out at least one.
+# In order for the build to work properly, the repositories must have been checked out at least once.
 SKIP_REPOSITORY_UPDATE := 0
 
 ONLY_ANONYMOUS_CHECKOUTS := 0
@@ -28,19 +25,50 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 
 # ----------- OpenRISC-specific options -----------
 
-ENABLE_PGAVIN := 0
-ENABLE_ICARUS_VERILOG := 0
-ENABLE_VERILATOR := 0
-ENABLE_OPEN_RISC_TEST_SUITE := 0
+ENABLE_PGAVIN := 0  # Build and use Peter Gavin's toolchain, which supports OpenRISC implementations
+                    # without the jump delay slot.
+
+ENABLE_ICARUS_VERILOG := 0  # If you enable this flag, orbuild will build its own Icarus Verilog
+                            # from the latest sources. Alternatively, you can install Icarus Verilog
+                            # from your Linux distribution's repository.
+
+ENABLE_VERILATOR := 0       # If you enable this flag, orbuild will build its own Verilator
+                            # from the latest sources. Alternatively, you can install Verilator
+                            # from your Linux distribution's repository.
+
+ENABLE_XILINX := 0  # If enabled, orbuild assumes the Xilinx ISim simulator and other such tools
+                    # are available. Please do not source the usual settings64.sh or similar
+                    # before running orbuild, as that breaks other software. Instead,
+                    # set environment variable ORBUILD_XILINX_HOME beforehand, so that orbuild
+                    # can find and run settings64.sh itself. For example:
+                    #  export ORBUILD_XILINX_HOME=/opt/Xilinx/13.4
+
+# ------ Test Suite options ------
+
+ENABLE_OPEN_RISC_TEST_SUITE := 0  # Whether to run the Test Suite against the OpenRISC implementations built.
+
+ENABLE_ORTS_ORPSOC := 0  # Please note that the current OR1200 implementation (as of July 2012) fails some of the tests.
+ENABLE_ORTS_OR10 := 0  # TODO: The OR10 CPU is not ready yet.
+
+
+# ------ eCos options (eCos is a real-time operating system) ------
 
 ENABLE_ECOS := 0
 ENABLE_ECOS_TEST := 0
 ENABLE_ECOS_REDBOOT := 0
-ENABLE_ECOS_REDBOOT_TEST_OR1KSIM   := 0  # Warning: This test never ends (it hangs).
-ENABLE_ECOS_REDBOOT_TEST_VERILATOR := 0  # Warning: This test never ends (it hangs).
+ENABLE_ECOS_REDBOOT_TEST_OR1KSIM   := 0  # Warning: This test never ends (it hangs forever).
+ENABLE_ECOS_REDBOOT_TEST_VERILATOR := 0  # Warning: This test never ends (it hangs forever).
+
+# ------ Other options ------
 
 ENABLE_ORPSOC_RTL_TESTS := 0
 ENABLE_OTHER_TESTS := 0
+
+
+# ------ End of the user-defined options. From here on you should not normally need to change anything. ------
+
+# Option --no-builtin-variables implies --no-builtin-rules, which accelerates GNU Make considerably.
+FASTER_MAKE := --no-builtin-variables
 
 LINUX_ARCH                    := or32
 OPENRISC_BARE_TARGET          := $(LINUX_ARCH)-elf
@@ -67,6 +95,16 @@ endif
 
 ifeq "$(strip $(ENABLE_OTHER_TESTS))" "1"
 all: all_tests
+endif
+
+ifeq "$(strip $(ENABLE_ORTS_OR10))" "1"
+ifneq "$(strip $(ENABLE_PGAVIN))" "1"
+  $(call assertion_failure,The OR10 CPU has no jump delay slot and needs Peter Gavin's toolchain at least for the C test cases)
+endif
+endif
+
+ifeq "$(strip $(ENABLE_XILINX))" "1"
+  $(if $(filter undefined,$(origin ORBUILD_XILINX_HOME)),$(error "Option ENABLE_XILINX is set, but environment variable ORBUILD_XILINX_HOME is not defined."))
 endif
 
 
@@ -959,7 +997,10 @@ $(ORTS_MINSOC_IVERILOG_SENTINEL) : $(ORTS_EXES_INSTALL_SENTINEL) $(VERILOG_TOOLS
 
 ifeq "$(strip $(ENABLE_OPEN_RISC_TEST_SUITE))" "1"
   all: $(ORTS_OR1KSIM_SENTINEL)
-  all: $(ORTS_ORPSOC_IVERILOG_SENTINEL)
+
+  ifeq "$(strip $(ENABLE_ORTS_ORPSOC))" "1"
+    all: $(ORTS_ORPSOC_IVERILOG_SENTINEL)
+  endif
 
   # We cannot run the Test Suite against MinSoC yet, as the l.nop instruction does not support
   # special simulation codes like NOP_REPORT or NOP_EXIT.
