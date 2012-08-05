@@ -47,10 +47,10 @@ echo "------- Running the simple test simulation -------"
 
 SIMULATION_LOG_FILENAME="$ECOS_TEST_OBJ_DIR/Simulation.log"
 
-or32-elf-sim --nosrv -f "$THIS_SCRIPT_DIR/or1ksim-with-jump-delay-slot.cfg"  "EcosSimpleTest.elf" 2>&1 | tee "$SIMULATION_LOG_FILENAME"
+or32-elf-sim --nosrv -f "$THIS_SCRIPT_DIR/or1ksim-redboot.cfg"  "EcosSimpleTest.elf" 2>&1 | tee "$SIMULATION_LOG_FILENAME"
 
 echo "------- Analysing the simulation log file -------"
 
-"$THIS_SCRIPT_DIR/AnalyseLog.pl" "$SIMULATION_LOG_FILENAME" "$THIS_SCRIPT_DIR/EcosSimpleTest.TestResults"
+"$ORBUILD_PROJECT_DIR/Tools/AnalyseLog.pl" "$SIMULATION_LOG_FILENAME" "$THIS_SCRIPT_DIR/EcosSimpleTest.TestResults"
 
 popd >/dev/null
