@@ -260,7 +260,10 @@ so rebuilding a single component may be desirable.
 
 Depending on the I<< orbuild >> project makefile and the specific component, it may be possible to rebuild just one
 component by deleting its output directory and/or the sentinel file it creates. Sentinel files
-are easy to find, all their names end in ".OrbuildSentinel".
+are easy to find, all their names end in ".OrbuildSentinel". In order to rebuild a single component every time,
+which can be handy during development, you could temporarily add a line like this near the top of the makefile:
+
+  $(shell rm $(ORBUILD_COMMAND_SENTINELS_DIR)/ORPSOCv2_LINT_OR1200.Cmd.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
 
 Rebuilding a component will trigger a rebuild of anything else that depends on it, but only if the build succeeds.
 If a component fails to build, dependent components will not be rebuilt, but may still be flagged
