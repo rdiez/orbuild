@@ -47,6 +47,21 @@ verify_var_is_set "ORBUILD_XILINX_HOME"
 declare -a SAVED_CMD_ARGS=("$@")
 shift $#
 
-source $ORBUILD_XILINX_HOME/ISE_DS/settings64.sh
+
+# Xilinx ISE comes with 32- and 64-bit tools (as of version 13.4), and there are separate
+# files to source for each set. The following code tries to guess what type of platform
+# we are running on in order to source the right type of file. Note that it is possible
+# to run the 32-bit tools on a 64-bit platform.
+LONG_INT_SIZE="$(getconf LONG_BIT)"
+case "$LONG_INT_SIZE" in
+  32) SETTINGS_FILENAME="$ORBUILD_XILINX_HOME/ISE_DS/settings32.sh";;
+  64) SETTINGS_FILENAME="$ORBUILD_XILINX_HOME/ISE_DS/settings64.sh";;
+  *)  abort "Cannot guess platform type from integer size of \"$LONG_INT_SIZE\".";;
+esac
+
+echo "Sourcing Xilinx settings file $SETTINGS_FILENAME..."
+source "$SETTINGS_FILENAME"
+
+echo "Running Xilinx tool \"$TOOL_NAME\"..."
 
 exec "$TOOL_NAME" ${SAVED_CMD_ARGS[@]}
