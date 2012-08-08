@@ -24,6 +24,7 @@
 `ifdef MY_XILINX_XST  // I could not find a predefined macro for XST, so I had to add one to the ISE project configuration.
 
   `define UNIQUE
+  `define IS_SIMULATION 0
   `define FINISH_WITH_ERROR_EXIT_CODE
   `define ASSERT_FALSE
 
@@ -37,7 +38,7 @@
    // I tried with -g2005 and -gsystem-verilog, -g2009 did not work at all.
    //   `define SUPPORTS_FINAL defined
 
-  `define IS_SIMULATION defined
+  `define IS_SIMULATION 1
 
   `define FINISH_WITH_ERROR_EXIT_CODE $finish_and_return(1)
 
@@ -47,7 +48,7 @@
 `elsif XILINX_ISIM
 
   `define UNIQUE
-  `define IS_SIMULATION defined
+  `define IS_SIMULATION 1
 
   // Note that Xilinx ISim does not support $finish_and_return, so there is no special exit code on error.
   `define FINISH_WITH_ERROR_EXIT_CODE $finish
@@ -56,7 +57,7 @@
 
 `elsif VERILATOR
 
-  `define IS_SIMULATION defined
+  `define IS_SIMULATION 1
   `define UNIQUE unique
   `define SUPPORTS_FINAL defined
 
