@@ -134,7 +134,9 @@ module or10_register_file (
    // You may need to use alternative Verilog code or vendor-specific primitives
    // for other FPGAs.
 
-   reg [`OR10_OPERAND_WIDTH-1:0] cpureg_gprs[`OR10_GPR_COUNT-1:0];  // General Purpose Registers.
+   localparam GPR_COUNT = 32;
+
+   reg [`OR10_OPERAND_WIDTH-1:0] cpureg_gprs[GPR_COUNT-1:0];  // General Purpose Registers.
 
 
    // Note that there is no read/write synchronisation in this implementation,
@@ -164,7 +166,7 @@ module or10_register_file (
         // Initialise all General Purpose Registers with a non-zero value, as this helps catch bugs
         // if the software forgets to initialise them. Note that the OpenRISC specification
         // does not mandate that the registers are initialised at all.
-        for ( i = 0; i < `OR10_GPR_COUNT; i = i + 1 )
+        for ( i = 0; i < GPR_COUNT; i = i + 1 )
           begin
              cpureg_gprs[i] = 32'h12345678;
           end
