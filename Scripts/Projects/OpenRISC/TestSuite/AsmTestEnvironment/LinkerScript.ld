@@ -4,7 +4,7 @@ MEMORY
     /* The exception vectors actually start at 0x100, but if you specify that address here,
        the "--output-target binary" step will start from address 0 with the contents meant for address 0x100 */
     exception_vectors : ORIGIN =  0 , LENGTH = 8K
-    ram               : ORIGIN =  8K, LENGTH = 2M - 8K
+    ram               : ORIGIN =  8K, LENGTH = 2M - 8K  /* If you change the RAM size, make sure you update the simulator configurations too */
 }
 
 SECTIONS
