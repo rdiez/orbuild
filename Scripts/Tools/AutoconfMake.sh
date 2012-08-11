@@ -21,7 +21,7 @@ pushd "$OBJ_DIR" >/dev/null
 # echo "The inherited MAKEFLAGS are: $MAKEFLAGS"
 
 CMD="make $EXTRA_MAKE_ARGS $MAKE_TARGETS"
-print_command $CMD
+printf "$CMD\n\n"
 eval "$CMD"
 
 echo "Done" >"$SENTINEL_FILENAME"

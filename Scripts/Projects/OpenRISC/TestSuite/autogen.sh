@@ -34,8 +34,8 @@ patch_for_or1k_support ()
 
 
 CMD="autoreconf --warnings=all --install"
-print_command $CMD
-$CMD
+printf "$CMD\n\n"
+eval "$CMD"
 
 case "$TARGET_HOST" in
   or32-elf) echo "Nothing to do here" >/dev/null;;

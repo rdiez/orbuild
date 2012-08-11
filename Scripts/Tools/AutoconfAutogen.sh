@@ -20,7 +20,7 @@ fi
 
 pushd "$SRC_DIR" >/dev/null
 
-echo "$AUTOGEN_CMD"
+printf "$AUTOGEN_CMD\n\n"
 eval "$AUTOGEN_CMD"
 
 echo "Done" >"$SENTINEL_FILENAME"
