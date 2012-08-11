@@ -1,12 +1,10 @@
 #!/bin/bash
 
-# Copyright (C) 2011 R. Diez - see the orbuild project for licensing information.
+# Copyright (C) 2011-2012 R. Diez - see the orbuild project for licensing information.
 
 set -o errexit
 
-source "$(dirname $0)/../../../ShellModules/StandardShellHeader.sh"
-source "$(dirname $0)/../../../ShellModules/PrintCommand.sh"
-source "$(dirname $0)/../../../ShellModules/FileUtils.sh"
+source "$ORBUILD_SANDBOX/Scripts/ShellModules/StandardShellHeader.sh"
 
 if [ $# -ne 4 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
@@ -63,9 +61,7 @@ COMPILE_CMD+=" -o $IVERILOG_EXE_FILENAME"
 COMPILE_CMD+=" $ALL_INCLUDES "
 COMPILE_CMD+=" $TEST_BENCH_DIR/minsoc_bench.v"
 
-print_command $COMPILE_CMD
-printf "\n"
-
-$COMPILE_CMD
+printf "$COMPILE_CMD\n\n"
+eval "$COMPILE_CMD"
 
 popd >/dev/null

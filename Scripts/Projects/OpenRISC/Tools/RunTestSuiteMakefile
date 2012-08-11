@@ -13,7 +13,7 @@ include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 TEST_TOOLS_DIR := $(ORBUILD_PROJECT_DIR)/Tools
 TEST_SUITE_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 
-MAX_SIMULATION_TIME_IN_CLOCK_TICKS := 20000
+MAX_SIMULATION_TIME_IN_CLOCK_TICKS := 200000
 
 # Set this variable to --trace in order to turn on or1ksim's tracing.
 OR1KSIM_TRACE_SWITCH :=
@@ -46,10 +46,16 @@ SIMULATIONS_GROUP    :=
 
 
 VERILOG_INCLUDE_DIR := $(OUTPUT_DIR)/verilog/include
-IVERILOG_EXE_DIR := $(OUTPUT_DIR)/iverilog
-IVERILOG_EXE_FILENAME := $(IVERILOG_EXE_DIR)/iverilog-simulation
-VERILATOR_EXE_DIR := $(OUTPUT_DIR)/verilator
-VERILATOR_EXE_FILENAME := $(VERILATOR_EXE_DIR)/verilator-simulation
+
+IVERILOG_EXE_DIR := $(OUTPUT_DIR)/SimulatorIcarusVerilog
+IVERILOG_EXE_FILENAME := $(IVERILOG_EXE_DIR)/OrtsSimulatorIcarusVerilog
+
+ISIM_EXE_DIR := $(OUTPUT_DIR)/SimulatorISim
+ISIM_EXE_FILENAME := $(ISIM_EXE_DIR)/OrtsSimulatorISim
+
+VERILATOR_EXE_DIR := $(OUTPUT_DIR)/SimulatorVerilator
+VERILATOR_EXE_FILENAME := $(VERILATOR_EXE_DIR)/OrtsSimulatorVerilator
+
 OR1200_CONFIG_FILE  := $(VERILOG_INCLUDE_DIR)/or1200_defines.v
 OR1200_TEST_DEFINES_FILENAME := $(VERILOG_INCLUDE_DIR)/test-defines.v
 
@@ -101,26 +107,26 @@ $(ORTS_MINSOC_OR1200_CONFIG_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
 
 # ---- Generate a common Icarus Verilog executable for all the ORPSoC RTL model simulations.
 
-BUILD_OR1200RTL_IVERILOG_SIM_CMD := if [ -d \"$(IVERILOG_EXE_DIR)\" ]; then echo \"Deleting previous Icarus Verilog simulator directory $(IVERILOG_EXE_DIR)...\" && rm -rf \"$(IVERILOG_EXE_DIR)\"; fi &&
-BUILD_OR1200RTL_IVERILOG_SIM_CMD += mkdir --parents \"$(IVERILOG_EXE_DIR)\" &&
-BUILD_OR1200RTL_IVERILOG_SIM_CMD += \"$(TEST_TOOLS_DIR)/BuildOr1200RtlIcarusVerilogSimulator.sh\"
-BUILD_OR1200RTL_IVERILOG_SIM_CMD +=    \"$(ORPSOCV2_CHECKOUT_DIR)\"
-BUILD_OR1200RTL_IVERILOG_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
-BUILD_OR1200RTL_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_DIR)\"
-BUILD_OR1200RTL_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_FILENAME)\"
+BUILD_ORPSOC_IVERILOG_SIM_CMD := if [ -d \"$(IVERILOG_EXE_DIR)\" ]; then echo \"Deleting previous Icarus Verilog simulator directory $(IVERILOG_EXE_DIR)...\" && rm -rf \"$(IVERILOG_EXE_DIR)\"; fi &&
+BUILD_ORPSOC_IVERILOG_SIM_CMD += mkdir --parents \"$(IVERILOG_EXE_DIR)\" &&
+BUILD_ORPSOC_IVERILOG_SIM_CMD += \"$(TEST_TOOLS_DIR)/SimulatorBuildScripts/BuildSim-ORPSoC-IcarusVerilog.sh\"
+BUILD_ORPSOC_IVERILOG_SIM_CMD +=    \"$(ORPSOCV2_CHECKOUT_DIR)\"
+BUILD_ORPSOC_IVERILOG_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
+BUILD_ORPSOC_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_DIR)\"
+BUILD_ORPSOC_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_FILENAME)\"
 
-BUILD_OR1200RTL_IVERILOG_SIM_MAKEFLAGS_FILTER := clear
+BUILD_ORPSOC_IVERILOG_SIM_MAKEFLAGS_FILTER := clear
 
-$(eval $(call run_and_report_template,BUILD_OR1200RTL_IVERILOG_SIM,Icarus Verilog or1200 simulator,$(SHELL) -c "$(BUILD_OR1200RTL_IVERILOG_SIM_CMD)"))
+$(eval $(call run_and_report_template,BUILD_ORPSOC_IVERILOG_SIM,Icarus Verilog or1200 simulator,$(SHELL) -c "$(BUILD_ORPSOC_IVERILOG_SIM_CMD)"))
 
-$(BUILD_OR1200RTL_IVERILOG_SIM_SENTINEL): $(ORTS_ORPSOC_OR1200_CONFIG_SENTINEL) $(ORPSOC_DEFINES_SENTINEL)
+$(BUILD_ORPSOC_IVERILOG_SIM_SENTINEL): $(ORTS_ORPSOC_OR1200_CONFIG_SENTINEL) $(ORPSOC_DEFINES_SENTINEL)
 
 
 # ---- Generate a common Icarus Verilog executable for all the MinSoC simulations.
 
 BUILD_MINSOC_IVERILOG_SIM_CMD := if [ -d \"$(IVERILOG_EXE_DIR)\" ]; then echo \"Deleting previous Icarus Verilog simulator directory $(IVERILOG_EXE_DIR)...\" && rm -rf \"$(IVERILOG_EXE_DIR)\"; fi &&
 BUILD_MINSOC_IVERILOG_SIM_CMD += mkdir --parents \"$(IVERILOG_EXE_DIR)\" &&
-BUILD_MINSOC_IVERILOG_SIM_CMD += \"$(TEST_TOOLS_DIR)/BuildMinsocIcarusVerilogSimulator.sh\"
+BUILD_MINSOC_IVERILOG_SIM_CMD += \"$(TEST_TOOLS_DIR)/SimulatorBuildScripts/BuildSim-MinSoC-IcarusVerilog.sh\"
 BUILD_MINSOC_IVERILOG_SIM_CMD +=    \"$(MINSOC_CHECKOUT_DIR)\"
 BUILD_MINSOC_IVERILOG_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
 BUILD_MINSOC_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_DIR)\"
@@ -131,6 +137,54 @@ BUILD_MINSOC_IVERILOG_SIM_MAKEFLAGS_FILTER := clear
 $(eval $(call run_and_report_template,BUILD_MINSOC_IVERILOG_SIM,Icarus Verilog MinSoC simulator,$(SHELL) -c "$(BUILD_MINSOC_IVERILOG_SIM_CMD)"))
 
 $(BUILD_MINSOC_IVERILOG_SIM_SENTINEL): $(ORTS_MINSOC_OR1200_CONFIG_SENTINEL)
+
+
+# ---- Generate a common Icarus Verilog executable for all the or10 simulations.
+
+BUILD_OR10_IVERILOG_SIM_CMD := if [ -d \"$(IVERILOG_EXE_DIR)\" ]; then echo \"Deleting previous Icarus Verilog simulator directory $(IVERILOG_EXE_DIR)...\" && rm -rf \"$(IVERILOG_EXE_DIR)\"; fi &&
+BUILD_OR10_IVERILOG_SIM_CMD += mkdir --parents \"$(IVERILOG_EXE_DIR)\" &&
+BUILD_OR10_IVERILOG_SIM_CMD += \"$(TEST_TOOLS_DIR)/SimulatorBuildScripts/BuildSim-OR10-IcarusVerilog.sh\"
+BUILD_OR10_IVERILOG_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
+BUILD_OR10_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_DIR)\"
+BUILD_OR10_IVERILOG_SIM_CMD +=    \"$(IVERILOG_EXE_FILENAME)\"
+
+BUILD_OR10_IVERILOG_SIM_MAKEFLAGS_FILTER := clear
+
+$(eval $(call run_and_report_template,BUILD_OR10_IVERILOG_SIM,Icarus Verilog OR10 simulator,$(SHELL) -c "$(BUILD_OR10_IVERILOG_SIM_CMD)"))
+
+$(BUILD_OR10_IVERILOG_SIM_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
+
+
+# ---- Generate a common Xilinx ISim executable for all the or10 simulations.
+
+BUILD_OR10_ISIM_SIM_CMD := if [ -d \"$(ISIM_EXE_DIR)\" ]; then echo \"Deleting previous ISim simulator directory $(ISIM_EXE_DIR)...\" && rm -rf \"$(ISIM_EXE_DIR)\"; fi &&
+BUILD_OR10_ISIM_SIM_CMD += mkdir --parents \"$(ISIM_EXE_DIR)\" &&
+BUILD_OR10_ISIM_SIM_CMD += \"$(TEST_TOOLS_DIR)/SimulatorBuildScripts/BuildSim-OR10-ISim.sh\"
+BUILD_OR10_ISIM_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
+BUILD_OR10_ISIM_SIM_CMD +=    \"$(ISIM_EXE_DIR)\"
+BUILD_OR10_ISIM_SIM_CMD +=    \"$(ISIM_EXE_FILENAME)\"
+
+BUILD_OR10_ISIM_SIM_MAKEFLAGS_FILTER := clear
+
+$(eval $(call run_and_report_template,BUILD_OR10_ISIM_SIM,Icarus Verilog OR10 simulator,$(SHELL) -c "$(BUILD_OR10_ISIM_SIM_CMD)"))
+
+$(BUILD_OR10_ISIM_SIM_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
+
+
+# ---- Generate a common Verilator executable for all the or10 simulations.
+
+BUILD_OR10_VERILATOR_SIM_CMD := if [ -d \"$(VERILATOR_EXE_DIR)\" ]; then echo \"Deleting previous Icarus Verilog simulator directory $(VERILATOR_EXE_DIR)...\" && rm -rf \"$(VERILATOR_EXE_DIR)\"; fi &&
+BUILD_OR10_VERILATOR_SIM_CMD += mkdir --parents \"$(VERILATOR_EXE_DIR)\" &&
+BUILD_OR10_VERILATOR_SIM_CMD += \"$(TEST_TOOLS_DIR)/SimulatorBuildScripts/BuildSim-OR10-Verilator.sh\"
+BUILD_OR10_VERILATOR_SIM_CMD +=    \"$(VERILOG_INCLUDE_DIR)\"
+BUILD_OR10_VERILATOR_SIM_CMD +=    \"$(VERILATOR_EXE_DIR)\"
+BUILD_OR10_VERILATOR_SIM_CMD +=    \"$(VERILATOR_EXE_FILENAME)\"
+
+BUILD_OR10_VERILATOR_SIM_MAKEFLAGS_FILTER := clear
+
+$(eval $(call run_and_report_template,BUILD_OR10_VERILATOR_SIM,Verilator OR10 simulator,$(SHELL) -c "$(BUILD_OR10_VERILATOR_SIM_CMD)"))
+
+$(BUILD_OR10_VERILATOR_SIM_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
 
 
 # -----------------------------------------------------
@@ -172,6 +226,33 @@ define simulation_files_template_variables_2
       $(1)_SIMULATION_FILES_CMD += && \"$(ORPSOCV2_CHECKOUT_DIR)/sw/utils/bin2vmem\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" >\"$(value $(1)_SIMULATION_FILES_DIR)/sram.vmem\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_MINSOC_IVERILOG"
+
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
+      $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
+
+      # This is the same as for ORTS_MINSOC_IVERILOG.
+
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
+      $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"
+
+      # This is the same as for ORTS_MINSOC_IVERILOG.
+
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
+      $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
+      $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_VERILATOR"
+
+      # This is the same as for ORTS_MINSOC_IVERILOG.
 
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
@@ -230,7 +311,22 @@ define test_case_simulation_template_variables
 
   else ifeq "$(TEST_TYPE)" "ORTS_MINSOC_IVERILOG"
 
-    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/RunMinsocIcarusVerilogSimulator.sh\" \"$(MINSOC_CHECKOUT_DIR)\" \"$(IVERILOG_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
+    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-IcarusVerilog.sh\" \"$(IVERILOG_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
+    $(1)_SIMULATION_RUN_CMD +=   2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
+
+    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-IcarusVerilog.sh\" \"$(IVERILOG_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
+    $(1)_SIMULATION_RUN_CMD +=   2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"
+
+    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-ISim.sh\" \"$(ISIM_EXE_DIR)\" \"$(ISIM_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
+    $(1)_SIMULATION_RUN_CMD +=   2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
+
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_VERILATOR"
+
+    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-Verilator.sh\" \"$(VERILATOR_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
     $(1)_SIMULATION_RUN_CMD +=   2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
 
   else
@@ -267,9 +363,15 @@ define test_case_simulation_template
   ifeq "$(TEST_TYPE)" "ORTS_OR1KSIM"
   else ifeq "$(TEST_TYPE)" "ORTS_PGAVIN_CGEN"
   else ifeq "$(TEST_TYPE)" "ORTS_ORPSOC_IVERILOG"
-    $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_OR1200RTL_IVERILOG_SIM_SENTINEL)
+    $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_ORPSOC_IVERILOG_SIM_SENTINEL)
   else ifeq "$(TEST_TYPE)" "ORTS_MINSOC_IVERILOG"
     $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_MINSOC_IVERILOG_SIM_SENTINEL)
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_VERILATOR"
+    $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_OR10_VERILATOR_SIM_SENTINEL)
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
+    $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_OR10_IVERILOG_SIM_SENTINEL)
+  else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"
+    $(value $(1)_SIMULATION_FILES_SENTINEL): $(BUILD_OR10_ISIM_SIM_SENTINEL)
   else
     $(value $(1)_SIMULATION_FILES_SENTINEL): error_unknown_test_type
   endif
