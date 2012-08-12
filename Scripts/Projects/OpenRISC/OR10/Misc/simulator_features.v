@@ -45,6 +45,9 @@
   // Icarus Verilog does not seem to support `__FILE__ and `__LINE__ yet.
   `define ASSERT_FALSE $display( "ERROR: Assertion failed." ); `FINISH_WITH_ERROR_EXIT_CODE
 
+  // Access to internal signals in submodules is handy when initialising inferred memory.
+  `define CAN_ACCESS_INTERNAL_SIGNALS defined
+
 `elsif XILINX_ISIM
 
   `define UNIQUE
@@ -54,6 +57,8 @@
   `define FINISH_WITH_ERROR_EXIT_CODE $finish
 
   `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
+
+  `define CAN_ACCESS_INTERNAL_SIGNALS defined
 
 `elsif VERILATOR
 
@@ -65,6 +70,8 @@
   `define FINISH_WITH_ERROR_EXIT_CODE $finish
 
   `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
+
+  `define CAN_ACCESS_INTERNAL_SIGNALS defined
 
 `else
   `error "Unknown platform."
