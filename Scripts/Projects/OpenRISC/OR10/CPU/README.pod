@@ -1,0 +1,115 @@
+
+This is the source file from which the README file is generated.
+
+This file is written in Perl's Plain Old Documentation (POD) format.
+Run the following Perl commands to convert it to text or to HTML
+for easy reading:
+
+  podchecker README.pod  # Optional, check syntax.
+  pod2text README.pod >README.txt
+
+  # pod2html seems buggy, at least in perl v5.10.1, therefore
+  # I'm using this long one-liner instead (with bash):
+  perl -MPod::Simple::HTML  -e "\$p = Pod::Simple::HTML->new; \$p->index( 1 ); \$p->output_fh( *STDOUT{IO} ); \$p->force_title('OR10 CPU'); \$p->parse_file('README.pod');"  >README.html
+
+This file is best edited with emacs module pod-mode, available in CPAN.
+However, the POD syntax is quite simple and can be edited with a standard text editor.
+
+=pod
+
+=head1 About the OR10 CPU
+
+OR10 is an open-source 32-bit CPU for embedded systems written in Verilog.
+
+=head2 Features
+
+=over
+
+=item * Implements the L<< OpenRISC|http://en.wikipedia.org/wiki/OpenRISC >> ORBIS32 instruction set.
+
+=item * Very simple design. One could say suboptimal, or even naive.
+
+=item * No jump delay slot, which makes it incompatible with most existing OpenRISC software.
+
+You need to use Peter Gavin's toolchain to generate code for OR10. The I<< orbuild >> framework
+can automatically download and build all the components you need.
+
+=item * Single L<< Wishbone bus|http://en.wikipedia.org/wiki/Wishbone_%28computer_bus%29 >> for both instruction fetches and data access.
+
+See the Verilog source code for the Wishbone datasheet.
+
+=item * Non-pipelined implementation (slow).
+
+It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
+and 4 cycles for instructions which access memory.
+
+=item * Designed mainly for FPGAs. Tested only on a smallish Xilinx Spartan-6.
+
+=item * No "supervision mode", the software runs always in "super-user" mode.
+
+=item * No instruction or data caches, no MMU.
+
+=item * Does not implement the multiplication or division instructions yet, let alone floating-point or anything advanced.
+
+However, all other ORBIS32 instructions are available.
+
+=item * No debugging support yet.
+
+=item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT.
+
+=item * Passes I<< orbuild >>'s OpenRISC Test Suite, which has special code for CPUs without a jump delay slot.
+
+As far as I know, no other OpenRISC implementation passes the Test Suite (!) as of july 2012,
+even though the original or1ksim simulator does. Use the I<< orbuild >> framework
+to run the tests against several platforms.
+
+=item * Reliable, synchronised reset handling.
+
+The CPU can also start on FPGA designs with the reset signal optimised away (hard-wired to '1').
+
+=item * Simulates with Verilator (no SystemC libraries required), Icarus Verilog and Xilinx ISim.
+
+=item * Lints cleanly with Icarus Verilog and with Verilator. Not a single warning.
+
+The code uses relatively modern Verilog features and tries to be easy to understand. There are
+no timescale definitions or timescale.v files anywhere to worry about.
+
+=item * Optional trace mode that prints the assembly instructions being executed together with the values/addresses they are using.
+
+=item * Triggers simulation assertions and run-time exceptions for all error conditions and suspect cases.
+
+For example, if a reserved bit in an instruction opcode is not zero, you'll get an "illegal instruction" exception.
+
+=back
+
+=head2 How to make OR10 smaller and save FPGA resources
+
+TODO
+
+=head2 About the OR10 name
+
+OR10 is a smaller and simpler OpenRISC implementation than the existing OR1200 processor, so it should carry a lower number.
+The number 10 is just a play on words with my name.
+
+=head2 Motivation and future
+
+When I started to look at OpenRISC I just wanted to learn Verilog, I guess I got carried away...
+This is a weekend hobby project: there is no support, I have no plans and I make no promises!
+
+=head2 Alternatives
+
+Other OpenRISC implementations I know of are
+the "traditional" L<< OR1200|http://opencores.org/or1k/Main_Page >> CPU
+and the new L<< AltOr32|http://opencores.org/project,altor32 >> implementation.
+
+=head2 License
+
+Copyright (C) R. Diez 2012,  rdiezmail-openrisc at yahoo.de
+
+The OR10 source code is released under the LGPL 3 license.
+
+Please note that some of the files under the OR10 directory have other authors and licenses.
+
+This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
+
+=cut

@@ -48,7 +48,7 @@ ENABLE_XILINX := 0  # If enabled, orbuild assumes the Xilinx ISim simulator and 
 ENABLE_OPEN_RISC_TEST_SUITE := 0  # Whether to run the Test Suite against the OpenRISC implementations built.
 
 ENABLE_ORTS_ORPSOC := 0  # Please note that the current OR1200 implementation (as of July 2012) fails some of the tests.
-ENABLE_ORTS_OR10 := 0  # TODO: The OR10 CPU is not ready yet.
+ENABLE_ORTS_OR10 := 0
 
 
 # ------ eCos options (eCos is a real-time operating system) ------
