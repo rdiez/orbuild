@@ -57,6 +57,7 @@ However, all other ORBIS32 instructions are available.
 
 =item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT.
 
+=item * Implements the Tick Timer and the PIC (all interrupts are level-triggered and maskable).
 =item * Passes I<< orbuild >>'s OpenRISC Test Suite, which has special code for CPUs without a jump delay slot.
 
 As far as I know, no other OpenRISC implementation passes the Test Suite (!) as of july 2012,
