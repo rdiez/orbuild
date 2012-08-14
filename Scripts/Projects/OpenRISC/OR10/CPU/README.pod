@@ -31,8 +31,9 @@ OR10 is an open-source 32-bit CPU for embedded systems written in Verilog.
 
 =item * No jump delay slot, which makes it incompatible with most existing OpenRISC software.
 
-You need to use Peter Gavin's toolchain to generate code for OR10. The I<< orbuild >> framework
-can automatically download and build all the components you need.
+You need to use Peter Gavin's toolchain or Stefan Kristiansson's LLVM/Clang compiler
+in order to generate code for OR10. The I<< orbuild >> framework
+can automatically download and build both sets of tools for you.
 
 =item * Single L<< Wishbone bus|http://en.wikipedia.org/wiki/Wishbone_%28computer_bus%29 >> for both instruction fetches and data access.
 
@@ -58,6 +59,7 @@ However, all other ORBIS32 instructions are available.
 =item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT.
 
 =item * Implements the Tick Timer and the PIC (all interrupts are level-triggered and maskable).
+
 =item * Passes I<< orbuild >>'s OpenRISC Test Suite, which has special code for CPUs without a jump delay slot.
 
 As far as I know, no other OpenRISC implementation passes the Test Suite (!) as of july 2012,

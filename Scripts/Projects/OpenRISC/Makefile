@@ -28,6 +28,9 @@ ONLY_ANONYMOUS_CHECKOUTS := 0
 ENABLE_PGAVIN := 0  # Build and use Peter Gavin's toolchain, which supports OpenRISC implementations
                     # without the jump delay slot.
 
+ENABLE_LLVM := 0
+ENABLE_LLVM_CHECK := 0
+
 ENABLE_ICARUS_VERILOG := 0  # If you enable this flag, orbuild will build its own Icarus Verilog
                             # from the latest sources. Alternatively, you can install Icarus Verilog
                             # from your Linux distribution's repository.
@@ -87,10 +90,14 @@ PGAVIN_BARE_TOOLCHAIN_DIR     := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kBare
 PGAVIN_LINUX_TOOLCHAIN_DIR    := $(ORBUILD_BUILD_DIR)/PGavinToolchainOr1kLinux
 PGAVIN_LINUX_TOOLCHAIN_PREFIX := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/$(PGAVIN_OPENRISC_LINUX_TARGET)
 
-.PHONY: all all_tests all_pgavin
+.PHONY: all all_tests all_pgavin all_llvm
 
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
 all: all_pgavin
+endif
+
+ifeq "$(strip $(ENABLE_LLVM))" "1"
+all: all_llvm
 endif
 
 ifeq "$(strip $(ENABLE_OTHER_TESTS))" "1"
@@ -181,6 +188,16 @@ all_pgavin: $(PGAVIN_OR1K_SRC_CHECKOUT_SENTINEL)
 $(eval $(call git_checkout_template,PGAVIN_OR1K_GCC,Peter Gavin's or1k-gcc,$(PGAVIN_GIT_BASE_URL)/or1k-gcc.git))
 $(eval $(call git_download_serializer_template,PGAVIN_OR1K_SRC,PGAVIN_OR1K_GCC))
 all_pgavin: $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
+
+
+# ----------- Stefan Kristiansson's LLVM/Clang -----------
+
+$(eval $(call git_checkout_template,LLVM,LLVM,git://github.com/skristiansson/llvm-or1k.git))
+all_llvm: $(LLVM_CHECKOUT_SENTINEL)
+
+$(eval $(call git_checkout_template,CLANG,Clang,git://github.com/skristiansson/clang-or1k.git))
+$(eval $(call git_download_serializer_template,LLVM,CLANG))
+all_llvm: $(CLANG_CHECKOUT_SENTINEL)
 
 
 # ----------- Jonas Bonn's repositories -----------
@@ -1139,6 +1156,49 @@ ifeq "$(strip $(ENABLE_ECOS_REDBOOT_TEST_VERILATOR))" "1"
 endif
 
 
+# -------------- LLVM/Clang --------------
+
+# Create the symbolic link from the LLVM repository to the Clang repository.
+
+LINK_FROM_LVM_TO_CLANG_LINK_NAME   := $(LLVM_CHECKOUT_DIR)/clang
+LINK_FROM_LVM_TO_CLANG_LINK_TARGET := $(CLANG_CHECKOUT_DIR)
+
+LINK_FROM_LVM_TO_CLANG_CMD := if [ -h \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\" ]; then echo \"Deleting previous symbolic link $(LINK_FROM_LVM_TO_CLANG_LINK_NAME)...\" && rm \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\"; fi &&
+LINK_FROM_LVM_TO_CLANG_CMD += echo \"Creating symbolic link from the LLVM repository to the Clang repository...\" && ln --symbolic --no-dereference --force \"$(LINK_FROM_LVM_TO_CLANG_LINK_TARGET)\" \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\"
+LINK_FROM_LVM_TO_CLANG_MAKEFLAGS_FILTER := clear
+$(eval $(call run_and_report_template,LINK_FROM_LVM_TO_CLANG,Symbolic link from LLVM to Clang,$(SHELL) -c "$(LINK_FROM_LVM_TO_CLANG_CMD)"))
+$(LINK_FROM_LVM_TO_CLANG_SENTINEL): $(LLVM_CHECKOUT_SENTINEL) $(CLANG_CHECKOUT_SENTINEL)
+
+
+# Build LLVM/Clang.
+
+LLVM_CLANG_EXTRA_GLOBAL_MAKE_ARGS   := $(FASTER_MAKE)
+LLVM_CLANG_EXTRA_CONFIG_ARGS        := CC=gcc CXX=g++ --enable-debug-runtime
+LLVM_CLANG_MAKE_MAKEFLAGS_FILTER    := pass-j
+LLVM_CLANG_INSTALL_MAKEFLAGS_FILTER := clear  # No need to risk it here.
+
+$(eval $(call autotool_project_template,LLVM_CLANG,LLVM/Clang,$(LLVM_CHECKOUT_DIR)))
+
+$(LLVM_CLANG_CONFIGURE_SENTINEL): $(LINK_FROM_LVM_TO_CLANG_SENTINEL)
+
+ifeq "$(strip $(ENABLE_LLVM))" "1"
+  all: $(LLVM_CLANG_INSTALL_SENTINEL)
+endif
+
+
+# Test LLVM/Clang.
+
+LLVM_CLANG_CHECK_TESTS_CMD := cd $(LLVM_CLANG_OBJ_DIR) && make $(FASTER_MAKE) check && make TESTSUITE=CodeGen/OR1K $(FASTER_MAKE) check
+LLVM_CLANG_CHECK_TESTS_MAKEFLAGS_FILTER := pass-j
+$(eval $(call run_makefile_and_report_template,LLVM_CLANG_CHECK_TESTS,LLVM/Clang checks,$(SHELL) -c "$(LLVM_CLANG_CHECK_TESTS_CMD)"))
+
+$(LLVM_CLANG_CHECK_TESTS_SENTINEL): $(LLVM_CLANG_INSTALL_SENTINEL)
+
+ifeq "$(strip $(ENABLE_LLVM_CHECK))" "1"
+  all: $(LLVM_CLANG_CHECK_TESTS_SENTINEL)
+endif
+
+
 # -------------- Report grouping --------------
 
 SVN_CHECKOUT_GROUP := OR1KSIM_SVN_CHECKOUT
@@ -1171,6 +1231,10 @@ PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_2_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(LINUX_GDB_AUTOTOOLS_GROUP)
 PGAVIN_TOOLCHAIN_GROUP += $(GDBSERVER_AUTOTOOLS_GROUP)
 
+LLVM_CLANG_GROUP := LLVM_CLANG_CHECK_TESTS
+LLVM_CLANG_GROUP += LINK_FROM_LVM_TO_CLANG
+LLVM_CLANG_GROUP += $(LLVM_CLANG_AUTOTOOLS_GROUP)
+
 PGAVIN_GIT_GROUP := $(PGAVIN_LINUX_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_OR1KSIM_GIT_GROUP)
 PGAVIN_GIT_GROUP += $(PGAVIN_UCLIBC_GIT_GROUP)
@@ -1188,6 +1252,8 @@ GIT_GROUP := $(JBONN_LINUX_GIT_GROUP)
 GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
 GIT_GROUP += $(ICARUS_VERILOG_GIT_GROUP)
 GIT_GROUP += $(VERILATOR_GIT_GROUP)
+GIT_GROUP += $(LLVM_GIT_GROUP)
+GIT_GROUP += $(CLANG_GIT_GROUP)
 
 .PHONY: generate_groups_file
 generate_groups_file:
@@ -1196,6 +1262,7 @@ generate_groups_file:
 	echo "Verilog Tools                  = $(VERILOG_TOOLS_GROUP)"    >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Peter Gavin's Toolchain        = $(PGAVIN_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Peter Gavin's Repositories     = $(PGAVIN_GIT_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "LLVM/Clang                     = $(LLVM_CLANG_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Lint results                   = $(LINT_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "eCos realtime operating system = $(ECOS_GROUP)"             >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Git Repositories               = $(GIT_GROUP)"              >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)

@@ -145,6 +145,14 @@ GDB 7.2 from OpenCores.org gets built with the Linux toolchain.
 
 An optional step is to run the Binutils checks.
 
+=item * Stefan Kristiansson's LLVM/Clang for OpenRISC
+
+Taken from git head at:
+  git://github.com/skristiansson/llvm-or1k.git
+  git://github.com/skristiansson/clang-or1k.git
+
+The LLVM/Clang tools are built but not actually used for anything else at the moment.
+
 =item * eCos realtime operating system
 
 The eCos repository is downloaded from L<< http://OpenCores.org/ >>, eCos is configured and a simple
