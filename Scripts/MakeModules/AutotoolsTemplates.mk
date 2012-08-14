@@ -93,19 +93,19 @@ endef
 
 define autotool_project_template_variables_2
 
-  ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "clear"
+  ifeq "$(strip $(value $(1)_INSTALL_MAKEFLAGS_FILTER))" "clear"
     $(1)_INSTALL_MAKEFLAGS_VALUE :=
-  else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-j"
+  else ifeq "$(strip $(value $(1)_INSTALL_MAKEFLAGS_FILTER))" "pass-j"
     $(1)_INSTALL_MAKEFLAGS_VALUE := $$$$(filter --jobserver-fds=%,$$$$(MAKEFLAGS)) $$$$(filter -j,$$$$(MAKEFLAGS))
-  else ifeq "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)" "pass-all"
+  else ifeq "$(strip $(value $(1)_INSTALL_MAKEFLAGS_FILTER))" "pass-all"
     $(1)_INSTALL_MAKEFLAGS_VALUE := $$$$(MAKEFLAGS)
   endif
 
-  ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "clear"
+  ifeq "$(strip $(value $(1)_MAKE_MAKEFLAGS_FILTER))" "clear"
     $(1)_MAKE_MAKEFLAGS_VALUE :=
-  else ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "pass-j"
+  else ifeq "$(strip $(value $(1)_MAKE_MAKEFLAGS_FILTER))" "pass-j"
     $(1)_MAKE_MAKEFLAGS_VALUE := $$$$(filter --jobserver-fds=%,$$$$(MAKEFLAGS)) $$$$(filter -j,$$$$(MAKEFLAGS))
-  else ifeq "$(value $(1)_MAKE_MAKEFLAGS_FILTER)" "pass-all"
+  else ifeq "$(strip $(value $(1)_MAKE_MAKEFLAGS_FILTER))" "pass-all"
     $(1)_MAKE_MAKEFLAGS_VALUE := $$$$(MAKEFLAGS)
   endif
 
@@ -113,11 +113,11 @@ endef
 
 define autotool_project_template_variables_3
 
-  $(if $(filter undefined,$(origin $(1)_INSTALL_MAKEFLAGS_VALUE)),$(error Invalid $(1)_INSTALL_MAKEFLAGS_FILTER value of "$(value $(1)_INSTALL_MAKEFLAGS_FILTER)"))
-  $(if $(filter pass-all,$(value $(1)_INSTALL_MAKEFLAGS_FILTER)),$(error Variable $(1)_INSTALL_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
+  $(if $(filter undefined,$(origin $(1)_INSTALL_MAKEFLAGS_VALUE)),$(error Invalid $(1)_INSTALL_MAKEFLAGS_FILTER value of "$(strip $(value $(1)_INSTALL_MAKEFLAGS_FILTER))"))
+  $(if $(filter pass-all,$(strip $(value $(1)_INSTALL_MAKEFLAGS_FILTER))),$(error Variable $(1)_INSTALL_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
 
-  $(if $(filter undefined,$(origin $(1)_MAKE_MAKEFLAGS_VALUE)),$(error Invalid $(1)_MAKE_MAKEFLAGS_FILTER value of "$(value $(1)_MAKE_MAKEFLAGS_FILTER)"))
-  $(if $(filter pass-all,$(value $(1)_MAKE_MAKEFLAGS_FILTER)),$(error Variable $(1)_MAKE_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
+  $(if $(filter undefined,$(origin $(1)_MAKE_MAKEFLAGS_VALUE)),$(error Invalid $(1)_MAKE_MAKEFLAGS_FILTER value of "$(strip $(value $(1)_MAKE_MAKEFLAGS_FILTER))"))
+  $(if $(filter pass-all,$(strip $(value $(1)_MAKE_MAKEFLAGS_FILTER))),$(error Variable $(1)_MAKE_MAKEFLAGS_FILTER has a value of "pass-all". This is theoretically allowed but should probably not be used in practice.))
 
 endef
 
