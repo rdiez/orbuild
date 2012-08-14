@@ -21,11 +21,12 @@ shift
 
 pushd "$SIM_DIRNAME" >/dev/null
 
-FIRMWARE_SIZE_IN_BYTES="$(wc -w <"$SIM_FILENAME.hex")"
+# An 'element' can be a byte or a 32-bit word, depending on the memory module used.
+FIRMWARE_SIZE_IN_ELEMENTS="$(wc -w <"$SIM_FILENAME.hex")"
 
 RUN_CMD="vvp"
 RUN_CMD+=" $IVERILOG_EXE_FILENAME"
-RUN_CMD+=" +file_name=$SIM_FILENAME.hex +firmware_size=$FIRMWARE_SIZE_IN_BYTES"
+RUN_CMD+=" +file_name=$SIM_FILENAME.hex +firmware_size=$FIRMWARE_SIZE_IN_ELEMENTS"
 RUN_CMD+=" +max_simulation_time_in_clock_ticks=$MAX_SIMULATION_TIME_IN_CLOCK_TICKS"
 RUN_CMD+=" -lxt2"
 
