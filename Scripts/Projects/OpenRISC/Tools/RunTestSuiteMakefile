@@ -234,16 +234,16 @@ define simulation_files_template_variables_2
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
 
-      # This is the same as for ORTS_MINSOC_IVERILOG.
+      # This is similar to ORTS_MINSOC_IVERILOG.
 
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
-      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 4 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2)-32.hex\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"
 
-      # This is the same as for ORTS_MINSOC_IVERILOG.
+      # This is similar to ORTS_MINSOC_IVERILOG.
 
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
@@ -252,7 +252,7 @@ define simulation_files_template_variables_2
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_VERILATOR"
 
-      # This is the same as for ORTS_MINSOC_IVERILOG.
+      # This is similar to ORTS_MINSOC_IVERILOG.
 
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
@@ -316,7 +316,7 @@ define test_case_simulation_template_variables
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
 
-    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-IcarusVerilog.sh\" \"$(IVERILOG_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
+    $(1)_SIMULATION_RUN_CMD += \"$(TEST_TOOLS_DIR)/SimulatorRunScripts/RunSim-IcarusVerilog.sh\" \"$(IVERILOG_EXE_FILENAME)\" \"$(value $(1)_SIMULATION_FILES_DIR)\" \"$(2)-32\" $(MAX_SIMULATION_TIME_IN_CLOCK_TICKS)
     $(1)_SIMULATION_RUN_CMD +=   2>&1 | tee $(value $(1)_SIMULATION_LOG_FILENAME)
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"

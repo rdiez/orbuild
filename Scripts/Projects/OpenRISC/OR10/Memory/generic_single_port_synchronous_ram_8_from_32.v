@@ -25,6 +25,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+`include "simulator_features.v"
 
 module generic_single_port_synchronous_ram_8_from_32
   #( parameter ADDR_WIDTH = 11,  // Each memory location is 8 bits wide. A width of 11 is then 2^11 = 2 KB of RAM.

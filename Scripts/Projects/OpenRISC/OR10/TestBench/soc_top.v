@@ -75,8 +75,12 @@ module soc_top ( input  wire wb_clk_i,
    );
 
 
-   generic_single_port_synchronous_ram_32 #
-     (
+   `ifdef __ICARUS__
+     generic_single_port_synchronous_ram_32_simulation_only
+   `else
+     generic_single_port_synchronous_ram_32
+   `endif
+     #(
       .ADR_WIDTH( MEMORY_ADR_WIDTH ),
       .MEMORY_FILENAME( MEMORY_FILENAME ),
       .MEMORY_FILESIZE( MEMORY_FILESIZE ),

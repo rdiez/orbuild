@@ -58,6 +58,7 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+`include "simulator_features.v"
 
 module generic_single_port_synchronous_ram_32
   #( parameter ADR_WIDTH = 11,  // Each memory location is 32 bits (4 bytes) wide. A width of 11 is then 2^(11+2) = 8 KB of RAM.
@@ -190,7 +191,12 @@ module generic_single_port_synchronous_ram_32
    // must be done in the lower level. However, that means that there are 4 copies of the file contents,
    // one per submodule, and that makes Icarus Verilog consume great amounts of RAM. That's the reason why
    // there are 2 copies of the memory initialisation code. When using this copy here, we save RAM under
-   // Icarus Verilog. The other copy is in the 'generic_single_port_synchronous_ram_8_from_32' submodule.
+   // Icarus Verilog. The other copy is in the 'generic_single_port_synchronous_ram_8_from_32' submodule,
+   // and it should work with all tools, as it does not need access to any submodule internal signals.
+   //
+   // Later note: in order to further reduce RAM consumption during simulation, I wrote a new memory module
+   // where the memory contents are stored in a single 32-bit register array, see file
+   // "generic_single_port_synchronous_ram_32_simulation_only.v".
   `ifdef CAN_ACCESS_INTERNAL_SIGNALS
 
      reg [255*8-1:0] arg_filename;
