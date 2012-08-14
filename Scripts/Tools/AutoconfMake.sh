@@ -4,7 +4,6 @@
 
 set -o errexit
 source "$(dirname $0)/../ShellModules/StandardShellHeader.sh"
-source "$(dirname $0)/../ShellModules/PrintCommand.sh"
 
 
 if [ $# -ne 4 ]; then
