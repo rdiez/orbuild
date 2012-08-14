@@ -97,6 +97,10 @@ The PDF documentation is built out of the TeX sources.
 
 An optional step is to run the I<< rtl-tests >>.
 
+=item * OR10
+
+The OR10 core (which is distributed together with I<< orbuild >>) can optionally run the Test Suite.
+
 =item * OpenRISC Test Suite
 
 I<< orbuild >> includes a port of most of the simple OpenRISC test cases written in assembly
