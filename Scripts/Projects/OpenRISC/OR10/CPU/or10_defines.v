@@ -19,4 +19,9 @@
 
 `define OR10_IOP_PREFIX  31:26
 
+// Bit ranges for a 16-bit Special Purpose Register (SPR) number.
+`define OR10_SPR_GRP_NUMBER 15:11
+`define OR10_SPR_REG_NUMBER 10:0
+
+
 `endif  // Include this header file only once.

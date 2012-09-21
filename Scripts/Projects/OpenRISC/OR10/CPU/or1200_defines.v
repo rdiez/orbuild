@@ -37,6 +37,7 @@
 `define OR1200_SPRGRP_SYS_EPCR      11'h020  // Exception PC Register.
 `define OR1200_SPRGRP_SYS_EEAR      11'h030  // Exception Effective Address Register.
 `define OR1200_SPRGRP_SYS_ESR       11'h040  // Exception Status Register.
+`define OR1200_SPRGRP_SYS_GPR_BASE  11'd1024 // First GPR.
 
 // SPR Group: Tick Timer
 `define OR1200_TT_OFS_TTMR  0
@@ -46,7 +47,7 @@
 `define OR1200_PIC_OFS_PICMR  0
 `define OR1200_PIC_OFS_PICSR  2
 
-// SPR SR Register bits
+// SPR SR's Register bits
 `define OR1200_SR_SM    0
 `define OR1200_SR_TEE   1
 `define OR1200_SR_IEE   2  // External Interrupt Exception Enabled
@@ -65,7 +66,7 @@
 `define OR1200_SR_FO   15
 `define OR1200_SR_TED  16
 
-// Tick Timer Mode Register (TTMR) bits
+// Tick Timer's Mode Register (TTMR) bits
 `define OR1200_TT_TTMR_TP  27:0  // Timer Period.
 `define OR1200_TT_TTMR_IP  28    // Interrupt Pending.
 `define OR1200_TT_TTMR_IE  29    // Interrupt Enabled.
