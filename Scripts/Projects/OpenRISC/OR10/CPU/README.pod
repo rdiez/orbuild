@@ -101,9 +101,17 @@ This is a weekend hobby project: there is no support, I have no plans and I make
 
 =head2 Alternatives
 
-Other OpenRISC implementations I know of are
-the "traditional" L<< OR1200|http://opencores.org/or1k/Main_Page >> CPU
-and the new L<< AltOr32|http://opencores.org/project,altor32 >> implementation.
+Other OpenRISC implementations I know of are:
+
+=over
+
+=item * The "traditional" L<< OR1200|http://opencores.org/or1k/Main_Page >> CPU.
+
+=item * The L<< AltOr32|http://opencores.org/project,altor32 >> implementation.
+
+=item * Julius Baxter's L<< mor1kx|https://github.com/openrisc/mor1kx >>
+
+=back
 
 =head2 License
 
