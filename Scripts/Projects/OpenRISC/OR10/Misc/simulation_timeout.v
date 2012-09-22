@@ -38,6 +38,7 @@ module simulation_timeout ( input wire clock );
    initial
      begin
         // Force the user to always specify a clock tick limit, so that nobody ever forgets.
+        // Use a value of '0' to disable the simulation timeout limit.
 
         if ( $value$plusargs("max_simulation_time_in_clock_ticks=%d", max_clock_tick_count) == 0 )
           begin
@@ -49,7 +50,7 @@ module simulation_timeout ( input wire clock );
    always @( posedge clock )
      begin
 
-        if ( clock_tick_count > max_clock_tick_count )
+        if ( max_clock_tick_count != 0 && clock_tick_count > max_clock_tick_count )
           begin
              $display( "The number of clock ticks exceeded the maximum of %0d ticks, ending the simulation.", max_clock_tick_count );
              `FINISH_WITH_ERROR_EXIT_CODE;
@@ -61,7 +62,7 @@ module simulation_timeout ( input wire clock );
   `ifdef SUPPORTS_FINAL
      final
        begin
-          if ( clock_tick_count < max_clock_tick_count )
+          if ( max_clock_tick_count == 0 || clock_tick_count < max_clock_tick_count )
             $display( "Simulation elapsed time: %0d clock ticks.", clock_tick_count );
        end
    `endif
