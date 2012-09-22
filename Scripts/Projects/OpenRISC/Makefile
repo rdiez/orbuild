@@ -190,14 +190,37 @@ $(eval $(call git_download_serializer_template,PGAVIN_OR1K_SRC,PGAVIN_OR1K_GCC))
 all_pgavin: $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 
-# ----------- Stefan Kristiansson's LLVM/Clang -----------
+# ----------- R. Diez's Repositories -----------
 
-$(eval $(call git_checkout_template,LLVM,LLVM,git://github.com/skristiansson/llvm-or1k.git))
+$(eval $(call git_checkout_template,JTAG_DPI,JTAG_DPI,git://github.com/rdiez/jtag_dpi.git))
+all: $(JTAG_DPI_CHECKOUT_SENTINEL)
+
+$(eval $(call git_checkout_template,UART_DPI,UART_DPI,git://github.com/rdiez/uart_dpi.git))
+all: $(UART_DPI_CHECKOUT_SENTINEL)
+
+
+# ----------- Stefan Kristiansson's LLVM / Clang / Linux toolchain -----------
+
+SKRISTIANSSON_BASE_GIT_URL := git://github.com/skristiansson
+
+$(eval $(call git_checkout_template,LLVM,LLVM,$(SKRISTIANSSON_BASE_GIT_URL)/llvm-or1k.git))
 all_llvm: $(LLVM_CHECKOUT_SENTINEL)
 
-$(eval $(call git_checkout_template,CLANG,Clang,git://github.com/skristiansson/clang-or1k.git))
-$(eval $(call git_download_serializer_template,LLVM,CLANG))
-all_llvm: $(CLANG_CHECKOUT_SENTINEL)
+$(eval $(call git_checkout_template,LLVM_CLANG,Clang,$(SKRISTIANSSON_BASE_GIT_URL)/clang-or1k.git))
+$(eval $(call git_download_serializer_template,LLVM,LLVM_CLANG))
+all_llvm: $(LLVM_CLANG_CHECKOUT_SENTINEL)
+
+$(eval $(call git_checkout_template,LLVM_OR1K_SRC,LLVM or1k src,$(SKRISTIANSSON_BASE_GIT_URL)/or1k-src.git))
+$(eval $(call git_download_serializer_template,LLVM_CLANG,LLVM_OR1K_SRC))
+all_llvm: $(LLVM_OR1K_SRC_CHECKOUT_SENTINEL)
+
+$(eval $(call git_checkout_template,LLVM_COMPILER_RT_OR1K,LLVM compiler rt or1k,$(SKRISTIANSSON_BASE_GIT_URL)/compiler-rt-or1k.git))
+$(eval $(call git_download_serializer_template,LLVM_OR1K_SRC,LLVM_COMPILER_RT_OR1K))
+all_llvm: $(LLVM_COMPILER_RT_OR1K_CHECKOUT_SENTINEL)
+
+$(eval $(call git_checkout_template,LLVM_UCLIBC,LLVM uClibc,$(SKRISTIANSSON_BASE_GIT_URL)/uClibc-or1k.git))
+$(eval $(call git_download_serializer_template,LLVM_COMPILER_RT_OR1K,LLVM_UCLIBC))
+all_llvm: $(LLVM_UCLIBC_CHECKOUT_SENTINEL)
 
 
 # ----------- Jonas Bonn's repositories -----------
@@ -1160,14 +1183,14 @@ endif
 
 # Create the symbolic link from the LLVM repository to the Clang repository.
 
-LINK_FROM_LVM_TO_CLANG_LINK_NAME   := $(LLVM_CHECKOUT_DIR)/clang
-LINK_FROM_LVM_TO_CLANG_LINK_TARGET := $(CLANG_CHECKOUT_DIR)
+LINK_FROM_LVM_TO_CLANG_LINK_NAME   := $(LLVM_CHECKOUT_DIR)/tools/clang
+LINK_FROM_LVM_TO_CLANG_LINK_TARGET := $(LLVM_CLANG_CHECKOUT_DIR)
 
 LINK_FROM_LVM_TO_CLANG_CMD := if [ -h \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\" ]; then echo \"Deleting previous symbolic link $(LINK_FROM_LVM_TO_CLANG_LINK_NAME)...\" && rm \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\"; fi &&
 LINK_FROM_LVM_TO_CLANG_CMD += echo \"Creating symbolic link from the LLVM repository to the Clang repository...\" && ln --symbolic --no-dereference --force \"$(LINK_FROM_LVM_TO_CLANG_LINK_TARGET)\" \"$(LINK_FROM_LVM_TO_CLANG_LINK_NAME)\"
 LINK_FROM_LVM_TO_CLANG_MAKEFLAGS_FILTER := clear
 $(eval $(call run_and_report_template,LINK_FROM_LVM_TO_CLANG,Symbolic link from LLVM to Clang,$(SHELL) -c "$(LINK_FROM_LVM_TO_CLANG_CMD)"))
-$(LINK_FROM_LVM_TO_CLANG_SENTINEL): $(LLVM_CHECKOUT_SENTINEL) $(CLANG_CHECKOUT_SENTINEL)
+$(LINK_FROM_LVM_TO_CLANG_SENTINEL): $(LLVM_CHECKOUT_SENTINEL) $(LLVM_CLANG_CHECKOUT_SENTINEL)
 
 
 # Build LLVM/Clang.
@@ -1253,7 +1276,7 @@ GIT_GROUP += $(JBONN_UCLIBC_GIT_GROUP)
 GIT_GROUP += $(ICARUS_VERILOG_GIT_GROUP)
 GIT_GROUP += $(VERILATOR_GIT_GROUP)
 GIT_GROUP += $(LLVM_GIT_GROUP)
-GIT_GROUP += $(CLANG_GIT_GROUP)
+GIT_GROUP += $(LLVM_CLANG_GIT_GROUP)
 
 .PHONY: generate_groups_file
 generate_groups_file:
