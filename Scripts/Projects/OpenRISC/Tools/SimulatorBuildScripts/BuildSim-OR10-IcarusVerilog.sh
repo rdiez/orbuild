@@ -38,6 +38,7 @@ declare -a INCLUDE_PATHS=(
     -I $OR10_BASE_DIR/UART
     -y $OR10_BASE_DIR/UART
 
+    -I $OR10_BASE_DIR/JTAG
     -y $OR10_BASE_DIR/JTAG
 
     -I $OR10_BASE_DIR/Misc
