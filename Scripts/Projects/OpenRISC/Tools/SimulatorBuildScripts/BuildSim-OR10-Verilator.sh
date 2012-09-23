@@ -51,8 +51,8 @@ eval "$CMD"
 
 get_make_j_val MAKE_J_VAL
 
-# Debug flags: export OPT="-O0 -Wall -Wwrite-strings -DDEBUG"
-export OPT="-O3 -Wall -Wwrite-strings -DNDEBUG"
+# Debug flags: export OPT="-O0 -g -Wall -Wwrite-strings -DDEBUG"
+export OPT="-O3 -g -Wall -Wwrite-strings -DNDEBUG"
 
 CMD="make -f \"V$TOP_LEVEL_MODULE.mk\" -j \"$MAKE_J_VAL\""
 printf "$CMD\n\n"
