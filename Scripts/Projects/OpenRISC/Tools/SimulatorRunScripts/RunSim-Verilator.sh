@@ -24,6 +24,7 @@ pushd "$SIM_DIRNAME" >/dev/null
 FIRMWARE_SIZE_IN_BYTES="$(wc -w <"$SIM_FILENAME.hex")"
 
 RUN_CMD="\"$(which time)\" -f \"%E\""
+# RUN_CMD+=" valgrind --leak-check=yes --leak-check=full --show-reachable=yes"
 RUN_CMD+=" $VERILATOR_EXE_FILENAME"
 RUN_CMD+=" +file_name=$SIM_FILENAME.hex +firmware_size=$FIRMWARE_SIZE_IN_BYTES"
 RUN_CMD+=" +max_simulation_time_in_clock_ticks=$MAX_SIMULATION_TIME_IN_CLOCK_TICKS"
