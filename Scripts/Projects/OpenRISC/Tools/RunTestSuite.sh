@@ -8,7 +8,7 @@ SANDBOX_DIR="$(readlink -f "$(dirname "$0")/../../../..")"
 source "$SANDBOX_DIR/Scripts/ShellModules/StandardShellHeader.sh"
 source "$SANDBOX_DIR/Scripts/ShellModules/FileUtils.sh"
 
-if [ $# -ne 11 ]; then
+if [ $# -ne 13 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
@@ -25,6 +25,10 @@ shift
 ORPSOCV2_CHECKOUT_DIR="$1"
 shift
 MINSOC_CHECKOUT_DIR="$1"
+shift
+JTAG_DPI_CHECKOUT_DIR="$1"
+shift
+UART_DPI_CHECKOUT_DIR="$1"
 shift
 OPENRISC_BARE_TARGET="$1"
 shift
@@ -74,6 +78,8 @@ make $K_FLAG --no-builtin-variables --warn-undefined-variables \
      MUL_INSTRUCTIONS="$MUL_INSTRUCTIONS" \
      ORPSOCV2_CHECKOUT_DIR="$ORPSOCV2_CHECKOUT_DIR" \
      MINSOC_CHECKOUT_DIR="$MINSOC_CHECKOUT_DIR" \
+     JTAG_DPI_CHECKOUT_DIR="$JTAG_DPI_CHECKOUT_DIR" \
+     UART_DPI_CHECKOUT_DIR="$UART_DPI_CHECKOUT_DIR" \
      OPENRISC_BARE_TARGET="$OPENRISC_BARE_TARGET" \
      ORBUILD_COMPONENT_GROUPS_FILENAME="$ORBUILD_COMPONENT_GROUPS_FILENAME" \
      -f RunTestSuiteMakefile \
