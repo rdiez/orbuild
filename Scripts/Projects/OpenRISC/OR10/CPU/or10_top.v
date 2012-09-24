@@ -599,7 +599,7 @@ module or10_top
    endtask
 
 
-   task automatic schedule_register_write_during_next_fetch_cycle;
+   task automatic schedule_register_write_during_next_cycle;
       input reg [`OR10_REG_NUMBER]        register_number;
       input reg [`OR10_OPERAND_WIDTH-1:0] register_value;
       begin
@@ -720,7 +720,7 @@ module or10_top
               if ( TRACE_ASM_EXECUTION )
                 $display( "0x%08h: l.movhi r%0d, 0x%04h", `OR10_TRACE_PC_VAL, dest_register, immediate_value );
 
-              schedule_register_write_during_next_fetch_cycle( dest_register, { immediate_value, 16'b0 } );
+              schedule_register_write_during_next_cycle( dest_register, { immediate_value, 16'b0 } );
            end
       end
    endtask
@@ -748,7 +748,7 @@ module or10_top
                      immediate_value,
                      result );
 
-         schedule_register_write_during_next_fetch_cycle( dest_register, result );
+         schedule_register_write_during_next_cycle( dest_register, result );
       end
    endtask
 
@@ -775,7 +775,7 @@ module or10_top
                      immediate_value,
                      result );
 
-         schedule_register_write_during_next_fetch_cycle( dest_register, result );
+         schedule_register_write_during_next_cycle( dest_register, result );
       end
    endtask
 
@@ -803,7 +803,7 @@ module or10_top
                      immediate_value,
                      result );
 
-         schedule_register_write_during_next_fetch_cycle( dest_register, result );
+         schedule_register_write_during_next_cycle( dest_register, result );
       end
    endtask
 
@@ -940,7 +940,7 @@ module or10_top
                                src_register,
                                result );
 
-                   schedule_register_write_during_next_fetch_cycle( dest_register, result );
+                   schedule_register_write_during_next_cycle( dest_register, result );
                 end
            end
       end
@@ -1002,7 +1002,7 @@ module or10_top
                                src_register,
                                result );
 
-                   schedule_register_write_during_next_fetch_cycle( dest_register, result );
+                   schedule_register_write_during_next_cycle( dest_register, result );
                 end
            end
       end
@@ -1029,7 +1029,7 @@ module or10_top
            end
          else
            begin
-              schedule_register_write_during_next_fetch_cycle( dest_register,
+              schedule_register_write_during_next_cycle( dest_register,
                                                                cpureg_spr_sr[`OR1200_SR_F]
                                                                  ? gpr_register_value_read_1
                                                                  : gpr_register_value_read_2 );
@@ -1135,7 +1135,7 @@ module or10_top
                    raise_illegal_instruction_exception( can_interrupt );
                 end
               else
-                schedule_register_write_during_next_fetch_cycle( dest_register, result );
+                schedule_register_write_during_next_cycle( dest_register, result );
            end
       end
    endtask
@@ -1287,7 +1287,7 @@ module or10_top
 
               raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
 
-              schedule_register_write_during_next_fetch_cycle( dest_register, result );
+              schedule_register_write_during_next_cycle( dest_register, result );
            end
       end
    endtask
@@ -1354,7 +1354,7 @@ module or10_top
 
               raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
 
-              schedule_register_write_during_next_fetch_cycle( dest_reg, result );
+              schedule_register_write_during_next_cycle( dest_reg, result );
            end
       end
    endtask
@@ -1431,7 +1431,7 @@ module or10_top
                    raise_illegal_instruction_exception( can_interrupt );
                 end
               else
-                schedule_register_write_during_next_fetch_cycle( dest_reg, result );
+                schedule_register_write_during_next_cycle( dest_reg, result );
            end
      end
    endtask
@@ -1502,7 +1502,7 @@ module or10_top
                                  result );
                  endcase
 
-         schedule_register_write_during_next_fetch_cycle( dest_reg, result );
+         schedule_register_write_during_next_cycle( dest_reg, result );
       end
    endtask
 
@@ -1964,7 +1964,7 @@ module or10_top
                 end
               else
                 begin
-                   schedule_register_write_during_next_fetch_cycle( dest_register, val );
+                   schedule_register_write_during_next_cycle( dest_register, val );
                 end
            end
       end
@@ -2172,7 +2172,7 @@ module or10_top
                           `OR10_TRACE_PC_VAL, jump_offset, pc_addr_to_32(jump_target) );
 
               next_pc = jump_target;
-              schedule_register_write_during_next_fetch_cycle( LINK_REGISTER_R9, pc_addr_to_32( cpureg_pc + 1 ) );
+              schedule_register_write_during_next_cycle( LINK_REGISTER_R9, pc_addr_to_32( cpureg_pc + 1 ) );
            end
          else
            begin
@@ -2296,7 +2296,7 @@ module or10_top
                                end
 
                              next_pc = jump_target;
-                             schedule_register_write_during_next_fetch_cycle( LINK_REGISTER_R9, pc_addr_to_32( cpureg_pc + 1 ) );
+                             schedule_register_write_during_next_cycle( LINK_REGISTER_R9, pc_addr_to_32( cpureg_pc + 1 ) );
                           end
                         else
                           begin
@@ -2649,7 +2649,7 @@ module or10_top
              end
          endcase
 
-         schedule_register_write_during_next_fetch_cycle( wishdat_dest_gpr, result );
+         schedule_register_write_during_next_cycle( wishdat_dest_gpr, result );
       end
    endtask
 
@@ -2985,7 +2985,7 @@ module or10_top
 
         // The register file does not write by default, or, if it was writing anything on the last cycle,
         // it should stop it now. Note that this can be overwritten down the line, see
-        // task 'schedule_register_write_during_next_fetch_cycle'.
+        // task 'schedule_register_write_during_next_cycle'.
         stop_register_file_write_operation;
 
         if ( wb_rst_i )
