@@ -43,7 +43,8 @@
 module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
-     parameter TRACE_ASM_EXECUTION = 0
+     parameter TRACE_ASM_EXECUTION = 0,
+     parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
    (
     input                                wb_clk_i,
@@ -84,11 +85,14 @@ module or10_top
 
    localparam LINK_REGISTER_R9 = 9;
 
+   localparam GPR_COUNT = 32;
+
    // For convenience:
    localparam DW = `OR10_OPERAND_WIDTH;
    localparam AW = `OR10_ADDR_WIDTH;
 
    localparam WISHBONE_SEL_WIDTH = 4;
+   localparam GPR_NUMBER_WIDTH = 5;
 
 
    // Exception vectors.
@@ -299,7 +303,7 @@ module or10_top
    reg                          wishdat_write_enable;
    // 2nd group, needed for read cycles only.
    reg [`OR10_REG_NUMBER] wishdat_dest_gpr;      // Only in read cycles.
-   reg [2:0]              wishdat_load_op_type;  // See the LOAD_OP_TYPE_xxx constants.
+   reg [2:0]              wishdat_load_op_type;  // See the WOPW_xxx constants.
 
 
    // On every clock edge, this task is called upfront, in order to setup the default values
@@ -353,10 +357,10 @@ module or10_top
 
    task automatic internal_start_wishbone_data_cycle;
 
-      input reg [AW-1:0]        addr;
-      input reg [DW-1:0]        data;
+      input reg [AW-1:0]                 addr;
+      input reg [DW-1:0]                 data;
       input reg [WISHBONE_SEL_WIDTH-1:0] sel;
-      input reg                 write_enable;
+      input reg                          write_enable;
 
       begin
          internal_start_wishbone_cycle;
@@ -449,7 +453,7 @@ module or10_top
          wishdat_write_enable <= 1;
 
          // For write cycles, the following information is not needed.
-         wishdat_dest_gpr     <= 5'bxxxxx;
+         wishdat_dest_gpr     <= {GPR_NUMBER_WIDTH{1'bx}};
          wishdat_load_op_type <= 3'bxxx;
       end
    endtask
@@ -593,7 +597,7 @@ module or10_top
    task automatic stop_register_file_write_operation;
       begin
          gpr_write_enable_1             <= 0;
-         gpr_register_number_to_write_1 <= 5'bxxxxx;
+         gpr_register_number_to_write_1 <= {GPR_NUMBER_WIDTH{1'bx}};
          gpr_register_value_to_write_1  <= {DW{1'bx}};
       end
    endtask
@@ -1562,10 +1566,10 @@ module or10_top
               shift_amount = wb_dat_i[4:0];
 
               `UNIQUE case ( opcode )
-                        2'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLLI, shift_amount, 5'bxxxxx );
-                        2'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRLI, shift_amount, 5'bxxxxx );
-                        2'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRAI, shift_amount, 5'bxxxxx );
-                        2'h3: execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, 5'bxxxxx );
+                        2'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                        2'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                        2'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRAI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                        2'h3: execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
                       endcase
            end
       end
@@ -1714,8 +1718,8 @@ module or10_top
          gpr1            = wb_dat_i[`OR10_IOP_GPR1];
 
          effective_combined_spr_number = gpr_register_value_read_1 | { 16'b0, immediate_value };
-         effective_spr_group           = effective_combined_spr_number[15:11];
-         effective_spr_number          = effective_combined_spr_number[10:0];
+         effective_spr_group           = effective_combined_spr_number[`OR10_SPR_GRP_NUMBER];
+         effective_spr_number          = effective_combined_spr_number[`OR10_SPR_REG_NUMBER];
 
          if ( TRACE_ASM_EXECUTION )
            $display( "0x%08h: l.mtspr r%0d, r%0d, 0x%04h (effective SPR group %0d, register number %0d, new value 0x%08h)",
@@ -1910,8 +1914,8 @@ module or10_top
          immediate_value  = wb_dat_i[15:0];
 
          effective_combined_spr_number = gpr_register_value_read_1 | { 16'b0, immediate_value };
-         effective_spr_group  = effective_combined_spr_number[15:11];
-         effective_spr_number = effective_combined_spr_number[10:0];
+         effective_spr_group  = effective_combined_spr_number[`OR10_SPR_GRP_NUMBER];
+         effective_spr_number = effective_combined_spr_number[`OR10_SPR_REG_NUMBER];
 
          if ( effective_combined_spr_number[31:16] != 0 )
            begin
@@ -2139,7 +2143,7 @@ module or10_top
       input reg [25:0] jump_offset;
       begin
          // Note that this error only triggers during simulation, the real hardware will ignore it.
-         if ( jump_offset == 0 )
+         if ( jump_offset == 0 && ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE )
            begin
               $display( "A jump or branch instruction with an zero offset was found at address 0x%08h, which jumps to itself causing an infinite loop. While perfectly legal, the instruction opcode is 0x00000000, which normally means the CPU has wandered into an empty memory area due to a software bug.",
                         `OR10_TRACE_PC_VAL );
@@ -2976,7 +2980,7 @@ module or10_top
 
    always @( posedge wb_clk_i )
      begin
-        // $display( "%s< CPU clock tick begin, state %d, reset %d >", TRACE_ASM_INDENT, current_state, wb_rst_i );
+        // $display( "%s< CPU clock tick begin, state %0d, reset %d >", TRACE_ASM_INDENT, current_state, wb_rst_i );
 
         // If the Wishbone signals are not overwritten below,
         // the default is to stop any previous bus transaction.
@@ -2993,7 +2997,7 @@ module or10_top
         else
           step_state_machine();
 
-        // $display( "%s< CPU clock tick end, state %d >", TRACE_ASM_INDENT, current_state );
+        // $display( "%s< CPU clock tick end, state %0d >", TRACE_ASM_INDENT, current_state );
      end
 
 endmodule
