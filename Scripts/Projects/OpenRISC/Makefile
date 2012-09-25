@@ -81,6 +81,10 @@ PGAVIN_LINUX_ARCH             := or1k
 PGAVIN_OPENRISC_BARE_TARGET   := $(PGAVIN_LINUX_ARCH)-elf
 PGAVIN_OPENRISC_LINUX_TARGET  := $(PGAVIN_LINUX_ARCH)-linux
 
+JBONN_LINUX_ARCH              := openrisc
+
+LLVM_LINUX_TARGET             := or1k-linux
+
 # In order for the GCC cross-compiler to automatically pick up the right assembler and so on,
 # it must be configured to use the same bin directory as Binutils.
 BARE_TOOLCHAIN_DIR            := $(ORBUILD_BUILD_DIR)/ToolchainOr32Bare
