@@ -19,6 +19,7 @@ CONFIG_SUB_FILENAME="config.sub"
 # Make sure that config.sub gets regenerated, see below for more information.
 delete_file_if_exists "$CONFIG_SUB_FILENAME"
 
+# Alternatively, see the new script "ReplaceTargetOr32WithOr1k.sh".
 patch_for_or1k_support ()
 {
   # Autoconf (as of version 2.68) does not recognise the architecture name "or1k",
