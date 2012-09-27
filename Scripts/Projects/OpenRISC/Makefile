@@ -83,7 +83,8 @@ PGAVIN_OPENRISC_LINUX_TARGET  := $(PGAVIN_LINUX_ARCH)-linux
 
 JBONN_LINUX_ARCH              := openrisc
 
-LLVM_LINUX_TARGET             := or1k-linux
+LLVM_ARCH                     := or1k
+LLVM_LINUX_TARGET             := $(LLVM_ARCH)-linux
 
 # In order for the GCC cross-compiler to automatically pick up the right assembler and so on,
 # it must be configured to use the same bin directory as Binutils.
@@ -216,15 +217,15 @@ all_llvm: $(LLVM_CLANG_CHECKOUT_SENTINEL)
 
 $(eval $(call git_checkout_template,LLVM_OR1K_SRC,LLVM or1k src,$(SKRISTIANSSON_BASE_GIT_URL)/or1k-src.git))
 $(eval $(call git_download_serializer_template,LLVM_CLANG,LLVM_OR1K_SRC))
-all_llvm: $(LLVM_OR1K_SRC_CHECKOUT_SENTINEL)
+all_llvm_linux: $(LLVM_OR1K_SRC_CHECKOUT_SENTINEL)
 
 $(eval $(call git_checkout_template,LLVM_COMPILER_RT_OR1K,LLVM compiler rt or1k,$(SKRISTIANSSON_BASE_GIT_URL)/compiler-rt-or1k.git))
 $(eval $(call git_download_serializer_template,LLVM_OR1K_SRC,LLVM_COMPILER_RT_OR1K))
-all_llvm: $(LLVM_COMPILER_RT_OR1K_CHECKOUT_SENTINEL)
+all_llvm_linux: $(LLVM_COMPILER_RT_OR1K_CHECKOUT_SENTINEL)
 
 $(eval $(call git_checkout_template,LLVM_UCLIBC,LLVM uClibc,$(SKRISTIANSSON_BASE_GIT_URL)/uClibc-or1k.git))
 $(eval $(call git_download_serializer_template,LLVM_COMPILER_RT_OR1K,LLVM_UCLIBC))
-all_llvm: $(LLVM_UCLIBC_CHECKOUT_SENTINEL)
+all_llvm_linux: $(LLVM_UCLIBC_CHECKOUT_SENTINEL)
 
 
 # ----------- Jonas Bonn's repositories -----------
@@ -786,7 +787,7 @@ $(PGAVIN_LINUX_BINUTILS_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_OR1K_SRC_CHECKOUT_
 
 # ---------- Peter Gavin's Linux Headers ----------
 
-PGAVIN_LINUX_HEADERS_OBJ_DIR := $(ORBUILD_BUILD_DIR)/PGAVIN_LINUX_HEADERS_OBJ
+PGAVIN_LINUX_HEADERS_OBJ_DIR := $(ORBUILD_BUILD_DIR)/obj/PGAVIN_LINUX_HEADERS_OBJ
 PGAVIN_LINUX_HEADERS_INSTALL_DIR := $(PGAVIN_LINUX_TOOLCHAIN_PREFIX)
 
 PGAVIN_LINUX_HEADERS_CMD := if [ -d \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" ]; then echo \"Deleting previous output directory $(PGAVIN_LINUX_HEADERS_OBJ_DIR)...\" && rm -rf \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\"; fi &&
@@ -1202,9 +1203,23 @@ $(LINK_FROM_LVM_TO_CLANG_SENTINEL): $(LLVM_CHECKOUT_SENTINEL) $(LLVM_CLANG_CHECK
 # Build LLVM/Clang.
 
 LLVM_CLANG_EXTRA_GLOBAL_MAKE_ARGS   := $(FASTER_MAKE)
-LLVM_CLANG_EXTRA_CONFIG_ARGS        := CC=gcc CXX=g++ --enable-debug-runtime
+LLVM_TOOLCHAIN_BIN_DIR := $(ORBUILD_BUILD_DIR)/bin/LlvmToolchain
+LLVM_LINUX_SYSROOT := $(LLVM_TOOLCHAIN_BIN_DIR)/$(LLVM_LINUX_TARGET)/sys-root
+
+LLVM_CLANG_EXTRA_CONFIG_ARGS        := CC=gcc CXX=g++
+# When this process has proved stable, replace --enable-debug-runtime with --enable-optimized
+LLVM_CLANG_EXTRA_CONFIG_ARGS        += --enable-debug-runtime
+# Without this switch, all targets are built, which is a waste of compilation time for our purposes.
+LLVM_CLANG_EXTRA_CONFIG_ARGS        += --enable-targets=$(LLVM_ARCH)
+# Switch "--with-sysroot" is needed only for Linux support. The same LLVM toolchain can build
+# "bare metal" executables though:
+#   clang -ccc-host-triple or1k-elf    # Builds bare metal executables.
+#   clang -ccc-host-triple or1k-linux  # Builds Linux executables.
+LLVM_CLANG_EXTRA_CONFIG_ARGS        += --with-sysroot=$(LLVM_LINUX_SYSROOT)
+
 LLVM_CLANG_MAKE_MAKEFLAGS_FILTER    := pass-j
 LLVM_CLANG_INSTALL_MAKEFLAGS_FILTER := clear  # No need to risk it here.
+LLVM_CLANG_BIN_DIR := $(LLVM_TOOLCHAIN_BIN_DIR)
 
 $(eval $(call autotool_project_template,LLVM_CLANG,LLVM/Clang,$(LLVM_CHECKOUT_DIR)))
 
@@ -1216,9 +1231,14 @@ endif
 
 
 # Test LLVM/Clang.
-
-LLVM_CLANG_CHECK_TESTS_CMD := cd $(LLVM_CLANG_OBJ_DIR) && make $(FASTER_MAKE) check && make TESTSUITE=CodeGen/OR1K $(FASTER_MAKE) check
+LLVM_CLANG_CHECK_TESTS_CMD := cd $(LLVM_CLANG_OBJ_DIR) &&
+# The following tests the compiler for the current build computer, not for the target,
+# but the toolchain only supports the or1k target now.
+# LLVM_CLANG_CHECK_TESTS_CMD += make $(FASTER_MAKE) check &&
+LLVM_CLANG_CHECK_TESTS_CMD += make TESTSUITE=CodeGen/OR1K $(FASTER_MAKE) check &&
+LLVM_CLANG_CHECK_TESTS_CMD += make TESTSUITE=MC/OR1K      $(FASTER_MAKE) check
 LLVM_CLANG_CHECK_TESTS_MAKEFLAGS_FILTER := pass-j
+
 $(eval $(call run_makefile_and_report_template,LLVM_CLANG_CHECK_TESTS,LLVM/Clang checks,$(SHELL) -c "$(LLVM_CLANG_CHECK_TESTS_CMD)"))
 
 $(LLVM_CLANG_CHECK_TESTS_SENTINEL): $(LLVM_CLANG_INSTALL_SENTINEL)
