@@ -33,7 +33,8 @@ module soc_top ( input wire         wb_clk_i,
                  output wire        wb_uart_stb_o,
                  input wire         wb_uart_ack_i,
                  input wire         wb_uart_err_i,
-                 input wire         uart_int_i,
+                 input wire         uart_int_i
+               );
 
    parameter MEMORY_FILENAME = "";
    parameter integer MEMORY_FILESIZE = 0;
