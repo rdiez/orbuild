@@ -20,8 +20,20 @@
 `include "or1200_defines.v"
 
 
-module soc_top ( input  wire wb_clk_i,
-                 input wire  wb_rst_i );
+module soc_top ( input wire         wb_clk_i,
+                 input wire         wb_rst_i,
+
+                 // ------ UART Wishbone signals ------
+                 output wire [31:0] wb_uart_dat_o,
+                 input wire [31:0]  wb_uart_dat_i,
+                 output wire [23:0] wb_uart_adr_o,
+                 output wire [3:0]  wb_uart_sel_o,
+                 output wire        wb_uart_we_o,
+                 output wire        wb_uart_cyc_o,
+                 output wire        wb_uart_stb_o,
+                 input wire         wb_uart_ack_i,
+                 input wire         wb_uart_err_i,
+                 input wire         uart_int_i,
 
    parameter MEMORY_FILENAME = "";
    parameter integer MEMORY_FILESIZE = 0;
@@ -52,9 +64,14 @@ module soc_top ( input  wire wb_clk_i,
    wire         wb_ss_err_o;
 
 
-   // For the Test Suite we don't need any external interrupt lines yet.
+   `define APP_INT_UART  2
+   `define APP_INT_REST1  31:3
+   `define APP_INT_REST2  1:0
+
    wire [31:0] pic_ints;
-   assign pic_ints = 0;
+   assign pic_ints[`APP_INT_REST1] = 0;
+   assign pic_ints[`APP_INT_REST2] = 0;
+   assign pic_ints[ `APP_INT_UART ] = uart_int_i;
 
 
    or10_top or10_top_instance (
@@ -118,6 +135,9 @@ module soc_top ( input  wire wb_clk_i,
   `define APP_ADDR_PS2        `APP_ADDR_DEC_W'h94
   `define APP_ADDR_JSP        `APP_ADDR_DEC_W'h9e
   `define APP_ADDR_RES2       `APP_ADDR_DEC_W'h9f
+
+   wire [31:0] wb_uart_adr_o_32;  // The upper byte [31:24] is always `APP_ADDR_UART.
+   assign wb_uart_adr_o = wb_uart_adr_o_32[23:0];
 
 
    // Given that the OR10 CPU has only one Wishbone interface,
@@ -287,16 +307,16 @@ module soc_top ( input  wire wb_clk_i,
     .t4_wb_ack_i    ( 1'b0 ),
     .t4_wb_err_i    ( 1'b1 ),
 
-    // WISHBONE Target 5 (unused)
-    .t5_wb_cyc_o    ( ),
-    .t5_wb_stb_o    ( ),
-    .t5_wb_adr_o    ( ),
-    .t5_wb_sel_o    ( ),
-    .t5_wb_we_o ( ),
-    .t5_wb_dat_o    ( ),
-    .t5_wb_dat_i    ( 32'h0000_0000 ),
-    .t5_wb_ack_i    ( 1'b0 ),
-    .t5_wb_err_i    ( 1'b1 ),
+    // WISHBONE Target 5 (UART)
+    .t5_wb_cyc_o    ( wb_uart_cyc_o ),
+    .t5_wb_stb_o    ( wb_uart_stb_o ),
+    .t5_wb_adr_o    ( wb_uart_adr_o_32 ),
+    .t5_wb_sel_o    ( wb_uart_sel_o ),
+    .t5_wb_we_o     ( wb_uart_we_o  ),
+    .t5_wb_dat_o    ( wb_uart_dat_o ),
+    .t5_wb_dat_i    ( wb_uart_dat_i ),
+    .t5_wb_ack_i    ( wb_uart_ack_i ),
+    .t5_wb_err_i    ( wb_uart_err_i ),
 
     // WISHBONE Target 6 (unused)
     .t6_wb_cyc_o    ( ),
