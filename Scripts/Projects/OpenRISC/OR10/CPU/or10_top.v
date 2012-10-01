@@ -43,6 +43,7 @@
 module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
+     parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
      parameter TRACE_ASM_EXECUTION = 0,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
@@ -1479,8 +1480,14 @@ module or10_top
                    OR10_SHIFTINST_SLL, OR10_SHIFTINST_SLLI:  result = src << shift_amount;
                    OR10_SHIFTINST_SRL, OR10_SHIFTINST_SRLI:  result = src >> shift_amount;
                    OR10_SHIFTINST_SRA, OR10_SHIFTINST_SRAI:  result = $signed(src) >>> shift_amount;
-                   OR10_SHIFTINST_ROR, OR10_SHIFTINST_RORI:  result = (src << ( 6'd32 - {1'b0, shift_amount} )) | (src >> shift_amount );
-
+                   OR10_SHIFTINST_ROR, OR10_SHIFTINST_RORI:
+                     if ( ENABLE_INSTRUCTION_ROR )
+                       result = (src << ( 6'd32 - {1'b0, shift_amount} )) | (src >> shift_amount );
+                     else
+                       begin
+                          `ASSERT_FALSE;
+                          result = {DW{1'bx}};
+                       end
                  endcase
 
          `UNIQUE case ( opcode )
@@ -1531,6 +1538,7 @@ module or10_top
       reg [3:0]              opcode;
       reg [4:0]              shift_amount;
       reg [`OR10_REG_NUMBER] amount_reg;
+      reg                    should_raise_illegal_exception;
 
       begin
          if ( wb_dat_i[10]  != 0 ||
@@ -1543,21 +1551,29 @@ module or10_top
               opcode       = wb_dat_i[9:6];
               amount_reg   = wb_dat_i[`OR10_IOP_GPR2];
               shift_amount = gpr_register_value_read_2[4:0];
+              should_raise_illegal_exception = 0;
 
               case ( opcode )
                 4'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLL, shift_amount, amount_reg );
                 4'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRL, shift_amount, amount_reg );
                 4'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRA, shift_amount, amount_reg );
-                4'h3: execute_shift_instruction_2( OR10_SHIFTINST_ROR, shift_amount, amount_reg );
+                4'h3:
+                  if ( ENABLE_INSTRUCTION_ROR )
+                    execute_shift_instruction_2( OR10_SHIFTINST_ROR, shift_amount, amount_reg );
+                  else
+                    should_raise_illegal_exception = 1;
 
                 default:
-                  begin
-                     if ( TRACE_ASM_EXECUTION )
-                       $display( "0x%08h: Illegal instruction exception raised for unsupported shift/rotate instruction.",
-                                 `OR10_TRACE_PC_VAL );
-                     raise_illegal_instruction_exception( can_interrupt );
-                  end
+                  should_raise_illegal_exception = 1;
               endcase
+
+              if ( should_raise_illegal_exception )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "0x%08h: Illegal instruction exception raised for unsupported shift/rotate instruction.",
+                               `OR10_TRACE_PC_VAL );
+                   raise_illegal_instruction_exception( can_interrupt );
+                end
            end
       end
    endtask
@@ -1569,6 +1585,7 @@ module or10_top
 
       reg [1:0] opcode;
       reg [4:0] shift_amount;
+      reg       should_raise_illegal_exception;
 
       begin
          if ( wb_dat_i[15:8] != 0 )
@@ -1577,13 +1594,25 @@ module or10_top
            begin
               opcode       = wb_dat_i[7:6];
               shift_amount = wb_dat_i[4:0];
+              should_raise_illegal_exception = 0;
 
               `UNIQUE case ( opcode )
                         2'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
                         2'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
                         2'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRAI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
-                        2'h3: execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                        2'h3: if ( ENABLE_INSTRUCTION_ROR )
+                                execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                              else
+                                should_raise_illegal_exception = 1;
                       endcase
+
+              if ( should_raise_illegal_exception )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "0x%08h: Illegal instruction exception raised for unsupported immediate shift/rotate instruction.",
+                               `OR10_TRACE_PC_VAL );
+                   raise_illegal_instruction_exception( can_interrupt );
+                end
            end
       end
    endtask
