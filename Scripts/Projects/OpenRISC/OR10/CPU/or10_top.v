@@ -44,6 +44,7 @@ module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
+     parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
      parameter TRACE_ASM_EXECUTION = 0,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
@@ -1624,9 +1625,11 @@ module or10_top
       inout reg          can_interrupt;
 
       reg [3:0] opcode;
+      reg       should_raise_illegal_exception;
 
       begin
          opcode = wb_dat_i[3:0];
+         should_raise_illegal_exception = 0;
 
          case ( opcode )
            4'h0: execute_add_instruction( OR10_ADDINST_ADD , next_sr, can_interrupt );
@@ -1637,17 +1640,22 @@ module or10_top
            // 4'h9:  l.div not supported yet.
            4'hc: execute_ext_b_h_instruction( can_interrupt );
            4'hd: execute_ext_w_instruction( can_interrupt );
-           4'he: execute_cmov( can_interrupt );
+           4'he: if ( ENABLE_INSTRUCTION_CMOV )
+                   execute_cmov( can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
            4'hf: execute_ff1_fl1( can_interrupt );
 
-           default:
-             begin
-                if ( TRACE_ASM_EXECUTION )
-                  $display( "0x%08h: Illegal instruction exception raised for unsupported instruction with a 6-bit opcode prefix of 0x%02h.",
-                            `OR10_TRACE_PC_VAL, OR10_INST_PREFIX_38 );
-                raise_illegal_instruction_exception( can_interrupt );
-             end
+           default: should_raise_illegal_exception = 1;
          endcase
+
+         if ( should_raise_illegal_exception )
+           begin
+              if ( TRACE_ASM_EXECUTION )
+                $display( "0x%08h: Illegal instruction exception raised for unsupported instruction with a 6-bit opcode prefix of 0x%02h.",
+                          `OR10_TRACE_PC_VAL, OR10_INST_PREFIX_38 );
+              raise_illegal_instruction_exception( can_interrupt );
+           end
       end
    endtask
 
