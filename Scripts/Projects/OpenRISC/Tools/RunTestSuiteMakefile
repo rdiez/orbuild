@@ -13,6 +13,8 @@ include $(ORBUILD_SANDBOX)/Scripts/MakeModules/RunAndReportTemplates.mk
 TEST_TOOLS_DIR := $(ORBUILD_PROJECT_DIR)/Tools
 TEST_SUITE_DIR := $(ORBUILD_PROJECT_DIR)/TestSuite
 
+BIN2HEX_TOOL := $(ORBUILD_PROJECT_DIR)/MinsocTools/bin2hex
+
 MAX_SIMULATION_TIME_IN_CLOCK_TICKS := 200000
 
 # Set this variable to --trace in order to turn on or1ksim's tracing.
@@ -230,7 +232,7 @@ define simulation_files_template_variables_2
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
-      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(BIN2HEX_TOOL)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_IVERILOG"
 
@@ -239,7 +241,7 @@ define simulation_files_template_variables_2
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
-      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 4 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2)-32.hex\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(BIN2HEX_TOOL)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 4 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2)-32.hex\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_ISIM"
 
@@ -248,7 +250,7 @@ define simulation_files_template_variables_2
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
-      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(BIN2HEX_TOOL)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
 
   else ifeq "$(TEST_TYPE)" "ORTS_OR10_VERILATOR"
 
@@ -257,7 +259,7 @@ define simulation_files_template_variables_2
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .elf file to .bin file...\"
       $(1)_SIMULATION_FILES_CMD += && $(OPENRISC_BARE_TARGET)-objcopy  --output-target=binary  \"$(ORTS_EXES_BIN_DIR)/bin/$(2)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\"
       $(1)_SIMULATION_FILES_CMD += && echo \"Converting .bin file to .hex file...\"
-      $(1)_SIMULATION_FILES_CMD += && \"$(MINSOC_CHECKOUT_DIR)/sw/utils/bin2hex\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
+      $(1)_SIMULATION_FILES_CMD += && \"$(BIN2HEX_TOOL)\" \"$(value $(1)_SIMULATION_FILES_DIR)/$(2).bin\" 1 -size_word >\"$(value $(1)_SIMULATION_FILES_DIR)/$(2).hex\"
 
   else
 

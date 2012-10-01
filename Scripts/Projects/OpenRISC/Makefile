@@ -546,18 +546,21 @@ endif
 $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL)
 
 
-# ----------- MinSoC -----------
+# ----------- MinSoC's tools -----------
 
-# Build some of MinSoC's utils.
+# Build some of MinSoC's utils. I used to build them from the MinSoC Repository, but after
+# several downtimes with OpenCores' Subversion server, I decided to make a copy
+# and store them in orbuild's repository.
 
 # Note that this step slightly pollutes the source repository it is run upon.
-MINSOC_SW_UTILS_CMD := cd $(MINSOC_CHECKOUT_DIR)/sw/utils && make $(FASTER_MAKE) bin2hex
+MINSOC_TOOLS_DIR := $(ORBUILD_PROJECT_DIR)/MinsocTools
+MINSOC_SW_UTILS_CMD := cd \"$(MINSOC_TOOLS_DIR)\" && make $(FASTER_MAKE) bin2hex
 MINSOC_SW_UTILS_CMD_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,MINSOC_SW_UTILS_CMD,MinSoC sw utils,$(SHELL) -c "$(value MINSOC_SW_UTILS_CMD)"))
-$(MINSOC_SW_UTILS_CMD_SENTINEL): $(MINSOC_CHECKOUT_SENTINEL)
+# Not needed any more:  $(MINSOC_SW_UTILS_CMD_SENTINEL): $(MINSOC_CHECKOUT_SENTINEL)
 
 
-# Test MinSoC's automatic installation script.
+# ----------- MinSoC's automatic installation script -----------
 
 MINSOC_INSTALLATION_SCRIPT_DIR := $(ORBUILD_BUILD_DIR)/MINSOC_INSTALLATION_SCRIPT
 MINSOC_INSTALLATION_SCRIPT_CMD := $(ORBUILD_PROJECT_DIR)/Tools/MinsocInstallationTest.sh $(MINSOC_CHECKOUT_DIR) $(MINSOC_INSTALLATION_SCRIPT_DIR)
