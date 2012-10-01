@@ -108,10 +108,23 @@ module or10_top
 
    // State machine definitions.
    //
-   // This should be an enumerated type, but "typedef enum"
+   // The STATE_xxx constants should be an enumerated type, but "typedef enum"
    // is not supported by Icarus Verilog (as of July 2012).
+
    localparam STATE_RESET                           = 0;
-   localparam STATE_WAITING_FOR_INSTRUCTION_FETCH   = 1;  // GRP writes on the Register File from last instruction (if any) happen in this phase too.
+
+   // The CPU spends most of its time in this state. The sequence is as follows:
+   //  1) The CPU issues a Wishbone fetch (read) request and enters STATE_WAITING_FOR_INSTRUCTION_FETCH.
+   //  2) On the next clock posedge, the Wishbone slave decodes and executes the request.
+   //     The CPU reads wb_ack_i == 0 and therefore does nothing (it waits).
+   //  3) On the next clock posedge, the CPU reads the Wishbone results, executes the instruction
+   //     and issues the next Wishbone fetch. Meantime, the Wishbone slave sets wb_ack_i = 0. Goto step (2).
+   // Therefore, it takes at least 2 clock cycles in STATE_WAITING_FOR_INSTRUCTION_FETCH to execute an instruction.
+   // Note that GPR writes on the Register File from last instruction (if any) usually happen in the first
+   // STATE_WAITING_FOR_INSTRUCTION_FETCH clock cycle too.
+   localparam STATE_WAITING_FOR_INSTRUCTION_FETCH   = 1;
+
+   // If an instruction needs to access memory, it needs 2 extra cycles in this state.
    localparam STATE_WAITING_FOR_WISHBONE_DATA_CYCLE = 2;
 
    reg [1:0]  current_state;
