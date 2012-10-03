@@ -68,6 +68,7 @@ module or10_top
 
    localparam TRACE_ASM_INDENT = "            ";  // Indent the extra information and error lines by the number of characters taken by the address field.
 
+   localparam ENABLE_GPR_ACCESS_OVER_SPR = 0;
 
    // These NOP_xxx definitions match the ones in file spr-defs.h in both ORPSoCV2 and or1ksim.
    localparam NOP_NOP            = 16'h0000;   // Normal nop instruction
@@ -129,7 +130,7 @@ module or10_top
    // If an instruction needs to access memory, it needs 2 extra cycles in this state.
    localparam STATE_WAITING_FOR_WISHBONE_DATA_CYCLE = 2;
 
-   reg [1:0]  current_state;
+   reg [1:0]  current_state;  // See the STATE_xxx constants.
 
 
    // Top-level instructions constants.
@@ -211,12 +212,18 @@ module or10_top
      begin
         // Register File Port 1 (read/write).
         if ( gpr_write_enable_1 )
-          gpr_register_number_to_read_or_write_1 = gpr_register_number_to_write_1;
+          begin
+             gpr_register_number_to_read_or_write_1 = gpr_register_number_to_write_1;
+          end
         else if ( `IS_SIMULATION && wb_dat_i[ `OR10_IOP_PREFIX ] == OR10_INST_NOP )
-          // During simulation, the l.nop instruction reads from R3.
-          gpr_register_number_to_read_or_write_1 = NOP_REG_R3;
+          begin
+             // During simulation, the l.nop instruction reads from R3.
+             gpr_register_number_to_read_or_write_1 = NOP_REG_R3;
+          end
         else
-          gpr_register_number_to_read_or_write_1 = wb_dat_i[ `OR10_IOP_GPR1 ];
+          begin
+             gpr_register_number_to_read_or_write_1 = wb_dat_i[ `OR10_IOP_GPR1 ];
+          end
 
         // Register File Port 1 (read only).
         gpr_register_number_to_read_2 = wb_dat_i[ `OR10_IOP_GPR2 ];
@@ -856,7 +863,6 @@ module or10_top
                   raise_exception_without_eear( RANGE_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
                 else
                   begin
-
                      trap_raised = 0 != ( cpureg_spr_sr[ immediate_value[4:0] ] );
 
                      if ( TRACE_ASM_EXECUTION )
@@ -1665,16 +1671,26 @@ module or10_top
       input reg [10:0]   effective_spr_number;
       input reg [DW-1:0] val;
       output reg         is_invalid_spr_number;
+      output reg         should_raise_alignment_exception;
 
+      inout [`OR10_PC_ADDR] next_pc;
       inout reg [DW-1:0] next_sr;
-      inout reg          can_interrupt;
 
       begin
          is_invalid_spr_number = 0;
+         should_raise_alignment_exception = 0;
 
          case ( effective_spr_number )
 
            `OR1200_SPRGRP_SYS_SR:   next_sr = val;
+
+           `OR1200_SPRGRP_SYS_NPC:
+             begin
+                if ( is_addr_aligned( val ) )
+                  next_pc = addr_32_to_pc( val );  // Only debuggers should modify the PC this way.
+                else
+                  should_raise_alignment_exception = 1;
+             end
 
            `OR1200_SPRGRP_SYS_EPCR:
              begin
@@ -1683,14 +1699,25 @@ module or10_top
                 if ( is_addr_aligned( val ) )
                   cpureg_spr_epcr <= addr_32_to_pc( val );
                 else
-                  raise_exception_with_eear( ALIGNMENT_VECTOR_ADDR, cpureg_pc, val, cpureg_spr_sr, can_interrupt );
+                  should_raise_alignment_exception = 1;
              end
 
            `OR1200_SPRGRP_SYS_EEAR: cpureg_spr_eear <= val;
            `OR1200_SPRGRP_SYS_ESR:  cpureg_spr_esr  <= val;
 
            default:
-             is_invalid_spr_number = 1;
+             if ( ENABLE_GPR_ACCESS_OVER_SPR &&
+                  effective_spr_number >= `OR1200_SPRGRP_SYS_GPR_BASE &&
+                  effective_spr_number <  `OR1200_SPRGRP_SYS_GPR_BASE + GPR_COUNT )
+               begin
+                  // The Debug Interface uses this code path in order to write to the GPRs,
+                  // but note that standard software running on the CPU can do it this way too.
+                  schedule_register_write_during_next_cycle( effective_spr_number[4:0], val );
+               end
+             else
+               begin
+                  is_invalid_spr_number = 1;
+               end
          endcase
       end
    endtask
@@ -1748,10 +1775,39 @@ module or10_top
    endtask
 
 
+   task automatic write_cpu_spr;
+
+      input reg [4:0]     effective_spr_group;
+      input reg [10:0]    effective_spr_number;
+      input reg [DW-1:0]  val;
+      output reg          is_invalid_spr_group;
+      output reg          is_invalid_spr_number;
+      output reg          should_raise_alignment_exception;
+      inout [`OR10_PC_ADDR] next_pc;
+      inout  reg [DW-1:0] next_sr;
+
+      begin
+         is_invalid_spr_group  = 0;
+         is_invalid_spr_number = 0;
+         should_raise_alignment_exception = 0;
+
+         case ( effective_spr_group )
+           `OR1200_SPR_GROUP_SYS: write_spr_sys( effective_spr_number, val, is_invalid_spr_number, should_raise_alignment_exception, next_pc, next_sr );
+           `OR1200_SPR_GROUP_TT:  write_spr_tt ( effective_spr_number, val, is_invalid_spr_number );
+           `OR1200_SPR_GROUP_PIC: write_spr_pic( effective_spr_number, val, is_invalid_spr_number );
+
+           default:
+             is_invalid_spr_group = 1;
+         endcase
+      end
+   endtask
+
+
    task automatic execute_mtspr;
 
+      inout [`OR10_PC_ADDR] next_pc;
       inout reg [DW-1:0] next_sr;
-      inout reg can_interrupt;
+      inout reg          can_interrupt;
 
       reg [`OR10_REG_NUMBER]  src_register;
       reg [`OR10_REG_NUMBER]  gpr1;  // Used here for logging purposes only.
@@ -1761,6 +1817,7 @@ module or10_top
       reg [10:0]              effective_spr_number;
       reg                     is_invalid_spr_group;
       reg                     is_invalid_spr_number;
+      reg                     should_raise_alignment_exception;
 
       begin
          immediate_value = { wb_dat_i[25:21], wb_dat_i[10:0] };
@@ -1790,17 +1847,14 @@ module or10_top
            end
          else
            begin
-              is_invalid_spr_group  = 0;
-              is_invalid_spr_number = 0;
-
-              case ( effective_spr_group )
-                `OR1200_SPR_GROUP_SYS: write_spr_sys( effective_spr_number, gpr_register_value_read_2, is_invalid_spr_number, next_sr, can_interrupt );
-                `OR1200_SPR_GROUP_TT:  write_spr_tt ( effective_spr_number, gpr_register_value_read_2, is_invalid_spr_number );
-                `OR1200_SPR_GROUP_PIC: write_spr_pic( effective_spr_number, gpr_register_value_read_2, is_invalid_spr_number );
-
-                default:
-                  is_invalid_spr_group = 1;
-              endcase
+              write_cpu_spr( effective_spr_group,
+                             effective_spr_number,
+                             gpr_register_value_read_2,
+                             is_invalid_spr_group,
+                             is_invalid_spr_number,
+                             should_raise_alignment_exception,
+                             next_pc,
+                             next_sr );
 
               if ( is_invalid_spr_group )
                 begin
@@ -1815,6 +1869,10 @@ module or10_top
                      $display( "%sError decoding instruction l.mtspr for group %0d with new value 0x%08h: wrong SPR number %0d.",
                                TRACE_ASM_INDENT, effective_spr_group, gpr_register_value_read_2, effective_spr_number );
                    raise_exception_without_eear( RANGE_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
+                end
+              else if ( should_raise_alignment_exception )
+                begin
+                   raise_exception_with_eear( ALIGNMENT_VECTOR_ADDR, cpureg_pc, gpr_register_value_read_2, cpureg_spr_sr, can_interrupt );
                 end
            end
       end
@@ -1888,8 +1946,20 @@ module or10_top
 
            default:
              begin
-                should_raise_range_exception = 1;
-                val = {DW{1'bx}};
+                if ( ENABLE_GPR_ACCESS_OVER_SPR &&
+                     effective_spr_number >= `OR1200_SPRGRP_SYS_GPR_BASE &&
+                     effective_spr_number <  `OR1200_SPRGRP_SYS_GPR_BASE + GPR_COUNT )
+                  begin
+                     // The Debug Interface uses this code path in order to read the GPRs,
+                     // but note that standard software running on the CPU can do it this way too.
+                     val = gpr_register_value_read_1;
+                  end
+                else
+                  begin
+                     should_raise_range_exception = 1;
+                     val = {DW{1'bx}};
+                     `ASSERT_FALSE;
+                  end
              end
          endcase
       end
@@ -1944,6 +2014,31 @@ module or10_top
    endtask
 
 
+   task automatic read_cpu_spr;
+
+      input reg [4:0]     effective_spr_group;
+      input reg [10:0]    effective_spr_number;
+      output reg [DW-1:0] val;
+      output reg          is_invalid_spr_group;
+      output reg          should_raise_range_exception;
+
+      begin
+         is_invalid_spr_group = 0;
+         should_raise_range_exception = 0;
+         val = {DW{1'bx}};
+
+         case ( effective_spr_group )
+           `OR1200_SPR_GROUP_SYS: read_spr_sys( effective_spr_number, val, should_raise_range_exception );
+           `OR1200_SPR_GROUP_PIC: read_spr_pic( effective_spr_number, val, should_raise_range_exception );
+           `OR1200_SPR_GROUP_TT:  read_spr_tt ( effective_spr_number, val, should_raise_range_exception );
+
+           default:
+             is_invalid_spr_group = 1;
+         endcase
+      end
+   endtask
+
+
    task automatic execute_mfspr;
 
       inout reg can_interrupt;
@@ -1976,19 +2071,9 @@ module or10_top
            end
          else
            begin
-              is_invalid_spr_group = 0;
-              should_raise_range_exception = 0;
-              val = 0;  // In case of exception, the $display call below shows a value read of 0, which is not quite right,
-                        // but it does not matter that much.
-
-              case ( effective_spr_group )
-                `OR1200_SPR_GROUP_SYS: read_spr_sys( effective_spr_number, val, should_raise_range_exception );
-                `OR1200_SPR_GROUP_PIC: read_spr_pic( effective_spr_number, val, should_raise_range_exception );
-                `OR1200_SPR_GROUP_TT:  read_spr_tt ( effective_spr_number, val, should_raise_range_exception );
-
-                default:
-                  is_invalid_spr_group = 1;
-              endcase
+              // Note that, inn case of exception, the $display call below shows some random value read, which is not quite right,
+              // but it does not matter that much.
+              read_cpu_spr( effective_spr_group, effective_spr_number, val, is_invalid_spr_group, should_raise_range_exception );
 
               if ( TRACE_ASM_EXECUTION )
                 $display( "0x%08h: l.mfspr r%0d, r%0d, 0x%04h (effective SPR group %0d, register number %0d, value read 0x%08h)",
@@ -2715,9 +2800,12 @@ module or10_top
       inout                 can_interrupt;
 
       reg [5:0] instruction_opcode_prefix;
+      reg       should_raise_illegal_exception;
 
       begin
          instruction_opcode_prefix = wb_dat_i[`OR10_IOP_PREFIX];
+
+         should_raise_illegal_exception = 0;
 
          case ( instruction_opcode_prefix )
            OR10_INST_BF:    execute_bf( 0, next_pc );
@@ -2737,7 +2825,7 @@ module or10_top
            OR10_INST_LHS:   execute_lhz_lhs( 0, can_interrupt );
            OR10_INST_LWZ:   execute_lwz_lws( 1, can_interrupt );
            OR10_INST_LWS:   execute_lwz_lws( 0, can_interrupt );
-           OR10_INST_MTSPR: execute_mtspr( next_sr, can_interrupt );
+           OR10_INST_MTSPR: execute_mtspr( next_pc, next_sr, can_interrupt );
            OR10_INST_MFSPR: execute_mfspr( can_interrupt );
            OR10_INST_RFE:   execute_rfe( next_pc, next_sr );
            OR10_INST_NOP:       execute_nop( can_interrupt );
@@ -2750,14 +2838,16 @@ module or10_top
            OR10_INST_SHIFT_I:   execute_shift_instruction_immediate( can_interrupt );
            OR10_INST_SFXX, OR10_INST_SFXXI: execute_sf( next_sr, can_interrupt );
 
-           default:
-             begin
-                if ( TRACE_ASM_EXECUTION )
-                  $display( "0x%08h: Illegal instruction exception raised for 6-bit instruction_opcode_prefix=0x%02h.",
-                            `OR10_TRACE_PC_VAL, instruction_opcode_prefix );
-                raise_illegal_instruction_exception( can_interrupt );
-             end
+           default: should_raise_illegal_exception = 1;
          endcase
+
+         if ( should_raise_illegal_exception )
+           begin
+              if ( TRACE_ASM_EXECUTION )
+                $display( "0x%08h: Illegal instruction exception raised for 6-bit instruction_opcode_prefix=0x%02h.",
+                          `OR10_TRACE_PC_VAL, instruction_opcode_prefix );
+              raise_illegal_instruction_exception( can_interrupt );
+           end
       end
    endtask
 
