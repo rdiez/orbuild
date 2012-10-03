@@ -1306,7 +1306,6 @@ module or10_top
                    endcase
                 end
 
-              next_sr = cpureg_spr_sr;
               next_sr[ `OR1200_SR_CY ] = carry;
               next_sr[ `OR1200_SR_OV ] = overflow;
 
@@ -1373,7 +1372,6 @@ module or10_top
                           carry,
                           overflow );
 
-              next_sr = cpureg_spr_sr;
               next_sr[ `OR1200_SR_CY ] = carry;
               next_sr[ `OR1200_SR_OV ] = overflow;
 
