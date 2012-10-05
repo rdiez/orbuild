@@ -19,7 +19,7 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =head1 About the OR10 CPU
 
-OR10 is an open-source 32-bit CPU for embedded systems written in Verilog.
+OR10 is an open-source, hacker-friendly, 32-bit CPU for embedded systems written in Verilog.
 
 =head2 Features
 
@@ -44,7 +44,7 @@ See the Verilog source code for the Wishbone datasheet.
 It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
 and 4 cycles for instructions which access memory.
 
-=item * Designed mainly for FPGAs. Tested only on a smallish Xilinx Spartan-6.
+=item * Designed mainly for FPGAs. Tested only on a smallish Xilinx Spartan-6 FPGA (XC6SLX16).
 
 =item * No "supervision mode", the software runs always in "super-user" mode.
 
@@ -54,9 +54,9 @@ and 4 cycles for instructions which access memory.
 
 However, all other ORBIS32 instructions are available.
 
-=item * No debugging support yet.
+=item * Debug Unit for JTAG debugging (see below for more information).
 
-=item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT.
+=item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT (simulation only).
 
 =item * Implements the Tick Timer and the PIC (all interrupts are level-triggered and maskable).
 
@@ -70,7 +70,9 @@ to run the tests against several platforms.
 
 The CPU can also start on FPGA designs with the reset signal optimised away (hard-wired to '1').
 
-=item * Simulates with Verilator (no SystemC libraries required), Icarus Verilog and Xilinx ISim.
+=item * Fast simulation with Verilator (no SystemC libraries required).
+
+Simulates with Icarus Verilog and Xilinx ISim too.
 
 =item * Lints cleanly with Icarus Verilog and with Verilator. Not a single warning.
 
@@ -87,7 +89,28 @@ For example, if a reserved bit in an instruction opcode is not zero, you'll get 
 
 =head2 How to make OR10 smaller and save FPGA resources
 
+Turn off all the features you don't need, look at I<< or10_top >>'s parameters.
+
 TODO
+
+=head2 Debug Unit and JTAG interface
+
+The Debug Unit supports asynchronous stalling, single-stepping and software breakpoints (with the l.trap instruction), but no hardware breakpoints yet.
+
+OR10's Debug Unit bus and protocol are not compatible with the original OR1200 implementation,
+so you need to use the supplied I<< GdbToJtagBridge >>. However, you can use
+the same GDB (or32-elf-gdb) that I<< orbuild >> builds for the "bare metal" OR32 toolchain.
+
+You'll need to instantiate a I<< tap_or10 >> and either a I<< tap_top >> or a Xilinx-specific BSCAN component like BSCAN_SPARTAN6. See
+I<< GdbToJtagBridge >>'s help for a list of supported JTAG cables.
+
+There are clock-domain-crossing components that synchronise the JTAG and the CPU clocks both ways. While not particularly fast,
+it should work with any JTAG clock frequency your FPGA can process.
+
+Note that I<< GdbToJtagBridge >> clears the "transfer control to JTAG on debug trap" bits on the CPU as part of the disconnect procedure.
+Therefore, if you do not disconnect from the debugged system gracefully (for example, if you just pull the JTAG cable),
+then the CPU will hang forever at the next breakpoint.
+
 
 =head2 About the OR10 name
 
