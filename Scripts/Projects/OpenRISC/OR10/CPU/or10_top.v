@@ -43,7 +43,10 @@
 module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
-     parameter ENABLE_DEBUG_UNIT   = 0,
+
+     parameter ENABLE_DEBUG_UNIT      = 1,
+     parameter ENABLE_TICK_TIMER_UNIT = 1,
+     parameter ENABLE_PIC_UNIT        = 1,
 
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
@@ -1966,8 +1969,14 @@ module or10_top
 
          case ( effective_spr_group )
            `OR1200_SPR_GROUP_SYS: write_spr_sys( effective_spr_number, val, is_invalid_spr_number, should_raise_alignment_exception, next_pc, next_sr );
-           `OR1200_SPR_GROUP_TT:  write_spr_tt ( effective_spr_number, val, is_invalid_spr_number );
-           `OR1200_SPR_GROUP_PIC: write_spr_pic( effective_spr_number, val, is_invalid_spr_number );
+           `OR1200_SPR_GROUP_TT:  if ( ENABLE_TICK_TIMER_UNIT )
+                                    write_spr_tt( effective_spr_number, val, is_invalid_spr_number );
+                                  else
+                                    is_invalid_spr_group = 1;
+           `OR1200_SPR_GROUP_PIC: if ( ENABLE_PIC_UNIT )
+                                    write_spr_pic( effective_spr_number, val, is_invalid_spr_number );
+                                  else
+                                    is_invalid_spr_group = 1;
            `OR1200_SPR_GROUP_DU:  write_spr_du ( effective_spr_number, val, is_invalid_spr_number, should_raise_alignment_exception );
 
            default:
@@ -2077,7 +2086,7 @@ module or10_top
                                            1'b0, // No Floating Point Unit. This bit is not actually defined in the spec,
                                            // and it seems duplicated (see the floating point flag in OR1200_SPRGRP_SYS_CPUCFGR).
 
-                                           1'b1, // Tick Timer Unit.
+                                           ENABLE_TICK_TIMER_UNIT ? 1'b1 : 1'b0, // Tick Timer Unit.
 
                                            1'b1, // PIC (Programmable Interrupt Controller) Unit.
 
@@ -2085,9 +2094,9 @@ module or10_top
 
                                            1'b0, // No Performance Counters Unit.
 
-                                           1'b0, // No Debug Unit.
+                                           ENABLE_DEBUG_UNIT ? 1'b1 : 1'b0, // No Debug Unit.
 
-                                           1'b0, // No MAC.
+                                           1'b0, // No MAC instructions.
 
                                            1'b0, // No Instruction MMU.
                                            1'b0, // No Data MMU.
@@ -2254,8 +2263,14 @@ module or10_top
 
          case ( effective_spr_group )
            `OR1200_SPR_GROUP_SYS: read_spr_sys( effective_spr_number, val, should_raise_range_exception );
-           `OR1200_SPR_GROUP_PIC: read_spr_pic( effective_spr_number, val, should_raise_range_exception );
-           `OR1200_SPR_GROUP_TT:  read_spr_tt ( effective_spr_number, val, should_raise_range_exception );
+           `OR1200_SPR_GROUP_PIC: if ( ENABLE_PIC_UNIT )
+                                    read_spr_pic( effective_spr_number, val, should_raise_range_exception );
+                                  else
+                                    is_invalid_spr_group = 1;
+           `OR1200_SPR_GROUP_TT:  if ( ENABLE_TICK_TIMER_UNIT )
+                                    read_spr_tt( effective_spr_number, val, should_raise_range_exception );
+                                  else
+                                    is_invalid_spr_group = 1;
            `OR1200_SPR_GROUP_DU:  read_spr_du ( effective_spr_number, val, should_raise_range_exception );
 
            default:
@@ -3149,7 +3164,8 @@ module or10_top
 
          // Note that the order of the following 'if' statements determine the interrupt priority.
 
-         if ( cpureg_spr_sr[ `OR1200_SR_IEE ] &&
+         if ( ENABLE_PIC_UNIT &&
+              cpureg_spr_sr[ `OR1200_SR_IEE ] &&
               0 != ( pic_ints_i & cpureg_spr_picmr ) )
            begin
               raise_exception_without_eear( EXTERNAL_INTERRUPT_VECTOR_ADDR, next_pc, next_sr, can_interrupt_ignored );
@@ -3596,7 +3612,7 @@ module or10_top
       begin
          // Do not update the Tick Timer if the CPU is stalled. That helps
          // when debugging software which makes use of the Tick Timer.
-         if ( current_state != STATE_RESET && ( !ENABLE_DEBUG_UNIT || current_state != STATE_DEBUG_STALLED ) )
+         if ( ENABLE_TICK_TIMER_UNIT && current_state != STATE_RESET && ( !ENABLE_DEBUG_UNIT || current_state != STATE_DEBUG_STALLED ) )
            update_tick_timer;
 
          case ( current_state )
