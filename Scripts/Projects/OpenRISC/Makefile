@@ -973,6 +973,23 @@ $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables
 # Reconfigure, rebuild and rerun:
 #   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Autogen.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
 
+
+# Build the "GDB to JTAG Bridge" as a standard autoconf project.
+
+OR10_GDB_JTAG_BRIDGE_EXTRA_CONFIG_ARGS := --enable-debug=yes --enable-jsp-server=no  # When development has settled down, turn off the debug build here.
+OR10_GDB_JTAG_BRIDGE_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
+OR10_GDB_JTAG_BRIDGE_MAKE_MAKEFLAGS_FILTER  := pass-j
+$(eval $(call autotool_project_template,OR10_GDB_JTAG_BRIDGE,OR10 GDB to JTAG Bridge,$(ORBUILD_PROJECT_DIR)/OR10/GdbToJtagBridge))
+
+# Before running the standard autoconf project operations, let autoconf generate the necessary files.
+OR10_GDB_JTAG_BRIDGE_AUTOGEN_CMD = $(SHELL) autogen.sh
+$(eval $(call autogen_project_template,OR10_GDB_JTAG_BRIDGE,OR10 GDB to JTAG Bridge))
+
+ifeq "$(strip $(ENABLE_ORTS_OR10))" "1"
+  all: $(OR10_GDB_JTAG_BRIDGE_INSTALL_SENTINEL)
+endif
+
+
 # ----- Run the test suite against different targets.
 
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
