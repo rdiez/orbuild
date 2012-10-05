@@ -170,6 +170,10 @@ module soc_top ( input wire         wb_clk_i,
    wire [31:0] wb_uart_adr_o_32;  // The upper byte [31:24] is always `APP_ADDR_UART.
    assign wb_uart_adr_o = wb_uart_adr_o_32[23:0];
 
+   wire prevent_unused_warning_with_verilator = &{ 1'b0,
+                                                   wb_uart_adr_o_32[31:24],
+                                                   1'b0 };
+
 
    // Given that the OR10 CPU has only one Wishbone interface,
    // we could use a simpler Wishbone Traffic Switch (Interconnect).
