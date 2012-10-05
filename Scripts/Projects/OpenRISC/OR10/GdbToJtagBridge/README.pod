@@ -1,0 +1,39 @@
+
+This is the source file from which the README file is generated.
+
+This file is written in Perl's Plain Old Documentation (POD) format.
+Run the following Perl commands to convert it to text or to HTML
+for easy reading:
+
+  podchecker README.pod  # Optional, check syntax.
+  pod2text README.pod >README.txt
+
+  # pod2html seems buggy, at least in perl v5.10.1, therefore
+  # I'm using this long one-liner instead (with bash):
+  perl -MPod::Simple::HTML  -e "\$p = Pod::Simple::HTML->new; \$p->index( 1 ); \$p->output_fh( *STDOUT{IO} ); \$p->force_title('GDB to JTAG bridge'); \$p->parse_file('README.pod');"  >README.html
+
+This file is best edited with emacs module pod-mode, available in CPAN.
+However, the POD syntax is quite simple and can be edited with a standard text editor.
+
+=pod
+
+=head1 About I<< GDB to JTAG Bridge >>
+
+I<< GDB to JTAG Bridge >> is a tool to help debug software running on the OR10 CPU core.
+
+It is based on Nathan Yawn's Advanced JTAG Bridge, please refer to that project for further information.
+
+
+=head2 License
+
+Copyright (C) R. Diez 2012,  rdiezmail-openrisc at yahoo.de
+
+There are other authors, please consult the source code for details.
+
+The source code is based on Nathan Yawn's Advanced JTAG Bridge, which is turn is based on I<< jp2 >>,
+which was distributed under the GNU Public License, version 2. Therefore,
+I<< GDB to JTAG Bridge >> is also distributed under this license.
+
+This document is released under the Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0) license.
+
+=cut
