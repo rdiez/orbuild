@@ -33,7 +33,17 @@ module soc_top ( input wire         wb_clk_i,
                  output wire        wb_uart_stb_o,
                  input wire         wb_uart_ack_i,
                  input wire         wb_uart_err_i,
-                 input wire         uart_int_i
+                 input wire         uart_int_i,
+
+                 // ------ JTAG Debug Interface ------
+                 input wire         jtag_tck_i,
+                 input wire         jtag_tdi_i,
+
+                 input wire         is_tap_state_test_logic_reset_i,
+                 input wire         is_tap_state_shift_dr_i,
+                 input wire         is_tap_state_update_dr_i,
+                 input wire         is_tap_current_instruction_debug_i,
+                 output wire        debug_tdo_o
                );
 
    parameter MEMORY_FILENAME = "";
@@ -75,6 +85,16 @@ module soc_top ( input wire         wb_clk_i,
    assign pic_ints[ `APP_INT_UART ] = uart_int_i;
 
 
+   // CPU debug interface.
+   wire [15:0] cpu_dbg_spr_number;
+   wire [31:0] cpu_dbg_data_to_cpu;
+   wire [31:0] cpu_dbg_data_from_cpu;
+   wire        cpu_dbg_stb;
+   wire        cpu_dbg_we;
+   wire        cpu_dbg_ack;
+   wire        cpu_dbg_err;
+   wire        cpu_dbg_is_stalled;
+
    or10_top or10_top_instance (
 
      .wb_clk_i  ( wb_clk_i ),
@@ -89,7 +109,17 @@ module soc_top ( input wire         wb_clk_i,
      .wb_rty_i  ( wb_cpu_rty_i ),
      .wb_we_o   ( wb_cpu_we_o  ),
      .wb_stb_o  ( wb_cpu_stb_o ),
-     .pic_ints_i( pic_ints     )
+
+     .pic_ints_i( pic_ints ),
+
+     .dbg_spr_number_i( cpu_dbg_spr_number ),
+     .dbg_data_i      ( cpu_dbg_data_to_cpu ),
+     .dbg_data_o      ( cpu_dbg_data_from_cpu ),
+     .dbg_stb_i       ( cpu_dbg_stb ),
+     .dbg_we_i        ( cpu_dbg_we ),
+     .dbg_ack_o       ( cpu_dbg_ack ),
+     .dbg_err_o       ( cpu_dbg_err ),
+     .dbg_is_stalled_o( cpu_dbg_is_stalled )
    );
 
 
@@ -352,5 +382,30 @@ module soc_top ( input wire         wb_clk_i,
     .t8_wb_ack_i    ( 1'b0 ),
     .t8_wb_err_i    ( 1'b1 )
    );
+
+
+   // ----------- Instanciate the JTAG cable simulation when running under Verilator -----------
+
+   tap_or10 tap_or10_instance
+     (
+      .jtag_tck_i( jtag_tck_i ),
+      .jtag_tdi_i( jtag_tdi_i ),
+      .jtag_tdo_o( debug_tdo_o ),
+
+      .is_tap_state_test_logic_reset_i( is_tap_state_test_logic_reset_i ),
+      .is_tap_state_shift_dr_i        ( is_tap_state_shift_dr_i   ),
+      .is_tap_state_update_dr_i       ( is_tap_state_update_dr_i  ),
+
+      .is_tap_current_instruction_debug_i( is_tap_current_instruction_debug_i ),
+
+      .cpu_spr_number_o( cpu_dbg_spr_number    ),
+      .cpu_data_i      ( cpu_dbg_data_from_cpu ),
+      .cpu_data_o      ( cpu_dbg_data_to_cpu   ),
+      .cpu_stb_o       ( cpu_dbg_stb           ),
+      .cpu_we_o        ( cpu_dbg_we            ),
+      .cpu_ack_i       ( cpu_dbg_ack           ),
+      .cpu_err_i       ( cpu_dbg_err           ),
+      .cpu_is_stalled_i( cpu_dbg_is_stalled    )
+      );
 
 endmodule

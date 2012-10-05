@@ -110,6 +110,66 @@ module test_bench ( input wire clock,
    `endif  // `ifdef ENABLE_DPI_MODULES
 
 
+   // ----------- Instanciate the JTAG Debug Interface -----------
+
+   wire jtag_tms;
+   wire jtag_tck;
+   wire jtag_trst;
+   wire jtag_tdi;
+   wire jtag_tdo;
+
+   `ifdef ENABLE_DPI_MODULES
+
+     jtag_dpi
+         #( .PRINT_RECEIVED_JTAG_DATA( 0 ) )
+       jtag_dpi_instance
+         (
+          .system_clk ( clock  ),
+          .jtag_tms_o ( jtag_tms  ),
+          .jtag_tck_o ( jtag_tck  ),
+          .jtag_trst_o( jtag_trst ),
+          .jtag_tdi_o ( jtag_tdi  ),
+          .jtag_tdo_i ( jtag_tdo  )
+         );
+
+   `else  // `ifdef ENABLE_DPI_MODULES
+
+     assign jtag_tms  = 0;
+     assign jtag_tck  = 0;
+     assign jtag_trst = 1;
+     assign jtag_tdi  = 0;
+
+     wire prevent_unused_warning_with_verilator_jtag = &{ 1'b0,
+                                                          jtag_tdo,
+                                                          1'b0 };
+
+   `endif  // `ifdef ENABLE_DPI_MODULES
+
+   wire is_tap_state_test_logic_reset;
+   wire is_tap_state_shift_dr;
+   wire is_tap_state_update_dr;
+   wire is_tap_current_instruction_debug;
+   wire debug_tdo;
+
+   tap_top tap_top_instance
+       (
+        .jtag_tms_i  ( jtag_tms  ),
+        .jtag_tck_i  ( jtag_tck  ),
+        .jtag_trstn_i( jtag_trst ),
+        .jtag_tdi_i  ( jtag_tdi  ),
+        .jtag_tdo_o  ( jtag_tdo  ),
+
+        .is_tap_state_test_logic_reset_o( is_tap_state_test_logic_reset ),
+        .is_tap_state_shift_dr_o        ( is_tap_state_shift_dr   ),
+        .is_tap_state_update_dr_o       ( is_tap_state_update_dr  ),
+        .is_tap_state_capture_dr_o      (),
+
+        .is_tap_current_instruction_debug_o( is_tap_current_instruction_debug ),
+
+        .debug_tdo_i( debug_tdo )
+       );
+
+
    // ----------- Instanciate the SoC -----------
 
    soc_top
@@ -128,7 +188,15 @@ module test_bench ( input wire clock,
        .wb_uart_stb_o( wb_uart_stb ),
        .wb_uart_ack_i( wb_uart_ack ),
        .wb_uart_err_i( wb_uart_err ),
-       .uart_int_i( uart_int )
+       .uart_int_i( uart_int ),
+
+       .jtag_tck_i(jtag_tck),
+       .jtag_tdi_i(jtag_tdi),
+       .is_tap_state_test_logic_reset_i( is_tap_state_test_logic_reset ),
+       .is_tap_state_shift_dr_i( is_tap_state_shift_dr ),
+       .is_tap_state_update_dr_i( is_tap_state_update_dr ),
+       .is_tap_current_instruction_debug_i( is_tap_current_instruction_debug ),
+       .debug_tdo_o( debug_tdo )
      );
 
 

@@ -1,5 +1,5 @@
 
-/*  OR10 CPU core version 0.80 Beta
+/*  OR10 CPU core version 0.82 Beta
 
     See the README file for more information about the CPU core.
 
@@ -43,6 +43,8 @@
 module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
+     parameter ENABLE_DEBUG_UNIT   = 0,
+
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
      parameter TRACE_ASM_EXECUTION = 0,
@@ -63,12 +65,23 @@ module or10_top
     output reg [3:0]                     wb_sel_o,
     output reg [`OR10_OPERAND_WIDTH-1:0] wb_dat_o,
 
-    input [`OR10_OPERAND_WIDTH-1:0]      pic_ints_i  // Interrupt request lines.
+    input [`OR10_OPERAND_WIDTH-1:0]      pic_ints_i, // Interrupt request lines.
+
+    input [15:0]                         dbg_spr_number_i,
+    input [`OR10_OPERAND_WIDTH-1:0]      dbg_data_i,
+    output reg [`OR10_OPERAND_WIDTH-1:0] dbg_data_o,
+    input                                dbg_stb_i, // Do not use directly, see synchronised_dbg_stb_i instead.
+    input                                dbg_we_i,
+    output reg                           dbg_ack_o,
+    output reg                           dbg_err_o, // Asserted as part of the data, before dbg_ack_o.
+
+    output reg                           dbg_is_stalled_o  // See comments to STATE_DEBUG_xxx about why this is a separate signal.
    );
 
    localparam TRACE_ASM_INDENT = "            ";  // Indent the extra information and error lines by the number of characters taken by the address field.
+   localparam TRACE_DEBUG_INTERFACE = TRACE_ASM_EXECUTION;
 
-   localparam ENABLE_GPR_ACCESS_OVER_SPR = 0;
+   localparam ENABLE_GPR_ACCESS_OVER_SPR = ENABLE_DEBUG_UNIT;
 
    // These NOP_xxx definitions match the ones in file spr-defs.h in both ORPSoCV2 and or1ksim.
    localparam NOP_NOP            = 16'h0000;   // Normal nop instruction
@@ -130,7 +143,46 @@ module or10_top
    // If an instruction needs to access memory, it needs 2 extra cycles in this state.
    localparam STATE_WAITING_FOR_WISHBONE_DATA_CYCLE = 2;
 
-   reg [1:0]  current_state;  // See the STATE_xxx constants.
+   // All STATE_DEBUG_xxx states have to do with the Debug Interface. During a Debug Interface operation,
+   // the CPU is temporarily stalled. This is necessary so as to avoid conflicts with the running software,
+   // as the Register File has only 2 ports (1 read and 1 read/write) for normal operation.
+   // In order to support concurrent Debug Interface accesses, the Register File would need one extra
+   // read/write port, and extra logic would also be needed for non-GPR reads and writes (for the rest of the SPRs).
+   // It would be possible to optimise the design in order to allow as much concurrent access as possible,
+   // but I do not think it's worth the effort.
+   //
+   // Note that, because of the temporary CPU stall, most of the JTAG operations change the timing of the
+   // software running on the CPU. Most Debug Interface accesses are issued from GDB when the software is
+   // stopped at a breakpoint, so it does not matter. The only time whether it really matters is
+   // if you have time-critical, hand-tuned assembly code, and the JTAG interface introduces random delays
+   // by polling the CPU so as to find out whether it has stopped at some breakpoint yet.
+   // That's the reason why there is a separate dbg_is_stalled_o signal which allows
+   // the DEBUG_CMD_IS_CPU_STALLED command to query the stalled/running status without temporarily
+   // stalling the CPU.
+   //
+   // Note that, when unstalling the CPU, the dbg_is_stalled_o signal is set to 0 one clock cycle
+   // before dbg_ack_o gets asserted. This timing is important, as unstalling the CPU is actually
+   // a Debug Interface SPR write operation, and we want to make sure that dbg_is_stalled_o
+   // is reset before that write operation completes. The reason is that the DEBUG_CMD_IS_CPU_STALLED command,
+   // as described above, does not stall the CPU and can therefore be considered asynchronous
+   // to the other Debug Interface operations. When single-stepping with the debugger, GDB will
+   // query the stall status immediately after unstalling the CPU, and we want to make sure that
+   // the stall status is not stale at that point in time. That is, if the CPU is stalled,
+   // it means it has already completed the next instruction in single-step mode.
+
+   localparam STATE_DEBUG_WAITING_FOR_REG_FILE_READ = 3;  // This state helps simplify the Register File address logic. We could probably optimise it
+                                                          // away and cut one clock cycle from the Debug Interface's response time.
+                                                          // Note that not all accesses involve the Register File, but all reads go through this state anyway.
+
+   localparam STATE_DEBUG_WAITING_FOR_ACK_ASSERT    = 4;  // This state implements a delay between presenting valid data in dbg_data_o and dbg_err_o
+                                                          // and asserting dbg_ack_o. The delay is necessary for clock domain crossing purposes.
+
+   localparam STATE_DEBUG_WAITING_FOR_STB_DEASSERT  = 5;
+
+   localparam STATE_DEBUG_STALLED                   = 6;
+   localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 7;
+
+   reg [3:0]  current_state;  // See the STATE_xxx constants.
 
 
    // Top-level instructions constants.
@@ -191,6 +243,22 @@ module or10_top
 
    localparam RESET_SPR_SR = `OR10_OPERAND_WIDTH'b0000000000000000_1000000000000001;  // Only bits FO (Fixed One, a constant '1') and SM (Supervisor Mode) are set.
 
+
+   // Clock domain crossing synchroniser for the Debug Interface.
+   wire synchronised_dbg_stb_i;
+   generate if ( ENABLE_DEBUG_UNIT )
+     begin
+        clock_domain_crossing_synchroniser clock_domain_crossing_synchroniser_dbg_stb_i( wb_clk_i, dbg_stb_i, synchronised_dbg_stb_i );
+     end
+   else
+     begin
+        // Bypass the synchronisation. It's generally not safe, but the !ENABLE_DEBUG_UNIT logic further below remains only
+        // to detect Verilog programming errors.
+        assign synchronised_dbg_stb_i = dbg_stb_i;
+     end
+   endgenerate
+
+
    // ------------- General Purpose Register File -------------
 
    // See the or10_register_file module for a detailed explanation about why we need this construct
@@ -219,6 +287,13 @@ module or10_top
           begin
              // During simulation, the l.nop instruction reads from R3.
              gpr_register_number_to_read_or_write_1 = NOP_REG_R3;
+          end
+        else if ( ENABLE_GPR_ACCESS_OVER_SPR && current_state == STATE_DEBUG_WAITING_FOR_REG_FILE_READ )
+          begin
+             // The Debug Interface may be reading from an SPR that is not a GPR,
+             // so this read may be wasted, but that does not matter and helps keep
+             // the logic simple. Other paths of the Register File read logic often get wasted too.
+             gpr_register_number_to_read_or_write_1 = dbg_spr_number_i[4:0];
           end
         else
           begin
@@ -250,6 +325,11 @@ module or10_top
    reg [DW-1:0]        cpureg_spr_ttmr;   // Tick Timer Mode Register.
    reg [DW-1:0]        cpureg_spr_ttcr;   // Tick Timer Counter Register.
 
+   reg                 is_trap_debug_unit_enabled;
+   reg                 is_stop_reason_trap;
+   reg                 stop_at_next_instruction_1;  // This is the "single step" setting in DMR1.
+   reg                 stop_at_next_instruction_2;  // Delayed so that the CPU has time to execute one instruction.
+   reg [`OR10_PC_ADDR] dbg_write_mem_addr;  // Memory address for the next Debug Interface memory write operation.
 
    reg [`OR10_PC_ADDR] cpureg_pc;         // Current program counter. Note that this register does not have the last 2 bits.
 
@@ -401,8 +481,6 @@ module or10_top
 
          wb_sel_o <= sel;
          wb_we_o  <= write_enable;
-
-         current_state <= STATE_WAITING_FOR_WISHBONE_DATA_CYCLE;
       end
    endtask
 
@@ -426,7 +504,8 @@ module or10_top
 
       input reg [AW-1:0]                 addr;
       input reg [WISHBONE_SEL_WIDTH-1:0] sel;
-      input reg [`OR10_REG_NUMBER]       dest_cpu_gpr_reg;
+      input reg [`OR10_REG_NUMBER]       dest_cpu_gpr_reg;  // Only used if is_from_debug_interface == 0,
+      input reg                          is_from_debug_interface;
       input reg [2:0]                    load_op_type;
       inout reg                          can_interrupt;  // We pass this argument only so that nobody forgets to set this flag.
 
@@ -438,6 +517,11 @@ module or10_top
          can_interrupt = 0;
 
          internal_start_wishbone_data_cycle( addr, {DW{1'bx}}, sel, 0 );
+
+         if ( is_from_debug_interface )
+           current_state <= STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE;
+         else
+           current_state <= STATE_WAITING_FOR_WISHBONE_DATA_CYCLE;
 
          // This information is for subsequent calls to keep_wishbone_data_cycle.
          wishdat_addr         <= addr;
@@ -454,10 +538,11 @@ module or10_top
 
    task automatic start_wishbone_data_write_cycle;
 
-      input reg [AW-1:0] addr;
-      input reg [DW-1:0] data;
+      input reg [AW-1:0]                 addr;
+      input reg [DW-1:0]                 data;
       input reg [WISHBONE_SEL_WIDTH-1:0] sel;
-      inout reg                 can_interrupt;  // We pass this argument only so that nobody forgets to set this flag.
+      input reg                          is_from_debug_interface;
+      inout reg                          can_interrupt;  // We pass this argument only so that nobody forgets to set this flag.
 
       begin
          if ( !can_interrupt )
@@ -467,6 +552,11 @@ module or10_top
          can_interrupt = 0;
 
          internal_start_wishbone_data_cycle( addr, data, sel, 1 );
+
+         if ( is_from_debug_interface )
+           current_state <= STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE;
+         else
+           current_state <= STATE_WAITING_FOR_WISHBONE_DATA_CYCLE;
 
          // This information is for subsequent calls to keep_wishbone_data_cycle.
          wishdat_addr         <= addr;
@@ -865,6 +955,9 @@ module or10_top
                   begin
                      trap_raised = 0 != ( cpureg_spr_sr[ immediate_value[4:0] ] );
 
+                     // TODO: Work-around for gdb, which seems to write always "l.trap 1"
+                     trap_raised = trap_raised || is_trap_debug_unit_enabled;
+
                      if ( TRACE_ASM_EXECUTION )
                        $display( "0x%08h: l.trap 0x%04h (%0s)",
                                  `OR10_TRACE_PC_VAL,
@@ -872,7 +965,19 @@ module or10_top
                                  trap_raised ? "trap raised" : "trap not raised" );
 
                      if ( trap_raised )
-                       raise_exception_without_eear( TRAP_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
+                       begin
+                          if ( is_trap_debug_unit_enabled )
+                            begin
+                               can_interrupt = 0;
+                               is_stop_reason_trap <= 1;
+                               dbg_is_stalled_o    <= 1;
+                               current_state       <= STATE_DEBUG_STALLED;
+                            end
+                          else
+                            begin
+                               raise_exception_without_eear( TRAP_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
+                            end
+                       end
                   end
              end
 
@@ -1743,6 +1848,76 @@ module or10_top
    endtask
 
 
+   task automatic write_spr_du;  // Special Purpose Registers, Debug Unit.
+
+      input reg [10:0]   effective_spr_number;
+      input reg [DW-1:0] val;
+      output reg         is_invalid_spr_number;
+      output reg         should_raise_alignment_exception;
+
+      reg   prevent_unused_warning_with_verilator;
+
+      begin
+         prevent_unused_warning_with_verilator = &{ 1'b0, val[31:1], 1'b0 };
+
+         is_invalid_spr_number = 0;
+         should_raise_alignment_exception = 0;
+
+         case ( effective_spr_number )
+
+           `OR1200_DU_EDIS:
+             begin
+                if ( TRACE_ASM_EXECUTION && dbg_is_stalled_o != val[0] )
+                  begin
+                     if ( val[0] )
+                       $display( "0x%08h: The CPU has been stalled by the Debug Unit.", `OR10_TRACE_PC_VAL );
+                     else
+                       $display( "0x%08h: The CPU has been unstalled by the Debug Unit.", `OR10_TRACE_PC_VAL );
+                  end
+
+                // Note that any other bits are ignored. We could raise an error if they are not 0.
+                dbg_is_stalled_o <= val[0];
+             end
+
+           `OR1200_DU_WRITE_MEM_ADDR:
+             begin
+                // Register dbg_write_mem_addr does not have the last 2 bits, therefore it cannot take
+                // any unaligned address.
+                if ( is_addr_aligned( val ) )
+                  dbg_write_mem_addr <= addr_32_to_pc( val );
+                else
+                  should_raise_alignment_exception = 1;
+             end
+
+           `OR1200_DU_DRR:
+             begin
+                // Note that any other bits are ignored. We could raise an error if they are not 0.
+                is_stop_reason_trap <= val[ `OR1200_DU_DRR_TE ];
+             end
+
+           `OR1200_DU_DSR:
+             begin
+                // Note that any other bits are ignored. We could raise an error if they are not 0.
+                if ( ENABLE_DEBUG_UNIT )
+                  is_trap_debug_unit_enabled <= val[ `OR1200_DU_DSR_TE ];
+                else
+                  is_invalid_spr_number = 1;
+             end
+
+           `OR1200_DU_DMR1:
+             begin
+                // Note that any other bits are ignored. We could raise an error if they are not 0.
+                stop_at_next_instruction_1 <= val[ `OR1200_DU_DMR1_ST ];
+                stop_at_next_instruction_2 <= 0;
+             end
+
+           default:
+             is_invalid_spr_number = 1;
+         endcase
+      end
+   endtask
+
+
    task automatic write_spr_tt;  // Special Purpose Registers, Tick Timer registers.
       input reg [10:0]   effective_spr_number;
       input reg [DW-1:0] val;
@@ -1793,6 +1968,7 @@ module or10_top
            `OR1200_SPR_GROUP_SYS: write_spr_sys( effective_spr_number, val, is_invalid_spr_number, should_raise_alignment_exception, next_pc, next_sr );
            `OR1200_SPR_GROUP_TT:  write_spr_tt ( effective_spr_number, val, is_invalid_spr_number );
            `OR1200_SPR_GROUP_PIC: write_spr_pic( effective_spr_number, val, is_invalid_spr_number );
+           `OR1200_SPR_GROUP_DU:  write_spr_du ( effective_spr_number, val, is_invalid_spr_number, should_raise_alignment_exception );
 
            default:
              is_invalid_spr_group = 1;
@@ -2011,6 +2187,57 @@ module or10_top
       end
    endtask
 
+   task automatic read_spr_du;  // Special Purpose Registers, Debug Unit group.
+
+      input reg [10:0]    effective_spr_number;
+      output reg [DW-1:0] val;
+      output reg          should_raise_range_exception;
+
+      begin
+         should_raise_range_exception = 0;
+
+         case ( effective_spr_number )
+
+           `OR1200_DU_EDIS: val = { 31'b0, dbg_is_stalled_o };
+
+           // We don't actually need to read from this register, so we could save this logic.
+           `OR1200_DU_WRITE_MEM_ADDR: val = pc_addr_to_32( dbg_write_mem_addr );
+
+           `OR1200_DU_DSR:
+             begin
+                if ( ENABLE_DEBUG_UNIT )
+                  begin
+                     val = 0;
+                     val[ `OR1200_DU_DSR_TE ] = is_trap_debug_unit_enabled;
+                  end
+                else
+                  begin
+                     should_raise_range_exception = 1;
+                     val = {DW{1'bx}};
+                  end
+             end
+
+           `OR1200_DU_DRR:
+             begin
+                val = 0;
+                val[ `OR1200_DU_DRR_TE ] = is_stop_reason_trap;
+             end
+
+           `OR1200_DU_DMR1:
+             begin
+                val = 0;
+                val[ `OR1200_DU_DMR1_ST ] = stop_at_next_instruction_1;
+             end
+
+           default:
+             begin
+                should_raise_range_exception = 1;
+                val = {DW{1'bx}};
+             end
+         endcase
+      end
+   endtask
+
 
    task automatic read_cpu_spr;
 
@@ -2029,6 +2256,7 @@ module or10_top
            `OR1200_SPR_GROUP_SYS: read_spr_sys( effective_spr_number, val, should_raise_range_exception );
            `OR1200_SPR_GROUP_PIC: read_spr_pic( effective_spr_number, val, should_raise_range_exception );
            `OR1200_SPR_GROUP_TT:  read_spr_tt ( effective_spr_number, val, should_raise_range_exception );
+           `OR1200_SPR_GROUP_DU:  read_spr_du ( effective_spr_number, val, should_raise_range_exception );
 
            default:
              is_invalid_spr_group = 1;
@@ -2505,6 +2733,7 @@ module or10_top
               start_wishbone_data_write_cycle( effective_addr,
                                                gpr_register_value_read_2,
                                                {WISHBONE_SEL_WIDTH{1'b1}},
+                                               0,
                                                can_interrupt );
            end
       end
@@ -2548,6 +2777,7 @@ module or10_top
          start_wishbone_data_write_cycle( effective_addr,
                                           data,
                                           wishbone_byte_sel_from_addr( effective_addr[1:0] ),
+                                          0,
                                           can_interrupt );
       end
    endtask
@@ -2604,6 +2834,7 @@ module or10_top
            start_wishbone_data_write_cycle( effective_addr,
                                             data,
                                             wishbone_half_word_sel_from_addr( effective_addr[1:0] ),
+                                            0,
                                             can_interrupt );
       end
    endtask
@@ -2646,6 +2877,7 @@ module or10_top
            start_wishbone_data_read_cycle( effective_addr,
                                            {WISHBONE_SEL_WIDTH{1'b1}},
                                            dest_register,
+                                           0,
                                            WOPW_32,
                                            can_interrupt );
       end
@@ -2685,6 +2917,7 @@ module or10_top
          start_wishbone_data_read_cycle( effective_addr,
                                          wishbone_byte_sel_from_addr( effective_addr[1:0] ), // {WISHBONE_SEL_WIDTH{1'b1}},
                                          dest_register,
+                                         0,
                                          is_lbz ? WOPW_8_Z : WOPW_8_S,
                                          can_interrupt );
       end
@@ -2730,6 +2963,7 @@ module or10_top
            start_wishbone_data_read_cycle( effective_addr,
                                            wishbone_half_word_sel_from_addr( effective_addr[1:0] ),  // {WISHBONE_SEL_WIDTH{1'b1}}
                                            dest_register,
+                                           0,
                                            is_lhz ? WOPW_16_Z : WOPW_16_S,
                                            can_interrupt );
       end
@@ -2960,6 +3194,13 @@ module or10_top
          cpureg_spr_ttmr <= 0;
          cpureg_spr_ttcr <= 0;
 
+         is_trap_debug_unit_enabled <= 0;
+         is_stop_reason_trap <= 0;
+         stop_at_next_instruction_1 <= 0;
+         stop_at_next_instruction_2 <= 0;
+
+         dbg_is_stalled_o <= 0;
+
          // Note that the General Purpose Registers are not cleared at this point.
          // According to the OpenRISC specification, it is not necessary to initialise them.
 
@@ -2974,6 +3215,182 @@ module or10_top
       end
    endtask
 
+   task automatic stop_debug_transaction;
+      begin
+         dbg_ack_o  <= 0;
+         dbg_data_o <= {DW{1'bx}};
+      end
+   endtask
+
+   task automatic do_state_debug_waiting_for_ack_assert;
+      begin
+         // We could abort here a little earlier if synchronised_dbg_stb_i is not longer asserted.
+         dbg_ack_o <= 1;
+
+         current_state <= STATE_DEBUG_WAITING_FOR_STB_DEASSERT;
+      end
+   endtask
+
+
+   task automatic do_state_debug_waiting_for_stb_deassert;
+      begin
+         if ( !synchronised_dbg_stb_i )
+           begin
+              stop_debug_transaction;
+
+              if ( dbg_is_stalled_o )
+                begin
+                   // This is a probably-unnecessary optimisation. We could let the CPU issue
+                   // the next instruction fetch, and then it will check the "is stalled" flag
+                   // and stall itself there.
+                   current_state <= STATE_DEBUG_STALLED;
+                end
+              else
+                begin
+                   start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc ) );
+                end
+           end
+      end
+   endtask
+
+
+   task automatic do_state_debug_waiting_for_reg_file_read;
+
+      reg [DW-1:0]        spr_val;
+      reg                 spr_is_invalid_spr_group;
+      reg                 spr_should_raise_range_exception;
+      reg                 error_flag;
+
+      begin
+         read_cpu_spr( dbg_spr_number_i[`OR10_SPR_GRP_NUMBER],
+                       dbg_spr_number_i[`OR10_SPR_REG_NUMBER],
+                       spr_val,
+                       spr_is_invalid_spr_group,
+                       spr_should_raise_range_exception );
+
+         error_flag = spr_is_invalid_spr_group || spr_should_raise_range_exception;
+
+         if ( TRACE_DEBUG_INTERFACE )
+           $display( "%sDebug Interface SPR read: SPR group number: %0d, SPR register number: %0d, value read: 0x%08h, error: %1d",
+                     TRACE_ASM_INDENT,
+                     dbg_spr_number_i[`OR10_SPR_GRP_NUMBER],
+                     dbg_spr_number_i[`OR10_SPR_REG_NUMBER],
+                     spr_val,
+                     error_flag );
+
+         dbg_data_o <= spr_val;
+         dbg_err_o  <= error_flag;
+
+         current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+      end
+   endtask
+
+
+   task automatic start_debug_interface_operation;
+
+      reg [`OR10_PC_ADDR] next_pc;
+      reg [DW-1:0] next_sr;
+
+      reg          is_invalid_spr_group;
+      reg          is_invalid_spr_number;
+      reg          should_raise_alignment_exception;
+
+      reg          can_interrupt_ignored;  // The value placed here is ignored in this task.
+      reg          error_flag;
+
+      begin
+         can_interrupt_ignored = 1;
+
+         if ( dbg_we_i )
+           begin
+              if ( dbg_spr_number_i[`OR10_SPR_GRP_NUMBER] == `OR1200_SPR_GROUP_DU &&
+                   dbg_spr_number_i[`OR10_SPR_REG_NUMBER] == `OR1200_DU_READ_MEM_ADDR )
+                begin
+                  if ( TRACE_DEBUG_INTERFACE )
+                    $display( "%sDebug Interface Wishbone read from memory address 0x%08h.",
+                              TRACE_ASM_INDENT,
+                              dbg_data_i );
+
+                   start_wishbone_data_read_cycle( dbg_data_i,
+                                                   {WISHBONE_SEL_WIDTH{1'b1}},
+                                                   {GPR_NUMBER_WIDTH{1'bx}},
+                                                   1,
+                                                   WOPW_32,
+                                                   can_interrupt_ignored );
+                end
+              else if ( dbg_spr_number_i[`OR10_SPR_GRP_NUMBER] == `OR1200_SPR_GROUP_DU &&
+                        dbg_spr_number_i[`OR10_SPR_REG_NUMBER] == `OR1200_DU_WRITE_MEM_DATA )
+                begin
+                   if ( TRACE_DEBUG_INTERFACE )
+                    $display( "%sDebug Interface Wishbone write to memory address 0x%08h, data 0x%08h.",
+                              TRACE_ASM_INDENT,
+                              pc_addr_to_32( dbg_write_mem_addr ),
+                              dbg_data_i );
+
+                   start_wishbone_data_write_cycle( pc_addr_to_32( dbg_write_mem_addr ),
+                                                    dbg_data_i,
+                                                    {WISHBONE_SEL_WIDTH{1'b1}},
+                                                    1,
+                                                    can_interrupt_ignored );
+                end
+              else
+                begin
+                   // An SPR write operation can start straight away.
+
+                   next_sr = cpureg_spr_sr;
+                   next_pc = cpureg_pc;
+
+                   write_cpu_spr( dbg_spr_number_i[`OR10_SPR_GRP_NUMBER],
+                                  dbg_spr_number_i[`OR10_SPR_REG_NUMBER],
+                                  dbg_data_i,
+                                  is_invalid_spr_group,
+                                  is_invalid_spr_number,
+                                  should_raise_alignment_exception,
+                                  next_pc,
+                                  next_sr );
+
+                   cpureg_spr_sr <= next_sr;
+                   cpureg_pc     <= next_pc;
+
+                   error_flag = is_invalid_spr_group || is_invalid_spr_number || should_raise_alignment_exception;
+
+                   if ( TRACE_DEBUG_INTERFACE )
+                     $display( "%sDebug Interface SPR write: SPR group number: %0d, SPR register number: %0d, SPR value: 0x%08h, error: %1d",
+                               TRACE_ASM_INDENT,
+                               dbg_spr_number_i[`OR10_SPR_GRP_NUMBER],
+                               dbg_spr_number_i[`OR10_SPR_REG_NUMBER],
+                               dbg_data_i,
+                               error_flag );
+
+                   dbg_data_o <= {DW{1'bx}};
+                   dbg_err_o  <= error_flag;
+
+                   current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+                end
+           end
+         else
+           begin
+              // The tracing is done a little later, in STATE_DEBUG_WAITING_FOR_REG_FILE_READ,
+              // where the value read is known.
+
+              // Delay the reading in order to keep the Register File's address logic simple.
+              current_state <= STATE_DEBUG_WAITING_FOR_REG_FILE_READ;
+           end
+      end
+   endtask
+
+
+   task automatic do_state_debug_stalled;
+      begin
+        if ( synchronised_dbg_stb_i )
+          start_debug_interface_operation;
+        else if ( !dbg_is_stalled_o )
+          begin
+             start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc ) );
+          end
+     end
+   endtask
+
 
    task automatic do_state_waiting_for_instruction_fetch;
 
@@ -2985,47 +3402,86 @@ module or10_top
       reg                 can_interrupt;
 
       begin
-         can_interrupt = 1;
-
-         if ( wb_ack_i )
+         // Checking for Debug Interface operations here wastes the instruction opcode just fetched,
+         // as we'll have to fetch it again in the future. However, if the exception vector
+         // happens to lie on an invalid memory address, we want the Debug Interface to be able to stop
+         // the CPU even if it is caught in a [fetch, wishbone bus error, fetch] infinite loop.
+         if ( ENABLE_DEBUG_UNIT && ( wb_ack_i || wb_err_i || wb_rty_i ) && ( synchronised_dbg_stb_i || dbg_is_stalled_o || stop_at_next_instruction_2 ) )
            begin
-              // $display("Read instruction opcode: 0x%08h", wb_dat_i );
-              next_pc = cpureg_pc + 1'b1;
-              next_sr = cpureg_spr_sr;
+              if ( synchronised_dbg_stb_i )
+                start_debug_interface_operation;
+              else if ( dbg_is_stalled_o )
+                begin
+                   // We never hit this code path with JTAG, as the stall register is set
+                   // over the Debug Interface, which goes to STATE_STALL directly afterwards
+                   // without coming back to STATE_WAITING_FOR_INSTRUCTION_FETCH.
+                   // However, the software might write to the stall register too, which
+                   // would then make the CPU land here. Whether the software should be allowed
+                   // so stall the CPU in this way is another interesting question. After all,
+                   // there is already the "l.trap" way.
+                   current_state <= STATE_DEBUG_STALLED;
+                end
+              else if ( stop_at_next_instruction_2 )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "0x%08h: The CPU has been stalled by the single-step mode after executing one instruction.", `OR10_TRACE_PC_VAL );
 
-              execute_instruction( next_pc, next_sr, can_interrupt );
-
-              cpureg_spr_sr <= next_sr;
-
-              if ( can_interrupt )
-                interrupt_or_start_next_fetch( next_pc, next_sr );
+                   dbg_is_stalled_o <= 1;
+                   stop_at_next_instruction_2 <= 0;  // The next time around we should execute one instruction more
+                                                     // (assuming the CPU is still in single-step mode).
+                   current_state <= STATE_DEBUG_STALLED;
+                end
               else
                 begin
-                   // If we cannot interrupt at this point, the next instruction fetch has already been issued,
-                   // or the current instruction is issuing a Wishbone data read or write.
-                   // In any case, we don't need to do anything else here.
+                   `ASSERT_FALSE;
                 end
-           end
-         else if ( wb_err_i )
-           begin
-              if ( TRACE_ASM_EXECUTION )
-                $display( "%sWishbone wb_err_i bus error at address 0x%08h during a Wishbone instruction fetch cycle.",
-                          TRACE_ASM_INDENT,
-                          pc_addr_to_32( cpureg_pc ) );
-              raise_exception_with_eear( BUS_ERROR_VECTOR_ADDR, cpureg_pc, pc_addr_to_32( cpureg_pc ), cpureg_spr_sr, can_interrupt );
-           end
-         else if ( wb_rty_i )
-           begin
-              if ( TRACE_ASM_EXECUTION )
-                $display( "%sWishbone wb_rty_i bus error at address 0x%08h during a Wishbone instruction fetch cycle.",
-                          TRACE_ASM_INDENT,
-                          pc_addr_to_32( cpureg_pc ) );
-              raise_exception_with_eear( BUS_ERROR_VECTOR_ADDR, cpureg_pc, pc_addr_to_32( cpureg_pc ), cpureg_spr_sr, can_interrupt );
            end
          else
            begin
-              // We must keep Wishbone signals in the same state until we get an answer.
-              start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc ) );
+              can_interrupt = 1;
+
+              if ( wb_ack_i )
+                begin
+                   stop_at_next_instruction_2 <= stop_at_next_instruction_1;
+
+                   // $display( "Read instruction opcode: 0x%08h", wb_dat_i );
+                   next_pc = cpureg_pc + 1'b1;
+                   next_sr = cpureg_spr_sr;
+
+                   execute_instruction( next_pc, next_sr, can_interrupt );
+
+                   cpureg_spr_sr <= next_sr;
+
+                   if ( can_interrupt )
+                     interrupt_or_start_next_fetch( next_pc, next_sr );
+                   else
+                     begin
+                        // If we cannot interrupt at this point, the next instruction fetch has already been issued,
+                        // or the current instruction is issuing a Wishbone data read or write.
+                        // In any case, we don't need to do anything else here.
+                     end
+                end
+              else if ( wb_err_i )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "%sWishbone wb_err_i bus error at address 0x%08h during a Wishbone instruction fetch cycle.",
+                               TRACE_ASM_INDENT,
+                               pc_addr_to_32( cpureg_pc ) );
+                   raise_exception_with_eear( BUS_ERROR_VECTOR_ADDR, cpureg_pc, pc_addr_to_32( cpureg_pc ), cpureg_spr_sr, can_interrupt );
+                end
+              else if ( wb_rty_i )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "%sWishbone wb_rty_i bus error at address 0x%08h during a Wishbone instruction fetch cycle.",
+                               TRACE_ASM_INDENT,
+                               pc_addr_to_32( cpureg_pc ) );
+                   raise_exception_with_eear( BUS_ERROR_VECTOR_ADDR, cpureg_pc, pc_addr_to_32( cpureg_pc ), cpureg_spr_sr, can_interrupt );
+                end
+              else
+                begin
+                   // We must keep Wishbone signals in the same state until we get an answer.
+                   start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc ) );
+                end
            end
       end
    endtask
@@ -3082,9 +3538,65 @@ module or10_top
    endtask
 
 
+   task automatic do_state_debug_waiting_for_wishbone_debug_interface_cycle;
+      begin
+        if ( wb_ack_i )
+          begin
+             if ( wishdat_write_enable )
+               begin
+                  // $display( "Debug Interface Wishbone write operation complete." );
+                  dbg_data_o    <= {DW{1'bx}};
+                  dbg_err_o     <= 0;
+                  current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+               end
+             else
+               begin
+                  // The instruction trace already printed did not contain the value read from memory,
+                  // as it was not available at the time. Print it now, as it's quite handy for debugging purposes.
+                  if ( TRACE_DEBUG_INTERFACE )
+                    $display( "%sDebug Interface Wishbone read operation complete, the value read is 0x%08h.",
+                              TRACE_ASM_INDENT,
+                              wb_dat_i  );
+
+                  dbg_data_o    <= wb_dat_i;
+                  dbg_err_o     <= 0;
+                  current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+               end
+          end
+        else if ( wb_err_i )
+          begin
+             if ( TRACE_ASM_EXECUTION )
+               $display( "%sWishbone wb_err_i bus error at address 0x%08h during a Debug Interface Wishbone cycle.",
+                         TRACE_ASM_INDENT,
+                         wishdat_addr );
+             dbg_data_o    <= {DW{1'bx}};
+             dbg_err_o     <= 1;
+             current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+          end
+        else if ( wb_rty_i )
+          begin
+             if ( TRACE_ASM_EXECUTION )
+               $display( "%sWishbone wb_rty_i bus error at address 0x%08h during a Debug Interface Wishbone cycle.",
+                         TRACE_ASM_INDENT,
+                         wishdat_addr );
+             dbg_data_o    <= {DW{1'bx}};
+             dbg_err_o     <= 1;
+             current_state <= STATE_DEBUG_WAITING_FOR_ACK_ASSERT;
+          end
+        else
+          begin
+             // We must keep Wishbone signals in the same state until we get an answer.
+             keep_wishbone_data_cycle;
+          end
+      end
+   endtask
+
+
    task automatic step_state_machine;
       begin
-         if ( current_state != STATE_RESET )
+         // Do not update the Tick Timer if the CPU is stalled. That helps
+         // when debugging software which makes use of the Tick Timer.
+         if ( current_state != STATE_RESET && ( !ENABLE_DEBUG_UNIT || current_state != STATE_DEBUG_STALLED ) )
            update_tick_timer;
 
          case ( current_state )
@@ -3092,6 +3604,11 @@ module or10_top
            STATE_RESET:                            do_state_reset;
            STATE_WAITING_FOR_INSTRUCTION_FETCH:    do_state_waiting_for_instruction_fetch;
            STATE_WAITING_FOR_WISHBONE_DATA_CYCLE:  do_state_waiting_for_wishbone_data_cycle;
+           STATE_DEBUG_WAITING_FOR_ACK_ASSERT:     if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_ack_assert;
+           STATE_DEBUG_WAITING_FOR_STB_DEASSERT:   if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_stb_deassert;
+           STATE_DEBUG_WAITING_FOR_REG_FILE_READ:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_reg_file_read;
+           STATE_DEBUG_STALLED:                    if ( ENABLE_DEBUG_UNIT ) do_state_debug_stalled;
+           STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_wishbone_debug_interface_cycle;
 
            default:
              begin
@@ -3111,6 +3628,7 @@ module or10_top
         wb_cyc_o = 0;
         wb_stb_o = 0;
         gpr_write_enable_1 = 0;  // May not be actually necessary.
+        dbg_ack_o = 0;
      end
 
 
@@ -3136,6 +3654,20 @@ module or10_top
           step_state_machine();
 
         // $display( "%s< CPU clock tick end, state %0d >", TRACE_ASM_INDENT, current_state );
+     end
+
+   always @( synchronised_dbg_stb_i )  // The @(*) syntax does not work with Icarus Verilog (as of Sep 2012) if ENABLE_DEBUG_UNIT is set.
+     begin
+        if ( !ENABLE_DEBUG_UNIT )
+          begin
+             // This logic may waste a little bit of FPGA resources,
+             // but it helps detect errors when the client tries to use a disabled
+             // debug interface. dbg_ack_o must be tied to dbg_stb_i, becuase
+             // the client waits for dbg_ack_o to be deasserted before starting a transaction.
+             dbg_ack_o  = synchronised_dbg_stb_i;
+             dbg_err_o  = 1;
+             dbg_data_o = {DW{1'bx}};
+          end
      end
 
 endmodule
