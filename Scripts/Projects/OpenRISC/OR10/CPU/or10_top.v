@@ -3669,6 +3669,8 @@ module or10_top
         else
           step_state_machine();
 
+        `IF_ICARUS_FLUSH_DISPLAY_OUTPUT;
+
         // $display( "%s< CPU clock tick end, state %0d >", TRACE_ASM_INDENT, current_state );
      end
 

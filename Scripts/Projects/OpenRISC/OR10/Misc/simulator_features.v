@@ -77,4 +77,12 @@
   `error "Unknown platform."
 `endif
 
+
+`ifdef __ICARUS__
+ `define IF_ICARUS_FLUSH_DISPLAY_OUTPUT  $fflush(0); $fflush(1)
+`else
+ `define IF_ICARUS_FLUSH_DISPLAY_OUTPUT
+`endif
+
+
 `endif  // Include this header file only once.
