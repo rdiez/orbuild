@@ -12,7 +12,13 @@ if [ $# -ne 13 ]; then
   abort "Invalid number of command-line arguments, see the source code for details."
 fi
 
+
+START_UPTIME="$(</proc/uptime)"
+# Remove the period and anything afterwards, keep only the integer part.
+START_UPTIME="${START_UPTIME%%.*}"
+
 START_TIME_UTC="$(date +"%Y-%m-%d %T %z" --utc)"
+
 
 REPORTS_BASEDIR="$1"
 shift
@@ -89,10 +95,20 @@ MAKE_EXIT_CODE=$?
 
 set -o errexit
 
+FINISH_UPTIME="$(</proc/uptime)"
+# Remove the period and anything afterwards, keep only the integer part.
+FINISH_UPTIME="${FINISH_UPTIME%%.*}"
+ELAPSED_SECONDS="$(($FINISH_UPTIME - $START_UPTIME))"
+
+ELAPSED_STR_SECONDS=$(( $ELAPSED_SECONDS%60 ))
+ELAPSED_STR_MINUTES=$(( $ELAPSED_SECONDS/60%60 ))
+ELAPSED_STR_HOURS=$(( $ELAPSED_SECONDS/60/60 ))
+ELAPSED_STR="$ELAPSED_STR_HOURS hours, $ELAPSED_STR_MINUTES minutes and $ELAPSED_STR_SECONDS seconds"
 
 perl "$ORBUILD_TOOLS/GenerateBuildReport.pl" \
      --title "Test suite run $TEST_TYPE report" \
      --startTimeUtc "$START_TIME_UTC" \
+     --elapsedTime "$ELAPSED_STR" \
      --componentGroupsFilename "$ORBUILD_COMPONENT_GROUPS_FILENAME" \
      "$ORBUILD_INTERNAL_REPORTS_DIR" \
      "$OUTPUT_DIR/$REPORTS_BASEDIR" \
