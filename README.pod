@@ -108,7 +108,7 @@ Perl module XML::Parser is also required by the HTML report generator perl scrip
 
 Under Ubuntu/Debian systems, the following command installs all prerequisites (for the basic I<< orbuild >> framework only) at once:
 
-  sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl gxmessage xdg-utils libnotify-bin
+  sudo apt-get install autoconf build-essential make patch subversion git-core curl libxml-parser-perl libbsd-resource-perl gxmessage xdg-utils libnotify-bin
 
 Each I<< orbuild >> project has its own prerequisites. For the OpenRISC project, look at file F<< Scripts/Projects/OpenRISC/README.pod >> .
 
@@ -356,7 +356,10 @@ the next time around.
 
 A parallel build process can easily overload the system, cause thrashing and render the computer
 unresponsive for long periods of time. I<< orbuild >>'s efforts to prevent that from happening
-are rudimentary at best. If you are serious about constraining your system load, you'll have to
+are rudimentary at best, see configuration settings I<< ProcessPriority >> and
+I<< MaximumVirtualMemoryPerProcess >> in F<< orbuild.conf >>.
+
+If you are serious about constraining your system load, you'll have to
 resort to more powerful methods like I<< cgroups >> under Linux, or running the build
 inside a virtual PC.
 
