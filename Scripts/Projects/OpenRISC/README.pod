@@ -28,7 +28,7 @@ This is an I<< orbuild project >>, see the main I<< orbuild system >> documentat
 Under Ubuntu/Debian systems, the following command installs all prerequisites at once:
 
   sudo apt-get install  gcc g++ libmpfr-dev libgmp3-dev libmpc-dev libzip-dev libtool texlive flex bison texinfo libncurses-dev gperf
-  sudo apt-get install  dejagnu verilator iverilog tcl-dev tk-dev autogen
+  sudo apt-get install  dejagnu verilator iverilog tcl-dev tk-dev autogen libusb-dev libftdi-dev
 
 If your system does not have a package with Verilator or Icarus Verilog, you can enable building them in the Makefile, see below.
 
