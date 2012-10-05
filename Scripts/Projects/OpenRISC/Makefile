@@ -1235,7 +1235,7 @@ LLVM_CLANG_EXTRA_CONFIG_ARGS        += --enable-targets=$(LLVM_ARCH)
 # "bare metal" executables though:
 #   clang -ccc-host-triple or1k-elf    # Builds bare metal executables.
 #   clang -ccc-host-triple or1k-linux  # Builds Linux executables.
-LLVM_CLANG_EXTRA_CONFIG_ARGS        += --with-sysroot=$(LLVM_LINUX_SYSROOT)
+LLVM_CLANG_EXTRA_CONFIG_ARGS        += --with-default-sysroot=$(LLVM_LINUX_SYSROOT)
 
 LLVM_CLANG_MAKE_MAKEFLAGS_FILTER    := pass-j
 LLVM_CLANG_INSTALL_MAKEFLAGS_FILTER := clear  # No need to risk it here.
