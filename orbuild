@@ -443,11 +443,47 @@ sub build_command ( $ $ $ )
 
   # Lower our CPU priority. Builds are normally long-running processes that should not interfere
   # too much with other system load.
-  use constant PRIO_PROCESS => 0;
-  my $currentPrio = getpriority( PRIO_PROCESS, $$ );
-  # 15 = 5 * 3, that means under Linux that the default ionice priority is automatically reduced by 3 notches,
-  # which should also help reduce the hard disk performace impact on other applications.
-  setpriority( PRIO_PROCESS, $$, $currentPrio + 15 );
+  my $processPriority = $configEntries->{ "ProcessPriority" };
+  if ( defined( $processPriority ) and length( $processPriority ) > 0 )
+  {
+    # This catches things like "ProcessPriority = abc".
+    if ( int($processPriority) == 0 )
+    {
+      die "Configuration setting ProcessPriority has an invalid value.\n";
+    }
+
+    use constant PRIO_PROCESS => 0;
+    setpriority( PRIO_PROCESS, $$, $processPriority );
+  }
+
+  # Limit the amount of virtual memory a child process can use. I've seen Icarus Verilog consume gigabytes
+  # for relative small verilog memory arrays. Building LLVM also consumes lots of memory.
+
+  my $memByteLimit = $configEntries->{ "MaximumVirtualMemoryPerProcess" };
+
+  if ( defined( $memByteLimit ) and length( $memByteLimit ) > 0 )
+  {
+    # This catches things like "MaximumVirtualMemoryPerProcess=abc".
+    if ( int($memByteLimit) == 0 )
+    {
+      die "Configuration setting MaximumVirtualMemoryPerProcess has an invalid value.\n";
+    }
+
+    eval  # Wrap in an eval, in case module BSD::Resource is not available.
+    '
+      use BSD::Resource qw( setrlimit RLIMIT_AS );
+
+      if ( not defined( setrlimit( RLIMIT_AS, $memByteLimit, $memByteLimit ) ) )
+      {
+        die "Error setting the maximum virtual memory per process to $memByteLimit bytes: $!\n";
+      }
+    ';
+
+    if ( $@ )
+    {
+        die $@;
+    }
+  }
 
   my $makeExitCode = ProcessUtils::run_process( $cmd );
 
@@ -753,6 +789,8 @@ sub process_config_file_etc ( $ $ )
 
   my @optionalEntries = qw( VisualNotification
                             PostBuildAction
+                            MaximumVirtualMemoryPerProcess
+                            ProcessPriority
                           );
 
   ConfigFile::check_config_file_contents( $configEntries, \@mandatoryEntries, \@optionalEntries, CONFIG_FILENAME );
