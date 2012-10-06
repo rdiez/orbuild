@@ -834,7 +834,7 @@ module or10_top
          else
            begin
               immediate_value = wb_dat_i[15:0];
-              dest_register   = wb_dat_i[25:21];
+              dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
 
               if ( TRACE_ASM_EXECUTION )
                 $display( "0x%08h: l.movhi r%0d, 0x%04h", `OR10_TRACE_PC_VAL, dest_register, immediate_value );
@@ -855,7 +855,7 @@ module or10_top
       begin
          immediate_value = wb_dat_i[15:0];
          src_register    = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register   = wb_dat_i[25:21];
+         dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
 
          result = { gpr_register_value_read_1[31:16], ( gpr_register_value_read_1[15:0] | immediate_value ) };
 
@@ -882,7 +882,7 @@ module or10_top
       begin
          immediate_value = wb_dat_i[15:0];
          src_register    = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register   = wb_dat_i[25:21];
+         dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
 
          result = { 16'h0000, ( gpr_register_value_read_1[15:0] & immediate_value ) };
 
@@ -908,7 +908,7 @@ module or10_top
       begin
          immediate_value = wb_dat_i[15:0];
          src_register    = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register   = wb_dat_i[25:21];
+         dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
 
          // Note that "l.xori rD,rA,-1" has the same effect as the non-existant l.not instruction.
 
@@ -1018,7 +1018,7 @@ module or10_top
            begin
               opcode        = wb_dat_i[9:6];
               src_register  = wb_dat_i[`OR10_IOP_GPR1];
-              dest_register = wb_dat_i[25:21];
+              dest_register = wb_dat_i[`OR10_IOP_DEST_GPR];
 
               src = gpr_register_value_read_1[15:0];
               should_raise_illegal_instruction_exception = 0;
@@ -1105,7 +1105,7 @@ module or10_top
 
               opcode        = wb_dat_i[9:6];
               src_register  = wb_dat_i[`OR10_IOP_GPR1];
-              dest_register = wb_dat_i[25:21];
+              dest_register = wb_dat_i[`OR10_IOP_DEST_GPR];
 
               result = gpr_register_value_read_1;
               should_raise_illegal_instruction_exception = 0;
@@ -1153,7 +1153,7 @@ module or10_top
       begin
          src_register_a = wb_dat_i[`OR10_IOP_GPR1];
          src_register_b = wb_dat_i[`OR10_IOP_GPR2];
-         dest_register  = wb_dat_i[25:21];
+         dest_register  = wb_dat_i[`OR10_IOP_DEST_GPR];
 
          if ( wb_dat_i[10]  != 0 ||
               wb_dat_i[7:4] != 0 )
@@ -1201,7 +1201,7 @@ module or10_top
            begin
               src_register_a  = wb_dat_i[`OR10_IOP_GPR1];
               src_register_b  = wb_dat_i[`OR10_IOP_GPR2];
-              dest_register   = wb_dat_i[25:21];
+              dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
 
               should_raise_illegal_instruction_exception = 0;
 
@@ -1296,7 +1296,7 @@ module or10_top
       reg          should_raise_reserved_bits_exception;
 
       begin
-         dest_register   = wb_dat_i[25:21];
+         dest_register   = wb_dat_i[`OR10_IOP_DEST_GPR];
          src_register_a  = wb_dat_i[`OR10_IOP_GPR1];
          src_register_b  = wb_dat_i[`OR10_IOP_GPR2];
          immediate_value = wb_dat_i[15:0];
@@ -1451,7 +1451,7 @@ module or10_top
            begin
               src_reg_a = wb_dat_i[`OR10_IOP_GPR1];
               src_reg_b = wb_dat_i[`OR10_IOP_GPR2];
-              dest_reg  = wb_dat_i[25:21];
+              dest_reg  = wb_dat_i[`OR10_IOP_DEST_GPR];
 
               src_a = gpr_register_value_read_1;
               src_b = gpr_register_value_read_2;
@@ -1513,7 +1513,7 @@ module or10_top
          else
            begin
 
-              dest_reg = wb_dat_i[25:21];
+              dest_reg = wb_dat_i[`OR10_IOP_DEST_GPR];
               src_reg  = wb_dat_i[`OR10_IOP_GPR1];
               opcode   = wb_dat_i[9:8];
 
@@ -1583,7 +1583,7 @@ module or10_top
       reg[6 * 8 - 1:0] instruction_name;
 
       begin
-         dest_reg = wb_dat_i[25:21];
+         dest_reg = wb_dat_i[`OR10_IOP_DEST_GPR];
          src_reg  = wb_dat_i[`OR10_IOP_GPR1];
 
          src = gpr_register_value_read_1;
@@ -2295,7 +2295,7 @@ module or10_top
       reg                    should_raise_range_exception;
 
       begin
-         dest_register    = wb_dat_i[25:21];
+         dest_register    = wb_dat_i[`OR10_IOP_DEST_GPR];
          gpr1             = wb_dat_i[`OR10_IOP_GPR1];
          immediate_value  = wb_dat_i[15:0];
 
@@ -2871,7 +2871,7 @@ module or10_top
          // The zero- or sign-extension would only happen on 64-bit CPU implementations.
 
          base_addr_register = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register      = wb_dat_i[25:21];
+         dest_register      = wb_dat_i[`OR10_IOP_DEST_GPR];
          offset             = wb_dat_i[15:0];
 
          // Add the sign-extended offset.
@@ -2911,7 +2911,7 @@ module or10_top
 
       begin
          base_addr_register = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register      = wb_dat_i[25:21];
+         dest_register      = wb_dat_i[`OR10_IOP_DEST_GPR];
          offset             = wb_dat_i[15:0];
 
          effective_addr = gpr_register_value_read_1 + { {16{offset[15]}} , offset };
@@ -2952,7 +2952,7 @@ module or10_top
 
       begin
          base_addr_register = wb_dat_i[`OR10_IOP_GPR1];
-         dest_register      = wb_dat_i[25:21];
+         dest_register      = wb_dat_i[`OR10_IOP_DEST_GPR];
          offset             = wb_dat_i[15:0];
 
          // Add the sign-extended offset.

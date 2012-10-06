@@ -16,6 +16,7 @@
 // Fields inside the instruction opcode where the GPRs are.
 `define OR10_IOP_GPR1  20:16
 `define OR10_IOP_GPR2  15:11
+`define OR10_IOP_DEST_GPR 25:21
 
 `define OR10_IOP_PREFIX  31:26
 
