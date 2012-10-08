@@ -29,11 +29,9 @@ OR10 is an open-source, hacker-friendly, 32-bit CPU for embedded systems written
 
 =item * Very simple design. One could say suboptimal, or even naive.
 
-=item * No jump delay slot, which makes it incompatible with most existing OpenRISC software.
+=item * No jump delay slot.
 
-You need to use Peter Gavin's toolchain or Stefan Kristiansson's LLVM/Clang compiler
-in order to generate code for OR10. The I<< orbuild >> framework
-can automatically download and build both sets of tools for you.
+See below for more information.
 
 =item * Single L<< Wishbone bus|http://en.wikipedia.org/wiki/Wishbone_%28computer_bus%29 >> for both instruction fetches and data access.
 
@@ -95,7 +93,7 @@ TODO
 
 =head2 Debug Unit and JTAG interface
 
-The Debug Unit supports asynchronous stalling, single-stepping and software breakpoints (with the l.trap instruction), but no hardware breakpoints yet.
+The Debug Unit supports asynchronous stalling, single-stepping, software breakpoints and accessing Wishbone memory.
 
 OR10's Debug Unit bus and protocol are not compatible with the original OR1200 implementation,
 so you need to use the supplied I<< GdbToJtagBridge >>. However, you can use
@@ -107,10 +105,55 @@ I<< GdbToJtagBridge >>'s help for a list of supported JTAG cables.
 There are clock-domain-crossing components that synchronise the JTAG and the CPU clocks both ways. While not particularly fast,
 it should work with any JTAG clock frequency your FPGA can process.
 
-Note that I<< GdbToJtagBridge >> clears the "transfer control to JTAG on debug trap" bits on the CPU as part of the disconnect procedure.
+=head3 Caveats
+
+=over
+
+=item * You need to detach from the CPU gracefully.
+
+I<< GdbToJtagBridge >> clears the "transfer control to JTAG on debug trap" bits on the CPU as part of the disconnect procedure.
 Therefore, if you do not disconnect from the debugged system gracefully (for example, if you just pull the JTAG cable),
 then the CPU will hang forever at the next breakpoint.
 
+Note that this is probably true for most other JTAG implementations too.
+
+=item * The Debug Unit does not support hardware breakpoints yet.
+
+This means that program memory must be writeable,
+as the debugger writes I<< l.trap >> instructions in order to trigger breakpoins. Therefore, it is not possible
+to set breakpoints in ROM or Flash memory.
+
+=item * Wishbone access is always 32-bit wide.
+
+The current Debug Interface implementation is not suitable for reading from or writing to byte-oriented Wishbone devices
+like 16550 UART controllers, as all reads and writes are 32-bits wide.
+
+Note also that the current I<< GdbToJtagBridge >> version does not support all unaligned address/size combinations,
+so reading from or writing to unaligned memory addresses or with unaligned data lengths may fail (you'll get a proper error message though).
+
+=back
+
+=head2 Deviations from the OpenRISC specification
+
+=over
+
+=item * No jump delay slot
+
+Not having a jump delay slot makes the I<< OR10 >> incompatible with most existing OpenRISC software.
+However, this is only an issue for hand-written assembly code. For C/C++ code,
+you just need to recompile with Peter Gavin's toolchain (with -mcompat-delay or -mno-delay)
+or Stefan Kristiansson's LLVM/Clang compiler (with -disable-or1k-delay-filler).
+Note that the I<< orbuild >> framework can automatically download and build both sets of tools for you.
+
+Special Purpose Register "CPU Configuration Register" (SPR CPUCFGR) has bit 10 set
+to indicate the lack of jump delay slot, but this is not in the official OpenRISC
+specification yet (this bit is marked as 'reserved').
+
+Peter Gavin's version of I<< or1ksim >> can also simulate a CPU without a jump delay slot,
+but you need to specify in the configuration file a value for SPR CPUCFGR which has bit 10 set,
+look at the or1ksim*.cfg files distributed with I<< orbuild >> for an example.
+
+=back
 
 =head2 About the OR10 name
 
