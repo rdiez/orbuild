@@ -50,6 +50,8 @@ module or10_top
 
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
+     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'.
+
      parameter TRACE_ASM_EXECUTION = 0,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
@@ -203,6 +205,7 @@ module or10_top
    localparam OR10_INST_MTSPR                          = 6'h30;
    localparam OR10_INST_NOP                            = 6'h05;
    localparam OR10_INST_ORI                            = 6'h2A;
+   localparam OR10_INST_MULI                           = 6'h2C;
    localparam OR10_INST_SYS_TRAP                       = 6'h08;
    localparam OR10_INST_RFE                            = 6'h09;
    localparam OR10_INST_SB                             = 6'h36;
@@ -932,7 +935,6 @@ module or10_top
       inout reg can_interrupt;
 
       reg [15:0] immediate_value;
-      reg        trap_raised;
 
       begin
          immediate_value = wb_dat_i[15:0];
@@ -952,35 +954,25 @@ module or10_top
 
            10'b0100000000:
              begin
-                if ( immediate_value[15:5] != 0 )
-                  raise_exception_without_eear( RANGE_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
+                // The immediate value is now ignored, like in all other processor implementations.
+                // Note that GDB uses an "l.trap 1" instruction to trigger software breakpoints.
+
+                if ( TRACE_ASM_EXECUTION )
+                  $display( "0x%08h: l.trap 0x%04h (%0s)",
+                            `OR10_TRACE_PC_VAL,
+                            immediate_value,
+                            is_trap_debug_unit_enabled ? "transfers control to the JTAG Debug Unit" : "raises the Trap exception" );
+
+                if ( is_trap_debug_unit_enabled )
+                  begin
+                     can_interrupt = 0;
+                     is_stop_reason_trap <= 1;
+                     dbg_is_stalled_o    <= 1;
+                     current_state       <= STATE_DEBUG_STALLED;
+                  end
                 else
                   begin
-                     trap_raised = 0 != ( cpureg_spr_sr[ immediate_value[4:0] ] );
-
-                     // TODO: Work-around for gdb, which seems to write always "l.trap 1"
-                     trap_raised = trap_raised || is_trap_debug_unit_enabled;
-
-                     if ( TRACE_ASM_EXECUTION )
-                       $display( "0x%08h: l.trap 0x%04h (%0s)",
-                                 `OR10_TRACE_PC_VAL,
-                                 immediate_value,
-                                 trap_raised ? "trap raised" : "trap not raised" );
-
-                     if ( trap_raised )
-                       begin
-                          if ( is_trap_debug_unit_enabled )
-                            begin
-                               can_interrupt = 0;
-                               is_stop_reason_trap <= 1;
-                               dbg_is_stalled_o    <= 1;
-                               current_state       <= STATE_DEBUG_STALLED;
-                            end
-                          else
-                            begin
-                               raise_exception_without_eear( TRAP_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
-                            end
-                       end
+                     raise_exception_without_eear( TRAP_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
                   end
              end
 
@@ -1568,6 +1560,127 @@ module or10_top
    endtask
 
 
+   task automatic execute_mul_instruction;
+
+      input reg          is_unsigned;
+      input reg          is_immediate;
+
+      inout reg [DW-1:0] next_sr;
+      inout reg          can_interrupt;
+
+      reg [`OR10_REG_NUMBER] operand_a_reg;
+      reg [`OR10_REG_NUMBER] operand_b_reg;       // Only used if non-immediate.
+      reg [15:0]             operand_b_immediate; // Only used if immediate.
+      reg [DW-1:0]           operand_a_value;     // Just an alias for gpr_register_value_read_1.
+      reg [DW-1:0]           operand_b_value;
+      reg [DW:0]             op33_a;
+      reg [DW:0]             op33_b;
+      reg [DW*2+1:0]         result66;
+      reg [`OR10_REG_NUMBER] dest_reg;
+      reg [6 * 8 - 1:0]      instruction_name;
+      reg                    carry;     // Meaningful only when multiplying unsigned integers.
+      reg                    overflow;  // Meaningful only when multiplying signed   integers.
+
+      begin
+         if ( !is_immediate && ( wb_dat_i[10]  != 0 ||
+                                 wb_dat_i[7:4] != 0 ) )
+           begin
+              `ASSERT_FALSE;
+              raise_reserved_instruction_opcode_bits_exception( can_interrupt );
+           end
+         else
+           begin
+             operand_a_reg       = wb_dat_i[`OR10_IOP_GPR1];
+             operand_b_reg       = wb_dat_i[`OR10_IOP_GPR2];
+             operand_b_immediate = wb_dat_i[15:0];
+             dest_reg            = wb_dat_i[`OR10_IOP_DEST_GPR];
+
+             operand_a_value = gpr_register_value_read_1;
+
+             if ( is_immediate )
+               operand_b_value = { {16{wb_dat_i[15]}}, operand_b_immediate };  // Sign-extend the immediate value.
+             else
+               operand_b_value = gpr_register_value_read_2;
+
+             // Multiply 33 * 33 = 66 bits, so that a single signed multiplier can do both signed
+             // and unsigned multiplications.
+             // There are probably better ways to achieve this, but I'm no expert at 2's complement.
+
+             if ( is_unsigned )
+               begin
+                  // The sign bit is always zero.
+                  op33_a = { 1'b0, operand_a_value };
+                  op33_b = { 1'b0, operand_b_value };
+               end
+             else
+               begin
+                  // Sign-extend the operands from 32 to 33 bits.
+                  op33_a = { operand_a_value[DW-1], operand_a_value };
+                  op33_b = { operand_b_value[DW-1], operand_b_value };
+               end
+
+             result66 = $signed(op33_a) * $signed(op33_b);
+
+             // Possible optimisation: if we didn't need the Carry and Overflow flags, we don't need
+             // to calculate the top 32-bits of the result, which might save some FPGA resources (I'm not sure).
+
+             if ( is_unsigned )
+               begin
+                  overflow = 0;
+                  carry    = result66[DW*2+1:DW] != 0;
+               end
+             else
+               begin
+                  overflow = result66[DW*2+1:DW] != {34{result66[DW-1]}};
+                  // I haven't found a way to calculate the carry flag as if the operands had been unsigned integers.
+                  // This is what or1ksim does, but it cheats by doing both a signed and an unsigned multiplications,
+                  // which would waste quite a lot of FPGA resources.
+                  carry    = 0;
+               end
+
+             if ( TRACE_ASM_EXECUTION )
+               begin
+                  if ( is_immediate )
+                    $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (result 0x%08h * 0x%08h = 0x%08h, C=%d, O=%d)",
+                              `OR10_TRACE_PC_VAL,
+                              dest_reg,
+                              operand_a_reg,
+                              operand_b_immediate,
+                              operand_a_value,
+                              operand_b_value,
+                              result66[DW-1:0],
+                              carry, overflow );
+                  else
+                    begin
+                       if ( is_unsigned )
+                         instruction_name = "l.mulu";
+                       else
+                         instruction_name = "l.mul";
+
+                       $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h * 0x%08h = 0x%08h, C=%d, O=%d)",
+                                 `OR10_TRACE_PC_VAL,
+                                 instruction_name,
+                                 dest_reg,
+                                 operand_a_reg,
+                                 operand_b_reg,
+                                 operand_a_value,
+                                 operand_b_value,
+                                 result66[DW-1:0],
+                                 carry, overflow );
+                    end
+               end
+
+             next_sr[ `OR1200_SR_CY ] = carry;
+             next_sr[ `OR1200_SR_OV ] = overflow;
+
+             raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
+
+             schedule_register_write_during_next_cycle( dest_reg, result66[DW-1:0] );
+           end
+      end
+   endtask
+
+
    task automatic execute_shift_instruction_2;
 
       input reg [2:0]              opcode;  // See the `OR10_SHIFTINST_xxx constants.
@@ -1748,14 +1861,28 @@ module or10_top
            4'h1: execute_add_instruction( OR10_ADDINST_ADDC, next_sr, can_interrupt );
            4'h2: execute_sub_instruction( next_sr, can_interrupt );
            4'h3, 4'h4, 4'h5: execute_logic_instruction( opcode, can_interrupt );
+
+           4'h6: if ( ENABLE_INSTRUCTION_MUL )
+                   execute_mul_instruction( 0, 0, next_sr, can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
+
            4'h8: execute_shift_instruction_reg( can_interrupt );
            // 4'h9:  l.div not supported yet.
+
+           4'hb: if ( ENABLE_INSTRUCTION_MUL )
+                   execute_mul_instruction( 1, 0, next_sr, can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
+
            4'hc: execute_ext_b_h_instruction( can_interrupt );
            4'hd: execute_ext_w_instruction( can_interrupt );
+
            4'he: if ( ENABLE_INSTRUCTION_CMOV )
                    execute_cmov( can_interrupt );
                  else
                    should_raise_illegal_exception = 1;
+
            4'hf: execute_ff1_fl1( can_interrupt );
 
            default: should_raise_illegal_exception = 1;
@@ -3079,6 +3206,7 @@ module or10_top
            OR10_INST_MOVHI:     execute_movhi( can_interrupt );
            OR10_INST_PREFIX_38: execute_prefix_38_instruction( next_sr, can_interrupt );
            OR10_INST_ORI:       execute_ori;
+           OR10_INST_MULI:      if ( ENABLE_INSTRUCTION_MUL ) execute_mul_instruction( 0, 1, next_sr, can_interrupt ); else should_raise_illegal_exception = 1;
            OR10_INST_SYS_TRAP:  execute_sys_trap( can_interrupt );
            OR10_INST_ANDI:      execute_andi;
            OR10_INST_XORI:      execute_xori;
