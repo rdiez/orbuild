@@ -40,66 +40,59 @@ start_tests:
         PUSH LINK_REGISTER_R9
 
 
-        // Test l.mul
+        // Test l.mul.
+        //
+        // Note that the l.mul instruction has been modified so that it always
+        // resets the Carry flag. Only the Overflow flag is meaningful.
 
-        // Multiply two small positive numbers. Should set no flags.
+        // Multiply two small positive numbers.
         TEST_INST_I32_I32 l.mul, 0x00000002, 0x00000003
 
-        // Multiply two quite large positive numbers. Should set no flags
+        // Multiply two quite large positive numbers.
         TEST_INST_I32_I32 l.mul, 0x00008001, 0x0000fffe
 
-        // Multiply two slightly too large positive numbers. Should set the
-        // overflow, but not the carry flag .
+        // Multiply two slightly too large positive numbers.
         TEST_INST_I32_I32 l.mul, 0x00008000, 0x00010000
 
-        // Multiply two large positive numbers. Should set both the carry and
-        // overflow flags (even though the result is not a negative number.
+        // Multiply two large positive numbers.
         TEST_INST_I32_I32 l.mul, 0x00010000, 0x00010000
 
-        // Multiply two small negative numbers. Should set the overflow, but not
-        // the carry flag.
+        // Multiply two small negative numbers.
         TEST_INST_I32_I32 l.mul, 0xfffffffe, 0xfffffffd
 
-        // Multiply two quite large negative numbers. Should set the overflow,
-        // but not the carry flag.
+        // Multiply two quite large negative numbers.
         TEST_INST_I32_I32 l.mul, 0xffff7fff, 0xffff0002
 
-        // Multiply two slightly too large negative numbers. Should set both the
-        // overflow, and the carry flags
+        // Multiply two slightly too large negative numbers.
         TEST_INST_I32_I32 l.mul, 0xffff7fff, 0xffff0000
 
-        // Multiply two large negative numbers. Should set the
-        // both the carry and overflow flags (even though the result is a
-        // positive number.
+        // Multiply two large negative numbers.
         TEST_INST_I32_I32 l.mul, 0xffff0000, 0xfffeffff
 
         // Multiply one small negative number and one small positive number.
-        // Should set the overflow, but not the carry flag.
         TEST_INST_I32_I32 l.mul, 0x00000002, 0xfffffffd
 
-        // Multiply one quite large negative number and one quite large
-        // positive number. Should set the overflow, but not the carry flag.
+        // Multiply one quite large negative number and one quite large positive number.
         TEST_INST_I32_I32 l.mul, 0xffff8000, 0x00010000
 
         // Multiply one slightly too large negative number and one slightly
-        // too large positive number. Should set both the carry and overflow flags.
+        // too large positive number.
         TEST_INST_I32_I32 l.mul, 0xffff7fff, 0x00010000
 
-        // Multiply the largest negative number by positive unity. Should set
-        // neither carry, nor overflow flag.
+        // Multiply the largest negative number by positive unity.
         TEST_INST_I32_I32 l.mul, 0x80000000, 0x00000001
 
         // ------ Check that range exceptions are triggered.
 
-        // Check that an overflow alone causes a RANGE Exception.
+        // Check that an Overflow causes a RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I32 l.mul, 0x00008000, 0x00010000
 
-        // Check that a carry alone does not cause a RANGE Exception.
+        // No Overflow flag, no RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I32 l.mul, 0x00000002, 0xfffffffd
 
-        // Check that carry and overflow together cause an exception.
+        // Check that an Overflow causes a RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I32 l.mul, 0xffff7fff, 0xffff0000
 
@@ -108,63 +101,54 @@ start_tests:
 
         // Test l.muli
 
-        // Multiply two small positive numbers. Should set no flags.
+        // Multiply two small positive numbers.
         TEST_INST_I32_I16 l.muli, 0x00000002, 0x0003
 
-        // Multiply two quite large positive numbers. Should set no flags
+        // Multiply two quite large positive numbers.
         TEST_INST_I32_I16 l.muli, 0x00010002, 0x7fff
 
-        // Multiply two slightly too large positive numbers. Should set the
-        // overflow, but not the carry flag
+        // Multiply two slightly too large positive numbers.
         TEST_INST_I32_I16 l.muli, 0x00020000, 0x4000
 
-        // Multiply two large positive numbers. Should set both the carry and
-        // overflow flags (even though the result is not a negative number.
+        // Multiply two large positive numbers.
         TEST_INST_I32_I16 l.muli, 0x00040000, 0x4000
 
-        // Multiply two small negative numbers. Should set the overflow, but not
-        // the carry flag.
+        // Multiply two small negative numbers.
         TEST_INST_I32_I16 l.muli, 0xfffffffe, 0xfffd
 
-        // Multiply two quite large negative numbers. Should set the overflow,
-        // but not the carry flag.
+        // Multiply two quite large negative numbers.
         TEST_INST_I32_I16 l.muli, 0xfffefffe, 0x8001
 
-        // Multiply two slightly too large negative numbers. Should set both the
-        // overflow, and the carry flags
+        // Multiply two slightly too large negative numbers.
         TEST_INST_I32_I16 l.muli, 0xfffe0000, 0xbfff
 
-        // Multiply two large negative numbers. Should set the
-        // both the carry and overflow flags (even though the result is a positive number.
+        // Multiply two large negative numbers.
         TEST_INST_I32_I16 l.muli, 0xfffdfffe, 0x8000
 
         // Multiply one small negative number and one small positive number.
-        // Should set the overflow, but not the carry flag.
         TEST_INST_I32_I16 l.muli, 0x00000002, 0xfffd
 
-        // Multiply one quite large negative number and one quite large
-        // positive number. Should set the overflow, but not the carry flag.
+        // Multiply one quite large negative number and one quite large positive number.
         TEST_INST_I32_I16 l.muli, 0x00010000, 0x8000
 
         // Multiply one slightly too large negative number and one slightly
-        // too large positive number. Should set both the carry and overflow flags.
+        // too large positive number.
         TEST_INST_I32_I16 l.muli, 0xfffdfffc, 0x4000
 
-        // Multiply the largest negative number by positive unity. Should set
-        // neither carry, nor overflow flag.
+        // Multiply the largest negative number by positive unity.
         TEST_INST_I32_I16 l.muli, 0x80000000, 0x0001
 
         // ------ Check that range exceptions are triggered.
 
-        // Check that an overflow alone causes a RANGE Exception.
+        // Check that an Overflow causes a RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I16 l.muli, 0x00020000, 0x4000
 
-        // Check that a carry alone does not cause a RANGE Exception.
+        // No Overflow flag, no RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I16 l.muli, 0xfffffffe, 0xfffd
 
-        // Check that carry and overflow together cause an exception.
+        // Check that an Overflow causes a RANGE Exception.
         SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
         TEST_INST_I32_I16 l.muli, 0xfffdfffe, 0x8000
 
@@ -173,50 +157,42 @@ start_tests:
 
         // Test l.mulu
 
-        // Multiply two small positive numbers. Should set no flags.
+        // Multiply two small positive numbers.
         TEST_INST_I32_I32 l.mulu, 0x00000002, 0x00000003
 
-        // Multiply two quite large positive numbers. Should set no flags
+        // Multiply two quite large positive numbers.
         TEST_INST_I32_I32 l.mulu, 0x00008001, 0x0000fffe
 
-        // Multiply two slightly too large positive numbers. Should set the
-        // overflow, but not the carry flag
+        // Multiply two slightly too large positive numbers.
         TEST_INST_I32_I32 l.mulu, 0x00008000, 0x00010000
 
-        // Multiply two large positive numbers. Should set both the carry and
-        // overflow flags (even though the result is not a negative number.
+        // Multiply two large positive numbers.
         TEST_INST_I32_I32 l.mulu, 0x00010000, 0x00010000
 
-        // Multiply two small negative numbers. Should set the overflow, but not
-        // the carry flag.
+        // Multiply two small negative numbers.
         TEST_INST_I32_I32 l.mulu, 0xfffffffe, 0xfffffffd
 
-        // Multiply two quite large negative numbers. Should set the overflow,
-        // but not the carry flag.
+        // Multiply two quite large negative numbers.
         TEST_INST_I32_I32 l.mulu, 0xffff7fff, 0xffff0002
 
-        // Multiply two slightly too large negative numbers. Should set both the
-        // overflow, and the carry flags
+        // Multiply two slightly too large negative numbers.
         TEST_INST_I32_I32 l.mulu, 0xffff7fff, 0xffff0000
 
-        // Multiply two large negative numbers. Should set the
-        //  both the carry and overflow flags (even though the result is a positive number.
+        // Multiply two large negative numbers.
         TEST_INST_I32_I32 l.mulu, 0xffff0000, 0xfffeffff
 
         // Multiply one small negative number and one small positive number.
-        // Should set the overflow, but not the carry flag.
         TEST_INST_I32_I32 l.mulu, 0x00000002, 0xfffffffd
 
         // Multiply one quite large negative number and one quite large
-        // positive number. Should set the overflow, but not the carry flag.
+        // positive number.
         TEST_INST_I32_I32 l.mulu, 0xffff8000, 0x00010000
 
         // Multiply one slightly too large negative number and one slightly
-        // too large positive number. Should set both the carry and overflow flags.
+        // too large positive number.
         TEST_INST_I32_I32 l.mulu, 0xffff7fff, 0x00010000
 
-        // Multiply the largest negative number by positive unity. Should set
-        // neither carry, nor overflow flag.
+        // Multiply the largest negative number by positive unity.
         TEST_INST_I32_I32 l.mulu, 0x80000000, 0x00000001
 
 

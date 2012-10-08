@@ -51,56 +51,56 @@ report(0x00000000);
 report(0x00010000);
 report(0x00010000);
 report(0x00000000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0xfffffffe);
 report(0xfffffffd);
 report(0x00000006);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xffff7fff);
 report(0xffff0002);
 report(0x7ffffffe);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xffff7fff);
 report(0xffff0000);
 report(0x80010000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0xffff0000);
 report(0xfffeffff);
 report(0x00010000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0x00000002);
 report(0xfffffffd);
 report(0xfffffffa);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xffff8000);
 report(0x00010000);
 report(0x80000000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xffff7fff);
 report(0x00010000);
 report(0x7fff0000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
@@ -122,14 +122,14 @@ report(0x00000001);
 report(0x00000002);
 report(0xfffffffd);
 report(0xfffffffa);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xffff7fff);
 report(0xffff0000);
 report(0x80010000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000001);
 
@@ -160,56 +160,56 @@ report(0x00000000);
 report(0x00040000);
 report(0x00004000);
 report(0x00000000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0xfffffffe);
 report(0x0000fffd);
 report(0x00000006);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xfffefffe);
 report(0x00008001);
 report(0x7ffffffe);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xfffe0000);
 report(0x0000bfff);
 report(0x80020000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0xfffdfffe);
 report(0x00008000);
 report(0x00010000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
 report(0x00000002);
 report(0x0000fffd);
 report(0xfffffffa);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0x00010000);
 report(0x00008000);
 report(0x80000000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xfffdfffc);
 report(0x00004000);
 report(0x7fff0000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000000);
 
@@ -231,14 +231,14 @@ report(0x00000001);
 report(0xfffffffe);
 report(0x0000fffd);
 report(0x00000006);
-report(0x00000001);
+report(0x00000000);
 report(0x00000000);
 report(0x00000000);
 
 report(0xfffdfffe);
 report(0x00008000);
 report(0x00010000);
-report(0x00000001);
+report(0x00000000);
 report(0x00000001);
 report(0x00000001);
 
