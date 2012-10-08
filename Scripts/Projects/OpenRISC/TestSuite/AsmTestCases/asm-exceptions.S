@@ -91,6 +91,7 @@ start_tests:
         l.trap FO_FLAG_BIT
 
         // Clear the OV flag, so that it does not trigger a trap.
+        // Note: the behaviour has changed, l.trap always triggers an exception now.
         #define OV_FLAG_BIT 11
         CLEAR_SPR_SR_FLAGS OV_FLAG_BIT, r2, r3
         l.trap OV_FLAG_BIT

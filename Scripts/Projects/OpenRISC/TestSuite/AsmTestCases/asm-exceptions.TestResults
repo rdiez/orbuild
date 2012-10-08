@@ -2,5 +2,6 @@
 report(0x00000700);  # Illegal instruction
 report(0x00000c00);  # l.sys
 report(0x00000e00);  # l.trap
+report(0x00000e00);  # l.trap again, the behaviour has changed, l.trap always triggers an exception now.
 
 exit(0)
