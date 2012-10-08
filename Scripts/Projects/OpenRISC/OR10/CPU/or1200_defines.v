@@ -44,6 +44,16 @@
 `define OR1200_TT_OFS_TTCR  1
 
 // SPR Group: Debug Unit (DU)
+
+`define OR1200_DU_DVR0		11'd0
+`define OR1200_DU_DVR1		11'd1
+`define OR1200_DU_DVR2		11'd2
+`define OR1200_DU_DVR3		11'd3
+`define OR1200_DU_DVR4		11'd4
+`define OR1200_DU_DVR5		11'd5
+`define OR1200_DU_DVR6		11'd6
+`define OR1200_DU_DVR7		11'd7
+
 `define OR1200_DU_DMR1		11'd16
 `define OR1200_DU_DSR       11'd20  // Debug Stop Register.
 `define OR1200_DU_DRR       11'd21  // Debug Reason Register.
