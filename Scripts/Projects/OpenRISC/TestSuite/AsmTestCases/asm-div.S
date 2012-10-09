@@ -29,10 +29,15 @@
 
         STANDARD_TEST_ENVIRONMENT
 
+        .section .exception_vectors
+
+        #include "RangeExceptionHandler.inc"
+
+
         .section .text
 start_tests:
         PUSH LINK_REGISTER_R9
-        
+
 
         // Test l.div
 
@@ -52,23 +57,24 @@ start_tests:
 	    TEST_INST_I32_I32 l.div, 0x0000000c, 0xfffffffd
 	    TEST_INST_I32_I32 l.div, 0x0000000b, 0xfffffffd
 
-	    // Divide by zero. Should set the overflow flag.
-        // TODO: temporarily disabled as these tests fail on both or1ksim and or1200
-	    // TEST_INST_I32_I32 l.div, 0x0000000c, 0x00000000
-	    // TEST_INST_I32_I32 l.div, 0xfffffff4, 0x00000000
+	    // Divide by zero. Should set the carry flag.
+        LOAD_IMMEDIATE r4, 0x12345678
+	    TEST_INST_I32_I32 l.div, 0x0000000c, 0x00000000
+        LOAD_IMMEDIATE r4, 0xABCDEF01
+	    TEST_INST_I32_I32 l.div, 0xfffffff4, 0x00000000
 
-        // ------ Check that range exceptions are triggered.
+	    // Divide by zero, should raise exception.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        LOAD_IMMEDIATE r4, 0x12345678
+	    TEST_INST_I32_I32 l.div, 0x0000000c, 0x00000000
 
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
-        
-	    // Divide by zero. Should set the overflow flag and trigger an exception. 
-        // TODO: disabled, as it fails against ORPSoC V2's or1200
-	    // TEST_INST_I32_I32 l.div, 0x0000000c, 0x00000000
-	    // TEST_INST_I32_I32 l.div, 0xfffffff4, 0x00000000
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        LOAD_IMMEDIATE r4, 0xABCDEF01
+	    TEST_INST_I32_I32 l.div, 0xfffffff4, 0x00000000
 
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
 
-        
+
         // Test l.divu
        
 	    // Divide two positive numbers and check rounding. Should set no flags. 
@@ -77,9 +83,8 @@ start_tests:
 
 	    // Divide two numbers that would be negative under 2's complement and
 	    // check rounding. Should set no flags. 
-        // TODO: disabled, as it fails against ORPSoC V2's or1200
-	    // TEST_INST_I32_I32 l.divu, 0xfffffff4, 0xfffffffd
-	    // TEST_INST_I32_I32 l.divu, 0xfffffff5, 0xfffffffd
+	    TEST_INST_I32_I32 l.divu, 0xfffffff4, 0xfffffffd
+	    TEST_INST_I32_I32 l.divu, 0xfffffff5, 0xfffffffd
 
 	    // Divide a number that would be negative under 2's complement by a
 	    // number that would be positive under 2's complement and check rounding. Should set no flags. 
@@ -88,25 +93,26 @@ start_tests:
 
 	    // Divide a number that would be positive under 2's complement by a
 	    // number that would be negative under 2's complement and check rounding. Should set no flags. 
-        // TODO: disabled, as it fails against ORPSoC V2's or1200
-	    // TEST_INST_I32_I32 l.divu, 0x0000000c, 0xfffffffd
-	    // TEST_INST_I32_I32 l.divu, 0x0000000b, 0xfffffffd
+	    TEST_INST_I32_I32 l.divu, 0x0000000c, 0xfffffffd
+	    TEST_INST_I32_I32 l.divu, 0x0000000b, 0xfffffffd
 
-	    // Divide by zero. Should set the overflow flag. 
-        // TODO: temporarily disabled as these tests fail on both or1ksim and or1200
-	    // TEST_INST_I32_I32 l.divu, 0x0000000c, 0x00000000
-		// TEST_INST_I32_I32 l.divu, 0xfffffff4, 0x00000000
+	    // Divide by zero. Should set the carry flag. 
+        LOAD_IMMEDIATE r4, 0x12345678
+	    TEST_INST_I32_I32 l.divu, 0x0000000c, 0x00000000
+        LOAD_IMMEDIATE r4, 0xABCDEF01
+		TEST_INST_I32_I32 l.divu, 0xfffffff4, 0x00000000
 
-        // ------ Check that range exceptions are triggered.
+        // Divide by zero, should raise exception.
+        SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        LOAD_IMMEDIATE r4, 0x12345678
+	    TEST_INST_I32_I32 l.divu, 0x0000000c, 0x00000000
 
-        SET_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
-
-	    // Divide by zero. Should set the overflow flag and trigger an exception. 
-        // TODO: disabled, as it fails against ORPSoC V2's or1200
-	    // TEST_INST_I32_I32 l.divu, 0x0000000c, 0x00000000
-	    // TEST_INST_I32_I32 l.divu, 0xfffffff4, 0x00000000
+		SET_SR_FLAGS_FOR_RANGE_EXCEPTION r2, r3
+        LOAD_IMMEDIATE r4, 0xABCDEF01
+        TEST_INST_I32_I32 l.divu, 0xfffffff4, 0x00000000
 
         CLEAR_SPR_SR_FLAGS SPR_SR_OVE, r2, r3
+
 
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9
