@@ -85,11 +85,26 @@ For example, if a reserved bit in an instruction opcode is not zero, you'll get 
 
 =back
 
-=head2 How to make OR10 smaller and save FPGA resources
+=head2 How to make OR10 smaller or faster
 
-Turn off all the features you don't need, look at I<< or10_top >>'s parameters.
+If you need to conserve FPGA resources, first of all, turn off all the features you don't need,
+look at I<< or10_top >>'s parameters for more information.
 
-TODO
+There are some things that could be done to improve FPGA area consumption:
+
+=over
+
+=item * Implement a serial bit shifter for l.ror and the like.
+
+=item * Implement a pipelined multiplier and divider.
+
+=item * Do not do a full decode on all instruction opcodes.
+
+Without a full decode, the CPU will not error (raise exceptions) on all invalid opcodes,
+SPR numbers and so on. This could save FPGA resources at the cost of harder error diagnostics.
+For an example on how this could be done, look for symbol OR1200_SYS_FULL_DECODE in ORPCSoC V2.
+
+=back
 
 =head2 Debug Unit and JTAG interface
 
@@ -133,7 +148,7 @@ so reading from or writing to unaligned memory addresses or with unaligned data 
 
 =back
 
-=head2 Deviations from the OpenRISC specification
+=head2 Implementation peculiarities and deviations from the OpenRISC specification
 
 =over
 
@@ -159,6 +174,36 @@ or1ksim is generally discouraged, see below.
 =item * Exceptions are raised for instruction opcodes where the reserved bits are not zero.
 
 =item * l.mul and l.muli alway clear the Carry flag.
+
+=item * The Range exception is triggered on edge.
+
+The Range exception is only triggered when the Overflow flag changes from 0 to 1
+(or, in the case of l.div and l.divu, the Carry flag).
+
+This matches the observed behaviour of the or1ksim simulator (although the source code seems to trigger on a high level),
+but it's different from ORPSoC V2's OR1200 core.
+
+=item * GPRs are initialised to 0x12345678 in order to help catch initialisation bugs.
+
+This is actually permitted by the specification.
+
+=item * R0 is a normal register and behaves like all other GPRs.
+
+This is actually permitted by the specification.
+
+=item * The PIC interrupts are level triggered and must not be rearmed.
+
+Writing to the PIC Status Register (PICSR) triggers a range exception.
+Therefore, the software must not attempt to clear the interrupt bit in PICSR for the interrupt to trigger again,
+the processor assumes that the peripheral will clear its interrupt line when accessed to
+inside the interrupt service routine. Otherwise, the interrupt will trigger again, possibly causing an infinite loop.
+
+=item * All interrupts are maskable.
+
+This is actually permitted by the specification, although PICMR[1:0] are suggested as possibly non-maskable interrupts,
+which I believe it is the case at least for the OR1200 implementation.
+
+=item * There is a Wishbone specification table at the beginning of I<< or10_top >>.
 
 =back
 
