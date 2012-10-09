@@ -50,7 +50,9 @@ module or10_top
 
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
-     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'.
+     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
+                                             // the maximum CPU frequency unnecessarily.
+     parameter ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
 
      parameter TRACE_ASM_EXECUTION = 0,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
@@ -650,9 +652,12 @@ module or10_top
    endtask
 
 
-   task automatic raise_ov_range_exception_if_necessary;
+   task automatic raise_ov_or_cy_range_exception_if_necessary;
+
+      input reg [4:0]    sr_bit_number;
       input reg [DW-1:0] next_sr;
       inout reg          can_interrupt;
+
       begin
          // About triggering on OV edge:
          //   Note that the Range Exception triggers on edge, when the OV flag changes from 0 to 1.
@@ -673,11 +678,27 @@ module or10_top
          //   to the overflow, as at least one of them may have been overwritten with the overflowed result.
 
          if ( cpureg_spr_sr[ `OR1200_SR_OVE ] == 1 &&
-              cpureg_spr_sr[ `OR1200_SR_OV  ] == 0 &&
-              next_sr      [ `OR1200_SR_OV  ] == 1 )
+              cpureg_spr_sr[ sr_bit_number  ] == 0 &&
+              next_sr      [ sr_bit_number  ] == 1 )
            begin
               raise_exception_without_eear( RANGE_VECTOR_ADDR, cpureg_pc, next_sr, can_interrupt );
            end
+      end
+   endtask
+
+   task automatic raise_ov_range_exception_if_necessary;
+      input reg [DW-1:0] next_sr;
+      inout reg          can_interrupt;
+      begin
+         raise_ov_or_cy_range_exception_if_necessary( `OR1200_SR_OV, next_sr, can_interrupt );
+      end
+   endtask
+
+   task automatic raise_cy_range_exception_if_necessary;
+      input reg [DW-1:0] next_sr;
+      inout reg          can_interrupt;
+      begin
+         raise_ov_or_cy_range_exception_if_necessary( `OR1200_SR_CY, next_sr, can_interrupt );
       end
    endtask
 
@@ -1585,8 +1606,14 @@ module or10_top
          if ( !is_immediate && ( wb_dat_i[10]  != 0 ||
                                  wb_dat_i[7:4] != 0 ) )
            begin
-              `ASSERT_FALSE;
               raise_reserved_instruction_opcode_bits_exception( can_interrupt );
+           end
+         else if ( !is_immediate && wb_dat_i[9:8] != 3 )
+           begin
+              if ( TRACE_ASM_EXECUTION )
+                $display( "0x%08h: Illegal instruction exception raised for unsupported l.div/l.divi instruction opcode.",
+                          `OR10_TRACE_PC_VAL );
+              raise_illegal_instruction_exception( can_interrupt );
            end
          else
            begin
@@ -1641,7 +1668,7 @@ module or10_top
              if ( TRACE_ASM_EXECUTION )
                begin
                   if ( is_immediate )
-                    $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (result 0x%08h * 0x%08h = 0x%08h, C=%d, O=%d)",
+                    $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
                               `OR10_TRACE_PC_VAL,
                               dest_reg,
                               operand_a_reg,
@@ -1657,7 +1684,7 @@ module or10_top
                        else
                          instruction_name = "l.mul";
 
-                       $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h * 0x%08h = 0x%08h, C=%d, O=%d)",
+                       $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
                                  `OR10_TRACE_PC_VAL,
                                  instruction_name,
                                  dest_reg,
@@ -1676,6 +1703,130 @@ module or10_top
              raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
 
              schedule_register_write_during_next_cycle( dest_reg, result66[DW-1:0] );
+           end
+      end
+   endtask
+
+
+   task automatic execute_div_instruction;
+
+      input reg          is_unsigned;
+
+      inout reg [DW-1:0] next_sr;
+      inout reg          can_interrupt;
+
+      reg [`OR10_REG_NUMBER] operand_a_reg;
+      reg [`OR10_REG_NUMBER] operand_b_reg;       // Only used if non-immediate.
+      reg [DW-1:0]           operand_a_value;     // Just an alias for gpr_register_value_read_1.
+      reg [DW-1:0]           operand_b_value;
+      reg [DW:0]             op33_a;
+      reg [DW:0]             op33_b;
+      reg [DW:0]             result33;
+      reg [DW:0]             reminder33;
+      reg [`OR10_REG_NUMBER] dest_reg;
+      reg [6 * 8 - 1:0]      instruction_name;
+      reg                    carry;
+
+      begin
+         if ( wb_dat_i[10]  != 0 ||
+              wb_dat_i[7:4] != 0 )
+           begin
+              raise_reserved_instruction_opcode_bits_exception( can_interrupt );
+           end
+         else if ( wb_dat_i[9:8] != 3 )
+           begin
+              if ( TRACE_ASM_EXECUTION )
+                $display( "0x%08h: Illegal instruction exception raised for unsupported l.div/l.divi instruction opcode.",
+                          `OR10_TRACE_PC_VAL );
+              raise_illegal_instruction_exception( can_interrupt );
+           end
+         else
+           begin
+              operand_a_reg       = wb_dat_i[`OR10_IOP_GPR1];
+              operand_b_reg       = wb_dat_i[`OR10_IOP_GPR2];
+              dest_reg            = wb_dat_i[`OR10_IOP_DEST_GPR];
+
+              operand_a_value = gpr_register_value_read_1;
+              operand_b_value = gpr_register_value_read_2;
+
+              if ( operand_b_value == 0 )
+                begin
+                   carry = 1;
+                   result33   = 0;  // For logging purposes only.
+                   reminder33 = 0;  // For logging purposes only.
+                end
+              else
+                begin
+                   carry = 0;
+
+                   // Divide 33 / 33 = 3 bits, so that a single signed divider can do both signed
+                   // and unsigned divisions.
+                   // There are probably better ways to achieve this, but I'm no expert at 2's complement.
+
+                   if ( is_unsigned )
+                     begin
+                        // The sign bit is always zero.
+                        op33_a = { 1'b0, operand_a_value };
+                        op33_b = { 1'b0, operand_b_value };
+                     end
+                   else
+                     begin
+                        // Sign-extend the operands from 32 to 33 bits.
+                        op33_a = { operand_a_value[DW-1], operand_a_value };
+                        op33_b = { operand_b_value[DW-1], operand_b_value };
+                     end
+
+                   result33   = $signed(op33_a) / $signed(op33_b);
+                   // Note that the reminder is not actually available to the software,
+                   // so at the moment it's calculated for tracing purposes only.
+                   reminder33 = $signed(op33_a) % $signed(op33_b);
+
+                   // If I have understood 2's complement correctly, we only need sign extension
+                   // for unsigned 32-bit numbers. Check that the results match the expectations.
+                   if ( is_unsigned )
+                     begin
+                        if ( result33  [DW] != 0 ||
+                             reminder33[DW] != 0 )
+                          begin
+                             `ASSERT_FALSE;
+                          end
+                     end
+                   else
+                     begin
+                        if ( result33  [DW] != result33  [DW-1] ||
+                             reminder33[DW] != reminder33[DW-1] )
+                          begin
+                             `ASSERT_FALSE;
+                          end
+                     end
+
+                   schedule_register_write_during_next_cycle( dest_reg, result33[DW-1:0] );
+                end
+
+              if ( TRACE_ASM_EXECUTION )
+                begin
+                   if ( is_unsigned )
+                     instruction_name = "l.divu";
+                   else
+                     instruction_name = "l.div";
+
+                   $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h / 0x%08h = 0x%08h, reminder 0x%08h, CY=%d)",
+                             `OR10_TRACE_PC_VAL,
+                             instruction_name,
+                             dest_reg,
+                             operand_a_reg,
+                             operand_b_reg,
+                             operand_a_value,
+                             operand_b_value,
+                             result33[DW-1:0],
+                             reminder33[DW-1:0],
+                             carry );
+                end
+
+              next_sr[ `OR1200_SR_CY ] = carry;
+              next_sr[ `OR1200_SR_OV ] = 0;
+
+              raise_cy_range_exception_if_necessary( next_sr, can_interrupt );
            end
       end
    endtask
@@ -1868,7 +2019,16 @@ module or10_top
                    should_raise_illegal_exception = 1;
 
            4'h8: execute_shift_instruction_reg( can_interrupt );
-           // 4'h9:  l.div not supported yet.
+
+           4'h9: if ( ENABLE_INSTRUCTION_DIV )
+                   execute_div_instruction( 0, next_sr, can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
+
+           4'ha: if ( ENABLE_INSTRUCTION_DIV )
+                   execute_div_instruction( 1, next_sr, can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
 
            4'hb: if ( ENABLE_INSTRUCTION_MUL )
                    execute_mul_instruction( 1, 0, next_sr, can_interrupt );
