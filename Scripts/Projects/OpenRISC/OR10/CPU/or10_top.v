@@ -44,7 +44,7 @@ module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
 
-     parameter ENABLE_DEBUG_UNIT      = 1,
+     parameter ENABLE_DEBUG_UNIT      = 1,  // See also WATCHPOINT_COUNT below.
      parameter ENABLE_TICK_TIMER_UNIT = 1,
      parameter ENABLE_PIC_UNIT        = 1,
 
@@ -53,6 +53,9 @@ module or10_top
      parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
                                              // the maximum CPU frequency unnecessarily.
      parameter ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
+
+     parameter ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
+     parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
 
      parameter TRACE_ASM_EXECUTION = 0,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
@@ -117,6 +120,7 @@ module or10_top
    localparam WISHBONE_SEL_WIDTH = 4;
    localparam GPR_NUMBER_WIDTH = 5;
 
+   localparam WATCHPOINT_INDEX_WIDTH = 3;  // 2^3 = maximum of 8 watchpoints
 
    // Exception vectors.
    localparam BUS_ERROR_VECTOR_ADDR           = `OR10_ADDR_WIDTH'h00000200;
@@ -150,6 +154,8 @@ module or10_top
    // If an instruction needs to access memory, it needs 2 extra cycles in this state.
    localparam STATE_WAITING_FOR_WISHBONE_DATA_CYCLE = 2;
 
+   localparam STATE_SLEEP                           = 3;
+
    // All STATE_DEBUG_xxx states have to do with the Debug Interface. During a Debug Interface operation,
    // the CPU is temporarily stalled. This is necessary so as to avoid conflicts with the running software,
    // as the Register File has only 2 ports (1 read and 1 read/write) for normal operation.
@@ -177,17 +183,17 @@ module or10_top
    // the stall status is not stale at that point in time. That is, if the CPU is stalled,
    // it means it has already completed the next instruction in single-step mode.
 
-   localparam STATE_DEBUG_WAITING_FOR_REG_FILE_READ = 3;  // This state helps simplify the Register File address logic. We could probably optimise it
+   localparam STATE_DEBUG_WAITING_FOR_REG_FILE_READ = 4;  // This state helps simplify the Register File address logic. We could probably optimise it
                                                           // away and cut one clock cycle from the Debug Interface's response time.
                                                           // Note that not all accesses involve the Register File, but all reads go through this state anyway.
 
-   localparam STATE_DEBUG_WAITING_FOR_ACK_ASSERT    = 4;  // This state implements a delay between presenting valid data in dbg_data_o and dbg_err_o
+   localparam STATE_DEBUG_WAITING_FOR_ACK_ASSERT    = 5;  // This state implements a delay between presenting valid data in dbg_data_o and dbg_err_o
                                                           // and asserting dbg_ack_o. The delay is necessary for clock domain crossing purposes.
 
-   localparam STATE_DEBUG_WAITING_FOR_STB_DEASSERT  = 5;
+   localparam STATE_DEBUG_WAITING_FOR_STB_DEASSERT  = 6;
 
-   localparam STATE_DEBUG_STALLED                   = 6;
-   localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 7;
+   localparam STATE_DEBUG_STALLED                   = 7;
+   localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 8;
 
    reg [3:0]  current_state;  // See the STATE_xxx constants.
 
@@ -340,6 +346,9 @@ module or10_top
    reg [`OR10_PC_ADDR] dbg_write_mem_addr;  // Memory address for the next Debug Interface memory write operation.
 
    reg [`OR10_PC_ADDR] cpureg_pc;         // Current program counter. Note that this register does not have the last 2 bits.
+
+   // TODO: maybe we don't need to store all 32 bits of the watchpoint address.
+   reg [AW-1:0]        watchpoints[ (1<<WATCHPOINT_INDEX_WIDTH)-1:0 ];
 
 
    // ------------- Address helper functions -------------
@@ -995,6 +1004,17 @@ module or10_top
                   begin
                      raise_exception_without_eear( TRAP_VECTOR_ADDR, cpureg_pc, cpureg_spr_sr, can_interrupt );
                   end
+             end
+
+           10'b0000000001:  // 16-bit opcode: 0x2001. Note that the l.sleep instruction is not in the "OpenRISC 1000 Architecture Manual".
+             begin
+                if ( TRACE_ASM_EXECUTION )
+                  $display( "0x%08h: l.sleep 0x%04h",
+                            `OR10_TRACE_PC_VAL,
+                            immediate_value );
+
+                can_interrupt = 0;  // We might waste one clock cycle, but it's better to keep the CPU simple.
+                current_state <= STATE_SLEEP;
              end
 
            default:
@@ -2145,7 +2165,8 @@ module or10_top
       output reg         is_invalid_spr_number;
       output reg         should_raise_alignment_exception;
 
-      reg   prevent_unused_warning_with_verilator;
+      reg [10:0]         watchpoint_index;
+      reg                prevent_unused_warning_with_verilator;
 
       begin
          prevent_unused_warning_with_verilator = &{ 1'b0, val[31:1], 1'b0 };
@@ -2202,7 +2223,19 @@ module or10_top
              end
 
            default:
-             is_invalid_spr_number = 1;
+             if ( ENABLE_WATCHPOINTS &&
+                  // effective_spr_number >= `OR1200_DU_DVR0 &&  Prevent warning "Comparison is constant due to unsigned arithmetic"
+                  effective_spr_number < `OR1200_DU_DVR0 + WATCHPOINT_COUNT )
+               begin
+                  watchpoint_index = `OR1200_DU_DVR0 + effective_spr_number;
+                  if ( watchpoint_index >= (1<<WATCHPOINT_INDEX_WIDTH) )
+                    begin
+                       `ASSERT_FALSE;
+                    end
+                  watchpoints[ watchpoint_index[WATCHPOINT_INDEX_WIDTH-1:0] ] <= val;
+               end
+             else
+               is_invalid_spr_number = 1;
          endcase
       end
    endtask
@@ -2489,6 +2522,8 @@ module or10_top
       output reg [DW-1:0] val;
       output reg          should_raise_range_exception;
 
+      reg [10:0]          watchpoint_index;
+
       begin
          should_raise_range_exception = 0;
 
@@ -2526,10 +2561,22 @@ module or10_top
              end
 
            default:
-             begin
-                should_raise_range_exception = 1;
-                val = {DW{1'bx}};
-             end
+             if ( ENABLE_WATCHPOINTS &&
+                  // effective_spr_number >= `OR1200_DU_DVR0 &&  Prevent warning "Comparison is constant due to unsigned arithmetic"
+                  effective_spr_number < `OR1200_DU_DVR0 + WATCHPOINT_COUNT )
+               begin
+                  watchpoint_index = `OR1200_DU_DVR0 + effective_spr_number;
+                  if ( watchpoint_index >= (1<<WATCHPOINT_INDEX_WIDTH) )
+                    begin
+                       `ASSERT_FALSE;
+                    end
+                  val = watchpoints[ watchpoint_index[WATCHPOINT_INDEX_WIDTH-1:0] ];
+               end
+             else
+               begin
+                  should_raise_range_exception = 1;
+                  val = {DW{1'bx}};
+               end
          endcase
       end
    endtask
@@ -3440,10 +3487,11 @@ module or10_top
    endtask
 
 
-   task interrupt_or_start_next_fetch;
+   task check_interrupt;
 
       input [`OR10_PC_ADDR] next_pc;
       input [DW-1:0]        next_sr;
+      inout                 was_interrupt_triggered;
 
       reg can_interrupt_ignored;  // The value placed here is ignored in this task.
 
@@ -3457,21 +3505,24 @@ module or10_top
               0 != ( pic_ints_i & cpureg_spr_picmr ) )
            begin
               raise_exception_without_eear( EXTERNAL_INTERRUPT_VECTOR_ADDR, next_pc, next_sr, can_interrupt_ignored );
+              was_interrupt_triggered = 1;
            end
          else if ( cpureg_spr_sr[ `OR1200_SR_TEE ] &&
                    0 != cpureg_spr_ttmr[`OR1200_TT_TTMR_IP] )
            begin
               raise_exception_without_eear( TICK_TIMER_VECTOR_ADDR, next_pc, next_sr, can_interrupt_ignored );
+              was_interrupt_triggered = 1;
            end
          else
            begin
-              start_wishbone_instruction_fetch_cycle( pc_addr_to_32( next_pc ) );
+              was_interrupt_triggered = 0;
            end
       end
    endtask
 
 
    task automatic do_state_reset;
+      integer watchpoint_index;
       begin
          // On FPGAs, the reset signal 'wb_rst_i' might be hard-wired to 0 in an 'initial' section
          // and most of the reset logic could be optimised away by the synthesiser. However, we still need
@@ -3504,6 +3555,9 @@ module or10_top
          stop_at_next_instruction_2 <= 0;
 
          dbg_is_stalled_o <= 0;
+
+         for ( watchpoint_index = 0; watchpoint_index < WATCHPOINT_COUNT; watchpoint_index = watchpoint_index + 1 )
+           watchpoints[ watchpoint_index ] <= 0;
 
          // Note that the General Purpose Registers are not cleared at this point.
          // According to the OpenRISC specification, it is not necessary to initialise them.
@@ -3696,24 +3750,19 @@ module or10_top
    endtask
 
 
-   task automatic do_state_waiting_for_instruction_fetch;
+   task automatic check_debug_unit_operation_start;
 
-      // If we raise an interrupt exception after executing a jump or an arithmetic instruction,
-      // we need the new PC and SR values. See comment in the "Exception management" section
-      // about why we need to pass these variables around all over the place.
-      reg [`OR10_PC_ADDR] next_pc;
-      reg [DW-1:0]        next_sr;
-      reg                 can_interrupt;
+      inout is_debug_unit_active;
+      integer             watchpoint_index;
 
       begin
-         // Checking for Debug Interface operations here wastes the instruction opcode just fetched,
-         // as we'll have to fetch it again in the future. However, if the exception vector
-         // happens to lie on an invalid memory address, we want the Debug Interface to be able to stop
-         // the CPU even if it is caught in a [fetch, wishbone bus error, fetch] infinite loop.
-         if ( ENABLE_DEBUG_UNIT && ( wb_ack_i || wb_err_i || wb_rty_i ) && ( synchronised_dbg_stb_i || dbg_is_stalled_o || stop_at_next_instruction_2 ) )
+         if ( synchronised_dbg_stb_i || dbg_is_stalled_o || stop_at_next_instruction_2 )
            begin
               if ( synchronised_dbg_stb_i )
-                start_debug_interface_operation;
+                begin
+                   start_debug_interface_operation;
+                   is_debug_unit_active = 1;
+                end
               else if ( dbg_is_stalled_o )
                 begin
                    // We never hit this code path with JTAG, as the stall register is set
@@ -3724,6 +3773,7 @@ module or10_top
                    // so stall the CPU in this way is another interesting question. After all,
                    // there is already the "l.trap" way.
                    current_state <= STATE_DEBUG_STALLED;
+                   is_debug_unit_active = 1;
                 end
               else if ( stop_at_next_instruction_2 )
                 begin
@@ -3732,8 +3782,9 @@ module or10_top
 
                    dbg_is_stalled_o <= 1;
                    stop_at_next_instruction_2 <= 0;  // The next time around we should execute one instruction more
-                                                     // (assuming the CPU is still in single-step mode).
+                                                          // (assuming the CPU is still in single-step mode).
                    current_state <= STATE_DEBUG_STALLED;
+                   is_debug_unit_active = 1;
                 end
               else
                 begin
@@ -3741,6 +3792,73 @@ module or10_top
                 end
            end
          else
+           begin
+              if ( ENABLE_WATCHPOINTS )
+                for ( watchpoint_index = 0; watchpoint_index < WATCHPOINT_COUNT; watchpoint_index = watchpoint_index + 1 )
+                  begin
+                     if ( addr_32_to_pc( watchpoints[ watchpoint_index ] ) == cpureg_pc )
+                       begin
+                          if ( TRACE_ASM_EXECUTION )
+                            $display( "0x%08h: The CPU has been stalled by watchpoint %0d.", `OR10_TRACE_PC_VAL, watchpoint_index );
+
+                          // TODO: Write reason here, or maybe no reason at all!
+                          // TODO: Only stop if bit WGB in DMR2 is set. But just for that reason a new register is probably a waste of time,
+                          //       so maybe reuse bit: is_trap_debug_unit_enabled <= val[ `OR1200_DU_DSR_TE ];
+                          dbg_is_stalled_o <= 1;
+                          current_state <= STATE_DEBUG_STALLED;
+                          is_debug_unit_active = 1;
+                       end
+                  end
+           end
+      end
+   endtask;
+
+
+   task automatic do_state_sleep;
+
+      reg is_debug_unit_active;
+      reg was_interrupt_triggered_ignored;  // Ignored in this task.
+
+      begin
+         is_debug_unit_active = 0;
+
+         check_debug_unit_operation_start( is_debug_unit_active );
+
+         if ( !is_debug_unit_active )
+           begin
+              was_interrupt_triggered_ignored = 0;
+              check_interrupt( cpureg_pc, cpureg_spr_sr, was_interrupt_triggered_ignored );
+           end
+      end
+   endtask
+
+
+   task automatic do_state_waiting_for_instruction_fetch;
+
+      // If we raise an interrupt exception after executing a jump or an arithmetic instruction,
+      // we need the new PC and SR values. See comment in the "Exception management" section
+      // about why we need to pass these variables around all over the place.
+      reg [`OR10_PC_ADDR] next_pc;
+      reg [DW-1:0]        next_sr;
+      reg                 can_interrupt;
+
+      reg                 is_debug_unit_active;
+      reg                 was_interrupt_triggered;
+
+      begin
+         // Checking for Debug Interface operations here wastes the instruction opcode just fetched,
+         // as we'll have to fetch it again in the future. However, if the exception vector
+         // happens to lie on an invalid memory address, we want the Debug Interface to be able to stop
+         // the CPU even if it is caught in a [fetch, wishbone bus error, fetch] infinite loop.
+
+         is_debug_unit_active = 0;
+
+         if ( ENABLE_DEBUG_UNIT && ( wb_ack_i || wb_err_i || wb_rty_i ) )
+           begin
+              check_debug_unit_operation_start( is_debug_unit_active );
+           end
+
+         if ( !is_debug_unit_active )
            begin
               can_interrupt = 1;
 
@@ -3757,7 +3875,12 @@ module or10_top
                    cpureg_spr_sr <= next_sr;
 
                    if ( can_interrupt )
-                     interrupt_or_start_next_fetch( next_pc, next_sr );
+                     begin
+                        was_interrupt_triggered = 0;
+                        check_interrupt( next_pc, next_sr, was_interrupt_triggered );
+                        if ( !was_interrupt_triggered )
+                          start_wishbone_instruction_fetch_cycle( pc_addr_to_32( next_pc ) );
+                     end
                    else
                      begin
                         // If we cannot interrupt at this point, the next instruction fetch has already been issued,
@@ -3792,7 +3915,10 @@ module or10_top
 
 
    task do_state_waiting_for_wishbone_data_cycle;
-      reg can_interrupt_ignored;
+
+      reg can_interrupt_ignored;  // Ignored in this task.
+      reg was_interrupt_triggered;
+
       begin
          can_interrupt_ignored = 1;  // The value in this variable gets ignored in this task.
 
@@ -3815,7 +3941,10 @@ module or10_top
                   complete_wishbone_data_read_cycle;
                end
 
-             interrupt_or_start_next_fetch( cpureg_pc + 1, cpureg_spr_sr );
+             was_interrupt_triggered = 0;
+             check_interrupt( cpureg_pc + 1, cpureg_spr_sr, was_interrupt_triggered );
+             if ( !was_interrupt_triggered )
+               start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc + 1 ) );
           end
         else if ( wb_err_i )
           begin
@@ -3908,6 +4037,7 @@ module or10_top
            STATE_RESET:                            do_state_reset;
            STATE_WAITING_FOR_INSTRUCTION_FETCH:    do_state_waiting_for_instruction_fetch;
            STATE_WAITING_FOR_WISHBONE_DATA_CYCLE:  do_state_waiting_for_wishbone_data_cycle;
+           STATE_SLEEP:                            do_state_sleep;
            STATE_DEBUG_WAITING_FOR_ACK_ASSERT:     if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_ack_assert;
            STATE_DEBUG_WAITING_FOR_STB_DEASSERT:   if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_stb_deassert;
            STATE_DEBUG_WAITING_FOR_REG_FILE_READ:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_reg_file_read;
