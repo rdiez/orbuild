@@ -110,7 +110,8 @@ There are also a few new test cases, like those in file F<< asm-load.S >>.
 The motivation behind this fork is to make it easy to run the test cases against
 different OpenRISC implementations and/or simulations.
 Currently, the test suite is run against the I<< or1ksim >> simulator and
-against an Icarus Verilog simulation of ORPSoC V2.
+against an Icarus Verilog simulation of ORPSoC V2. Note that some tests are known to fail;
+at the moment, only the OR10 CPU passes all tests.
 
 The new test suite should actually live in a separate source repository,
 but it is kept together with I<< orbuild >> for convenience, at least for the time being.
