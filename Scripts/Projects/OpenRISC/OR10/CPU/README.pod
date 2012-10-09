@@ -60,8 +60,8 @@ However, all other ORBIS32 instructions are available.
 
 =item * Passes I<< orbuild >>'s OpenRISC Test Suite, which has special code for CPUs without a jump delay slot.
 
-As far as I know, no other OpenRISC implementation passes the Test Suite (!) as of july 2012,
-even though the original or1ksim simulator does. Use the I<< orbuild >> framework
+As far as I know (as of september 2012), no other OpenRISC CPU implementation passes the Test Suite (!),
+even though the original or1ksim simulator does pass most of the tests. Use the I<< orbuild >> framework
 to run the tests against several platforms.
 
 =item * Reliable, synchronised reset handling.
@@ -137,7 +137,7 @@ so reading from or writing to unaligned memory addresses or with unaligned data 
 
 =over
 
-=item * No jump delay slot
+=item * No jump delay slot.
 
 Not having a jump delay slot makes the I<< OR10 >> incompatible with most existing OpenRISC software.
 However, this is only an issue for hand-written assembly code. For C/C++ code,
@@ -151,7 +151,38 @@ specification yet (this bit is marked as 'reserved').
 
 Peter Gavin's version of I<< or1ksim >> can also simulate a CPU without a jump delay slot,
 but you need to specify in the configuration file a value for SPR CPUCFGR which has bit 10 set,
-look at the or1ksim*.cfg files distributed with I<< orbuild >> for an example.
+look at the or1ksim*.cfg files distributed with I<< orbuild >> for an example. Note however that using
+or1ksim is generally discouraged, see below.
+
+=item * Exceptions are raised if the software tries to access non-existent Special Purpose Registers.
+
+=item * Exceptions are raised for instruction opcodes where the reserved bits are not zero.
+
+=item * l.mul and l.muli alway clear the Carry flag.
+
+=back
+
+=head3 Pitfalls when using or1ksim for simulation
+
+The or1ksim simulator does not behave exactly like the OR10 CPU, so it's best to test you software
+on a OR10 SoC simulation. Verilator and Xilinx' ISim are much faster than Icarus Verilog, they should be fast
+enough for most test purposes.
+
+Known differences between or1ksim and OR10 are (but note that there may be more):
+
+=over
+
+=item * or1ksim does not raise exceptions for instruction opcodes where reserved bits are not zero.
+
+=item * or1ksim does not raise exceptions if the software tries to access non-existent Special Purpose Registers.
+
+=item * or1ksim's l.mul/l.muli implementation calculate the Carry flag as if the integers had been unsigned.
+
+OR10 always clears the Carry flag for those instructions.
+
+=item * or1ksim does take the l.trap argument into account.
+
+All other OpenRISC CPU implementations ignore it.
 
 =back
 
