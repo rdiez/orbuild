@@ -613,11 +613,15 @@ module or10_top
    // variables as task inout arguments all over the place, which is rather inconvenient.
 
    task automatic internal_raise_exception;
+
       input reg [AW-1:0]        vector_addr;
       input reg [`OR10_PC_ADDR] epcr;
       input reg [AW-1:0]        eear;
       input reg [DW-1:0]        esr;
       inout reg                 can_interrupt;  // We pass this argument only so that nobody forgets to set this flag.
+
+      reg [AW-1:0]              workaround_verilator_bug;
+
       begin
          if ( !can_interrupt )
            begin
@@ -630,6 +634,13 @@ module or10_top
          cpureg_spr_esr  <= esr;
          cpureg_spr_sr   <= RESET_SPR_SR;
          start_wishbone_instruction_fetch_cycle( vector_addr );
+
+         if ( TRACE_ASM_EXECUTION )
+           begin
+              workaround_verilator_bug = pc_addr_to_32( epcr );
+              $display( "Exception raised, vector addr: 0x%08h, data addr: 0x%08h, saved SR: 0x%08h, return addr: 0x%08h.",
+                        vector_addr, eear, esr, workaround_verilator_bug );
+           end
       end
    endtask
 
@@ -829,6 +840,8 @@ module or10_top
 
                 default:
                   begin
+                     if ( TRACE_ASM_EXECUTION )
+                       $display( "0x%08h: l.nop %0d (unknown nop code)", `OR10_TRACE_PC_VAL, nop_code );
                      $display( "ERROR: Default case for nop_code=%0d at instruction address 0x%08h.",
                                nop_code, `OR10_TRACE_PC_VAL );
                      `ASSERT_FALSE;
