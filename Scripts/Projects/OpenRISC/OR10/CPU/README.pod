@@ -109,6 +109,7 @@ For an example on how this could be done, look for symbol OR1200_SYS_FULL_DECODE
 =head2 Debug Unit and JTAG interface
 
 The Debug Unit supports asynchronous stalling, single-stepping, software breakpoints and accessing Wishbone memory.
+It has been tested on an FPGA and with a Verilator simulation too (with the JTAG DPI module emulating a JTAG cable).
 
 OR10's Debug Unit bus and protocol are not compatible with the original OR1200 implementation,
 so you need to use the supplied I<< GdbToJtagBridge >>. However, you can use
@@ -190,6 +191,14 @@ This is actually permitted by the specification.
 =item * R0 is a normal register and behaves like all other GPRs.
 
 This is actually permitted by the specification.
+
+=item * There is a new 'sleep' instruction.
+
+Opcode 0x20010000 corresponds to a new instruction that could be called "l.sleep". It just stalls the CPU until the
+next interrupt arrives, then carries on with the next instruction after "l.sleep". During the sleep time,
+the Wishbone bus is not used any more, so other peripherals can access RAM and so on at full speed.
+
+The new opcode starts with a 6-bit prefix of 0x08, like l.sys and l.trap.
 
 =item * The PIC interrupts are level triggered and must not be rearmed.
 
