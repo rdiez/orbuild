@@ -3840,7 +3840,9 @@ module or10_top
          if ( !is_debug_unit_active )
            begin
               was_interrupt_triggered_ignored = 0;
-              check_interrupt( cpureg_pc, cpureg_spr_sr, was_interrupt_triggered_ignored );
+              // The "cpureg_pc + 1" makes the CPU skip the current l.sleep instruction
+              // after the interrupt has been processed.
+              check_interrupt( cpureg_pc + 1, cpureg_spr_sr, was_interrupt_triggered_ignored );
            end
       end
    endtask
