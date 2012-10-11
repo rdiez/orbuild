@@ -197,12 +197,14 @@ all_pgavin: $(PGAVIN_OR1K_GCC_CHECKOUT_SENTINEL)
 
 # ----------- R. Diez's Repositories -----------
 
-$(eval $(call git_checkout_template,JTAG_DPI,JTAG_DPI,git://github.com/rdiez/jtag_dpi.git))
+$(eval $(call git_checkout_template,JTAG_DPI,JTAG DPI module for Verilator,git://github.com/rdiez/jtag_dpi.git))
 all: $(JTAG_DPI_CHECKOUT_SENTINEL)
 
-$(eval $(call git_checkout_template,UART_DPI,UART_DPI,git://github.com/rdiez/uart_dpi.git))
+$(eval $(call git_checkout_template,UART_DPI,UART DPI module for Verilator,git://github.com/rdiez/uart_dpi.git))
 all: $(UART_DPI_CHECKOUT_SENTINEL)
 
+$(eval $(call git_checkout_template,ETHERNET_DPI,Ethernet DPI module for Verilator,git://github.com/rdiez/ethernet_dpi.git))
+all: $(ETHERNET_DPI_CHECKOUT_SENTINEL)
 
 # ----------- Stefan Kristiansson's LLVM / Clang / Linux toolchain -----------
 
@@ -1030,6 +1032,7 @@ ORTS_COMMON_CMD += \"$(ORPSOCV2_CHECKOUT_DIR)\"
 ORTS_COMMON_CMD += \"$(MINSOC_CHECKOUT_DIR)\"
 ORTS_COMMON_CMD += \"$(JTAG_DPI_CHECKOUT_DIR)\"
 ORTS_COMMON_CMD += \"$(UART_DPI_CHECKOUT_DIR)\"
+ORTS_COMMON_CMD += \"$(ETHERNET_DPI_CHECKOUT_DIR)\"
 
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_COMMON_CMD += $(PGAVIN_OPENRISC_BARE_TARGET)
@@ -1329,6 +1332,7 @@ GIT_GROUP += $(ICARUS_VERILOG_GIT_GROUP)
 GIT_GROUP += $(VERILATOR_GIT_GROUP)
 GIT_GROUP += $(UART_DPI_GIT_GROUP)
 GIT_GROUP += $(JTAG_DPI_GIT_GROUP)
+GIT_GROUP += $(ETHERNET_DPI_GIT_GROUP)
 
 .PHONY: generate_groups_file
 generate_groups_file:
