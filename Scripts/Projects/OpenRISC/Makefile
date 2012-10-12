@@ -994,6 +994,11 @@ endif
 
 # ----- Run the test suite against different targets.
 
+# Force a rebuild of all simulators and a re-run of all tests every time, for development purposes only.
+# There is a special rule in RunTestSuiteMakefile so that deleting this file re-runs everything.
+#   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Install.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+
+
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
   ORTS_OR1KSIM_PREPEND_PATH    := $(PGAVIN_OR1KSIM_BIN_DIR)/bin
   ORTS_TOOLCHAIN_PATH          := $(PGAVIN_BARE_TOOLCHAIN_DIR)/bin
