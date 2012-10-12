@@ -110,6 +110,64 @@ module test_bench ( input wire clock,
    `endif  // `ifdef ENABLE_DPI_MODULES
 
 
+   // ----------- Instanciate the Ethernet interface -----------
+
+   wire [31:0] wb_eth_dat_to_eth;
+   wire [31:0] wb_eth_dat_from_eth;
+   wire [31:0] wb_eth_adr;
+   wire [3:0]  wb_eth_sel;
+   wire        wb_eth_we;
+   wire        wb_eth_cyc;
+   wire        wb_eth_stb;
+   wire        wb_eth_ack;
+   wire        wb_eth_err;
+
+   wire        eth_int;
+
+   `ifdef ENABLE_DPI_MODULES
+
+     ethernet_dpi
+     ethernet_dpi_instance1
+       (
+	    .wb_clk_i	( clock ),
+	    .wb_rst_i	( reset ),
+
+	    .wb_adr_i	( { 8'b0, wb_eth_adr[23:0] } ),  // The highest address byte [31,24] is always to APP_ADDR_ETH.
+	    .wb_dat_i	( wb_eth_dat_to_eth ),
+	    .wb_dat_o	( wb_eth_dat_from_eth ),
+	    .wb_we_i	( wb_eth_we  ),
+	    .wb_stb_i	( wb_eth_stb ),
+	    .wb_cyc_i	( wb_eth_cyc ),
+	    .wb_ack_o	( wb_eth_ack ),
+        .wb_err_o   ( wb_eth_err ),
+	    .wb_sel_i	( wb_eth_sel ),
+
+	    .int_o		( eth_int )
+        );
+
+     wire prevent_unused_warning_with_verilator_eth_addr = &{ 1'b0,
+                                                              wb_eth_adr[31:24],
+                                                              1'b0 };
+
+   `else  // `ifdef ENABLE_DPI_MODULES
+
+     assign wb_eth_dat_from_eth = 32'h0000_0000;
+     assign wb_eth_ack = 0;
+     assign wb_eth_err = 1;
+     assign eth_int = 0;
+
+     wire prevent_unused_warning_with_verilator_eth = &{ 1'b0,
+                                                         wb_eth_dat_to_eth,
+                                                         wb_eth_adr,
+                                                         wb_eth_sel,
+                                                         wb_eth_we,
+                                                         wb_eth_cyc,
+                                                         wb_eth_stb,
+                                                         1'b0 };
+
+   `endif  // `ifdef ENABLE_DPI_MODULES
+
+
    // ----------- Instanciate the JTAG Debug Interface -----------
 
    wire jtag_tms;
@@ -189,6 +247,18 @@ module test_bench ( input wire clock,
        .wb_uart_ack_i( wb_uart_ack ),
        .wb_uart_err_i( wb_uart_err ),
        .uart_int_i( uart_int ),
+
+       .wb_eth_dat_o( wb_eth_dat_to_eth ),
+       .wb_eth_dat_i( wb_eth_dat_from_eth ),
+       .wb_eth_adr_o( wb_eth_adr ),
+       .wb_eth_sel_o( wb_eth_sel ),
+       .wb_eth_we_o ( wb_eth_we  ),
+       .wb_eth_cyc_o( wb_eth_cyc ),
+       .wb_eth_stb_o( wb_eth_stb ),
+       .wb_eth_ack_i( wb_eth_ack ),
+       .wb_eth_err_i( wb_eth_err ),
+       .eth_int_i( eth_int ),
+       // TODO: The client Wishbone interface for the Ethernet module is missing here.
 
        .jtag_tck_i(jtag_tck),
        .jtag_tdi_i(jtag_tdi),

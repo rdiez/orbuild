@@ -35,6 +35,18 @@ module soc_top ( input wire         wb_clk_i,
                  input wire         wb_uart_err_i,
                  input wire         uart_int_i,
 
+                 // ------ Ethernet Wishbone signals ------
+                 output wire [31:0] wb_eth_dat_o,
+                 input wire [31:0]  wb_eth_dat_i,
+                 output wire [31:0] wb_eth_adr_o,
+                 output wire [3:0]  wb_eth_sel_o,
+                 output wire        wb_eth_we_o,
+                 output wire        wb_eth_cyc_o,
+                 output wire        wb_eth_stb_o,
+                 input wire         wb_eth_ack_i,
+                 input wire         wb_eth_err_i,
+                 input wire         eth_int_i,
+
                  // ------ JTAG Debug Interface ------
                  input wire         jtag_tck_i,
                  input wire         jtag_tdi_i,
@@ -76,13 +88,12 @@ module soc_top ( input wire         wb_clk_i,
 
 
    `define APP_INT_UART  2
-   `define APP_INT_REST1  31:3
-   `define APP_INT_REST2  1:0
+   `define APP_INT_ETH   4
 
    wire [31:0] pic_ints;
-   assign pic_ints[`APP_INT_REST1] = 0;
-   assign pic_ints[`APP_INT_REST2] = 0;
-   assign pic_ints[ `APP_INT_UART ] = uart_int_i;
+   assign pic_ints = 0;
+   assign pic_ints[`APP_INT_ETH  ] = eth_int_i;
+   assign pic_ints[`APP_INT_UART ] = uart_int_i;
 
 
    // CPU debug interface.
@@ -320,16 +331,16 @@ module soc_top ( input wire         wb_clk_i,
     .t2_wb_ack_i    ( 1'b0 ),
     .t2_wb_err_i    ( 1'b1 ),
 
-    // WISHBONE Target 3 (unused)
-    .t3_wb_cyc_o    ( ),
-    .t3_wb_stb_o    ( ),
-    .t3_wb_adr_o    ( ),
-    .t3_wb_sel_o    ( ),
-    .t3_wb_we_o ( ),
-    .t3_wb_dat_o    ( ),
-    .t3_wb_dat_i    ( 32'h0000_0000 ),
-    .t3_wb_ack_i    ( 1'b0 ),
-    .t3_wb_err_i    ( 1'b1 ),
+    // WISHBONE Target 3 (Ethernet)
+    .t3_wb_cyc_o    ( wb_eth_cyc_o ),
+    .t3_wb_stb_o    ( wb_eth_stb_o ),
+    .t3_wb_adr_o    ( wb_eth_adr_o ),
+    .t3_wb_sel_o    ( wb_eth_sel_o ),
+    .t3_wb_we_o     ( wb_eth_we_o  ),
+    .t3_wb_dat_o    ( wb_eth_dat_o ),
+    .t3_wb_dat_i    ( wb_eth_dat_i ),
+    .t3_wb_ack_i    ( wb_eth_ack_i ),
+    .t3_wb_err_i    ( wb_eth_err_i ),
 
     // WISHBONE Target 4 (unused)
     .t4_wb_cyc_o    ( ),
