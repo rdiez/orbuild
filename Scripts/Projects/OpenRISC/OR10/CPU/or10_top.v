@@ -3824,7 +3824,7 @@ module or10_top
                   end
            end
       end
-   endtask;
+   endtask
 
 
    task automatic do_state_sleep;
