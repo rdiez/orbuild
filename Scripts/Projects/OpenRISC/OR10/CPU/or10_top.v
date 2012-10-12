@@ -58,11 +58,12 @@ module or10_top
      parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
 
      parameter TRACE_ASM_EXECUTION = 0,
+     parameter TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
      parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
    (
     input                                wb_clk_i,
-    input                                wb_rst_i,
+    input                                wb_rst_i, // There is no need to assert reset at the beginning.
 
     input                                wb_ack_i, // See the Wishbone Datasheet above.
     input                                wb_err_i,
@@ -635,7 +636,7 @@ module or10_top
          cpureg_spr_sr   <= RESET_SPR_SR;
          start_wishbone_instruction_fetch_cycle( vector_addr );
 
-         if ( TRACE_ASM_EXECUTION )
+         if ( TRACE_EXCEPTIONS )
            begin
               workaround_verilator_bug = pc_addr_to_32( epcr );
               $display( "Exception raised, vector addr: 0x%08h, data addr: 0x%08h, saved SR: 0x%08h, return addr: 0x%08h.",
