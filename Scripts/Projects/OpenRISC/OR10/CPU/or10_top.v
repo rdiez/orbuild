@@ -42,24 +42,24 @@
 
 module or10_top
    #(
-     RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
+     parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
 
-     ENABLE_DEBUG_UNIT      = 1,  // See also WATCHPOINT_COUNT below.
-     ENABLE_TICK_TIMER_UNIT = 1,
-     ENABLE_PIC_UNIT        = 1,
+     parameter ENABLE_DEBUG_UNIT      = 1,  // See also WATCHPOINT_COUNT below.
+     parameter ENABLE_TICK_TIMER_UNIT = 1,
+     parameter ENABLE_PIC_UNIT        = 1,
 
-     ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
-     ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
-     ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
+     parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
+     parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
+     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
                                              // the maximum CPU frequency unnecessarily.
-     ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
+     parameter ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
 
-     ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
-     WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
+     parameter ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
+     parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
 
-     TRACE_ASM_EXECUTION = 0,
-     TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
-     ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
+     parameter TRACE_ASM_EXECUTION = 0,
+     parameter TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
+     parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
    (
     input                                wb_clk_i,
