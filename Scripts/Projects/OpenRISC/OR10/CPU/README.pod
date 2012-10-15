@@ -198,7 +198,10 @@ Opcode 0x20010000 corresponds to a new instruction that could be called "l.sleep
 next interrupt arrives, then carries on with the next instruction after "l.sleep". During the sleep time,
 the Wishbone bus is not used any more, so other peripherals can access RAM and so on at full speed.
 
-The new opcode starts with a 6-bit prefix of 0x08, like l.sys and l.trap.
+The new opcode starts with a 6-bit prefix of 0x08, like l.sys and l.trap. Use the following construct
+in order to generate a sleep instruction in a C program:
+
+  asm volatile ( ".word 0x20010000" );
 
 =item * The PIC interrupts are level triggered and must not be rearmed.
 
