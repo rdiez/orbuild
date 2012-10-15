@@ -45,6 +45,17 @@ module soc_top ( input wire         wb_clk_i,
                  output wire        wb_eth_stb_o,
                  input wire         wb_eth_ack_i,
                  input wire         wb_eth_err_i,
+
+                 input wire [31:0]  wb_ethm_adr_i,
+                 output wire [31:0] wb_ethm_dat_o,
+                 input wire [31:0]  wb_ethm_dat_i,
+                 input wire [3:0]   wb_ethm_sel_i,
+                 input wire         wb_ethm_we_i,
+                 input wire         wb_ethm_stb_i,
+                 input wire         wb_ethm_cyc_i,
+                 output wire        wb_ethm_ack_o,
+                 output wire        wb_ethm_err_o,
+
                  input wire         eth_int_i,
 
                  // ------ JTAG Debug Interface ------
@@ -219,16 +230,16 @@ module soc_top ( input wire         wb_clk_i,
     .i0_wb_ack_o    ( ),
     .i0_wb_err_o    ( ),
 
-    // WISHBONE Initiator 1 (unused)
-    .i1_wb_cyc_i    ( 1'b0 ),
-    .i1_wb_stb_i    ( 1'b0 ),
-    .i1_wb_adr_i    ( 32'h0000_0000 ),
-    .i1_wb_sel_i    ( 4'b0000 ),
-    .i1_wb_we_i ( 1'b0 ),
-    .i1_wb_dat_i    ( 32'h0000_0000 ),
-    .i1_wb_dat_o    ( ),
-    .i1_wb_ack_o    ( ),
-    .i1_wb_err_o    ( ),
+    // WISHBONE Initiator 1 (Ethernet Wishbone master for DMA transfers)
+    .i1_wb_cyc_i    ( wb_ethm_cyc_i ),
+    .i1_wb_stb_i    ( wb_ethm_stb_i ),
+    .i1_wb_adr_i    ( wb_ethm_adr_i ),
+    .i1_wb_sel_i    ( wb_ethm_sel_i ),
+    .i1_wb_we_i     ( wb_ethm_we_i  ),
+    .i1_wb_dat_i    ( wb_ethm_dat_i ),
+    .i1_wb_dat_o    ( wb_ethm_dat_o ),
+    .i1_wb_ack_o    ( wb_ethm_ack_o ),
+    .i1_wb_err_o    ( wb_ethm_err_o ),
 
     // WISHBONE Initiator 2 (unused)
     .i2_wb_cyc_i    ( 1'b0 ),

@@ -73,19 +73,19 @@ module test_bench ( input wire clock,
           )
      uart_dpi_instance1
        (
-	    .wb_clk_i	( clock ),
-	    .wb_rst_i	( reset ),
+        .wb_clk_i   ( clock ),
+        .wb_rst_i   ( reset ),
 
-	    .wb_adr_i	( wb_uart_adr ),  // The highest address byte [31,24] is fixed to APP_ADDR_UART.
-	    .wb_dat_i	( wb_uart_dat_to_uart ),
-	    .wb_dat_o	( wb_uart_dat_from_uart ),
-	    .wb_we_i	( wb_uart_we  ),
-	    .wb_stb_i	( wb_uart_stb ),
-	    .wb_cyc_i	( wb_uart_cyc ),
-	    .wb_ack_o	( wb_uart_ack ),
-	    .wb_sel_i	( wb_uart_sel ),
+        .wb_adr_i   ( wb_uart_adr ),  // The highest address byte [31,24] is fixed to APP_ADDR_UART.
+        .wb_dat_i   ( wb_uart_dat_to_uart ),
+        .wb_dat_o   ( wb_uart_dat_from_uart ),
+        .wb_we_i    ( wb_uart_we  ),
+        .wb_stb_i   ( wb_uart_stb ),
+        .wb_cyc_i   ( wb_uart_cyc ),
+        .wb_ack_o   ( wb_uart_ack ),
+        .wb_sel_i   ( wb_uart_sel ),
 
-	    .int_o		( uart_int )
+        .int_o      ( uart_int )
         );
 
      assign wb_uart_err = 1'b0;  // The UART DPI module does not support signal wb_err yet.
@@ -122,6 +122,17 @@ module test_bench ( input wire clock,
    wire        wb_eth_ack;
    wire        wb_eth_err;
 
+   // The Ethernet module has a Wishbone master interface for DMA transfers.
+   wire [31:0] wb_ethm_adr;
+   wire [3:0]  wb_ethm_sel;
+   wire        wb_ethm_we;
+   wire [31:0] wb_ethm_dat_from_eth;
+   wire [31:0] wb_ethm_dat_to_eth;
+   wire        wb_ethm_cyc;
+   wire        wb_ethm_stb;
+   wire        wb_ethm_ack;
+   wire        wb_ethm_err;
+
    wire        eth_int;
 
    `ifdef ENABLE_DPI_MODULES
@@ -129,20 +140,30 @@ module test_bench ( input wire clock,
      ethernet_dpi
      ethernet_dpi_instance1
        (
-	    .wb_clk_i	( clock ),
-	    .wb_rst_i	( reset ),
+        .wb_clk_i   ( clock ),
+        .wb_rst_i   ( reset ),
 
-	    .wb_adr_i	( { 8'b0, wb_eth_adr[23:0] } ),  // The highest address byte [31,24] is always to APP_ADDR_ETH.
-	    .wb_dat_i	( wb_eth_dat_to_eth ),
-	    .wb_dat_o	( wb_eth_dat_from_eth ),
-	    .wb_we_i	( wb_eth_we  ),
-	    .wb_stb_i	( wb_eth_stb ),
-	    .wb_cyc_i	( wb_eth_cyc ),
-	    .wb_ack_o	( wb_eth_ack ),
+        .wb_adr_i   ( { 8'b0, wb_eth_adr[23:0] } ),  // The highest address byte [31,24] is always to APP_ADDR_ETH.
+        .wb_dat_i   ( wb_eth_dat_to_eth ),
+        .wb_dat_o   ( wb_eth_dat_from_eth ),
+        .wb_we_i    ( wb_eth_we  ),
+        .wb_stb_i   ( wb_eth_stb ),
+        .wb_cyc_i   ( wb_eth_cyc ),
+        .wb_ack_o   ( wb_eth_ack ),
         .wb_err_o   ( wb_eth_err ),
-	    .wb_sel_i	( wb_eth_sel ),
+        .wb_sel_i   ( wb_eth_sel ),
 
-	    .int_o		( eth_int )
+        .m_wb_adr_o ( wb_ethm_adr ),
+        .m_wb_dat_i ( wb_ethm_dat_to_eth ),
+        .m_wb_dat_o ( wb_ethm_dat_from_eth ),
+        .m_wb_we_o  ( wb_ethm_we  ),
+        .m_wb_stb_o ( wb_ethm_stb ),
+        .m_wb_cyc_o ( wb_ethm_cyc ),
+        .m_wb_ack_i ( wb_ethm_ack ),
+        .m_wb_err_i ( wb_ethm_err ),
+        .m_wb_sel_o ( wb_ethm_sel ),
+
+        .int_o      ( eth_int )
         );
 
      wire prevent_unused_warning_with_verilator_eth_addr = &{ 1'b0,
@@ -154,15 +175,28 @@ module test_bench ( input wire clock,
      assign wb_eth_dat_from_eth = 32'h0000_0000;
      assign wb_eth_ack = 0;
      assign wb_eth_err = 1;
+
+     assign wb_ethm_adr = 0;
+     assign wb_ethm_dat_from_eth = 0;
+     assign wb_ethm_we = 0;
+     assign wb_ethm_stb = 0;
+     assign wb_ethm_cyc = 0;
+     assign wb_ethm_sel = 0;
+
      assign eth_int = 0;
 
-     wire prevent_unused_warning_with_verilator_eth = &{ 1'b0,
+     wire   prevent_unused_warning_with_verilator_eth = &{ 1'b0,
                                                          wb_eth_dat_to_eth,
                                                          wb_eth_adr,
                                                          wb_eth_sel,
                                                          wb_eth_we,
                                                          wb_eth_cyc,
                                                          wb_eth_stb,
+
+                                                         wb_ethm_dat_to_eth,
+                                                         wb_ethm_ack,
+                                                         wb_ethm_err,
+
                                                          1'b0 };
 
    `endif  // `ifdef ENABLE_DPI_MODULES
@@ -257,8 +291,18 @@ module test_bench ( input wire clock,
        .wb_eth_stb_o( wb_eth_stb ),
        .wb_eth_ack_i( wb_eth_ack ),
        .wb_eth_err_i( wb_eth_err ),
+
+       .wb_ethm_adr_i( wb_ethm_adr ),
+       .wb_ethm_dat_o( wb_ethm_dat_to_eth ),
+       .wb_ethm_dat_i( wb_ethm_dat_from_eth ),
+       .wb_ethm_sel_i( wb_ethm_sel ),
+       .wb_ethm_we_i ( wb_ethm_we ),
+       .wb_ethm_stb_i( wb_ethm_stb ),
+       .wb_ethm_cyc_i( wb_ethm_cyc ),
+       .wb_ethm_ack_o( wb_ethm_ack ),
+       .wb_ethm_err_o( wb_ethm_err ),
+
        .eth_int_i( eth_int ),
-       // TODO: The client Wishbone interface for the Ethernet module is missing here.
 
        .jtag_tck_i(jtag_tck),
        .jtag_tdi_i(jtag_tdi),
