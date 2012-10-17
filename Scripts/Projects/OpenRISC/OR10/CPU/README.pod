@@ -156,8 +156,19 @@ so reading from or writing to unaligned memory addresses or with unaligned data 
 =item * No jump delay slot.
 
 Not having a jump delay slot makes the I<< OR10 >> incompatible with most existing OpenRISC software.
-However, this is only an issue for hand-written assembly code. For C/C++ code,
-you just need to recompile with Peter Gavin's toolchain (with -mcompat-delay or -mno-delay)
+However, this is only an issue for hand-written assembly code. In order to adapt old code,
+search all manually-written assembly code for instructions that start with l.j and l.b
+(instruction l.rfe does not have a jump delay slot). The affected instructions are:
+
+    l.bf  l.bnf
+    l.j   l.jr  l.jal  l.jalr
+
+Those instructions should swap places with the next instruction. Remember to
+add an l.nop after the jump. The code will lose some performance and grow a little in size,
+but it will run on CPUs with and without a jump delay slot. It's best to use some EMPTY_JUMP_DELAY_SLOT
+macro instead of a plain l.nop, or the next forgetful developer may be tempted to remove it.
+
+For C/C++ code, you just need to recompile with Peter Gavin's toolchain (with -mcompat-delay or -mno-delay)
 or Stefan Kristiansson's LLVM/Clang compiler (with -disable-or1k-delay-filler).
 Note that the I<< orbuild >> framework can automatically download and build both sets of tools for you.
 
