@@ -1,0 +1,6 @@
+
+# 64-bit arithmetic.
+report(0x80000010);
+report(0x00000003);
+
+exit(0)

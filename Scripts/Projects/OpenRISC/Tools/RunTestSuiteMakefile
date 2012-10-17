@@ -425,7 +425,7 @@ else
   $(eval $(call test_case_simulation_template,ASM_BASIC_WITHOUT_JUMP_DELAY_SLOT,asm-basic-without-jump-delay-slot,own-test-results))
 endif
 
-$(eval $(call test_case_simulation_template,C_BASIC,c-basic,single-exit-0-test-results))
+$(eval $(call test_case_simulation_template,C_BASIC,c-basic,own-test-results))
 $(eval $(call test_case_simulation_template,C_BASIC_NEWLIB,c-basic-newlib,single-exit-0-test-results))
 $(eval $(call test_case_simulation_template,CPP_BASIC_NEWLIB,cpp-basic-newlib,single-exit-0-test-results))
 

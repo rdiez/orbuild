@@ -1,7 +1,7 @@
 
 # Copyright (C) 2012 R. Diez - see the orbuild project for licensing information.
 
-dist_data_DATA = single-exit-0.TestResults
+dist_data_DATA = single-exit-0.TestResults c-basic.TestResults
 
 AM_CPPFLAGS = -I$(srcdir)/../LibcBare
 
@@ -29,7 +29,10 @@ cpp_basic_newlib_SOURCES = cpp-basic-newlib.cpp
 #
 #   c_basic_LDADD = ../LibcBare/libc-bare.a
 c_basic_LDADD = ../LibcBare/startup.o
-c_basic_LDFLAGS = -nostdlib -T $(srcdir)/../AsmTestEnvironment/LinkerScript.ld
+# -lgcc is needed here to pull libgcc, which has support for 64-bit arithmetic and the like (functions like __umoddi3).
+# About C++: I haven't managed to build a bare C++ program, adding -lsupc++ is not enough, as that library needs itself bits and pieces
+#            from the standard C runtime library.
+c_basic_LDFLAGS = -nostdlib -lgcc -T $(srcdir)/../AsmTestEnvironment/LinkerScript.ld
 
 # Newlib test cases.
 c_basic_newlib_LDFLAGS   = -mboard=or1ksim
