@@ -59,7 +59,8 @@ module or10_top
 
      parameter TRACE_ASM_EXECUTION = 0,
      parameter TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
-     parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 0  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
+     parameter ENABLE_ASSERT_ON_ATYPICAL_EXCEPTIONS     = 1, // Helps debug your software.
+     parameter ENABLE_ASSERT_ON_ZERO_INSTRUCTION_OPCODE = 1  // Helps debugging by asserting if the CPU strays into memory that only contains zeros.
     )
    (
     input                                wb_clk_i,
@@ -624,6 +625,24 @@ module or10_top
       reg [AW-1:0]              workaround_verilator_bug;
 
       begin
+         if ( ENABLE_ASSERT_ON_ATYPICAL_EXCEPTIONS )
+           begin
+              case ( vector_addr )
+                BUS_ERROR_VECTOR_ADDR,
+                ALIGNMENT_VECTOR_ADDR,
+                ILLEGAL_INSTRUCTION_VECTOR_ADDR,
+                RANGE_VECTOR_ADDR,
+                TRAP_VECTOR_ADDR:
+                  begin
+                     `ASSERT_FALSE;
+                  end
+                default:
+                  begin
+                     // Nothing to do here.
+                  end
+              endcase
+           end
+
          if ( !can_interrupt )
            begin
               `ASSERT_FALSE;

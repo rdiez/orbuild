@@ -117,8 +117,13 @@ module soc_top ( input wire         wb_clk_i,
    wire        cpu_dbg_err;
    wire        cpu_dbg_is_stalled;
 
-   or10_top or10_top_instance (
-
+   or10_top
+    #(
+       // The test suite checks all corner cases and needs these asserts turned off.
+       .ENABLE_ASSERT_ON_ATYPICAL_EXCEPTIONS( 0 )
+     )
+   or10_top_instance
+    (
      .wb_clk_i  ( wb_clk_i ),
      .wb_rst_i  ( wb_rst_i ),
      .wb_cyc_o  ( wb_cpu_cyc_o ),
