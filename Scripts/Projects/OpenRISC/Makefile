@@ -49,6 +49,8 @@ ENABLE_XILINX := 0  # If enabled, orbuild assumes the Xilinx ISim simulator and 
 # ------ Test Suite options ------
 
 ENABLE_OPEN_RISC_TEST_SUITE := 0  # Whether to run the Test Suite against the OpenRISC implementations built.
+                                  # Please note that all CPU simulators and implementations except for the OR10 CPU
+                                  # are known to fail at least some of the tests.
 
 ENABLE_ORTS_ORPSOC := 0  # Please note that the current OR1200 implementation (as of July 2012) fails some of the tests.
 ENABLE_ORTS_OR10 := 0
@@ -140,9 +142,13 @@ $(eval $(call subversion_checkout_template,DOCS,OpenRISC docs,$(OC_OR_SVN_BASE_U
 all: $(DOCS_CHECKOUT_SENTINEL)
 $(DOCS_CHECKOUT_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL)
 
+$(eval $(call subversion_checkout_template,GDB,GDB 7.2,$(OC_OR_SVN_BASE_URL)/gnu-dev/gdb-7.2))
+all: $(GDB_CHECKOUT_SENTINEL)
+$(GDB_CHECKOUT_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL)
+
 $(eval $(call subversion_checkout_template,ORPSOCV2,ORPSoC v2,$(OC_OR_SVN_BASE_URL)/orpsocv2))
 all: $(ORPSOCV2_CHECKOUT_SENTINEL)
-$(ORPSOCV2_CHECKOUT_SENTINEL): $(DOCS_CHECKOUT_SENTINEL)
+$(ORPSOCV2_CHECKOUT_SENTINEL): $(GDB_CHECKOUT_SENTINEL)
 
 $(eval $(call subversion_checkout_template,ECOS,eCos realtime operating system,$(OC_OR_SVN_BASE_URL)/rtos/ecos-3.0))
 ifeq "$(strip $(ENABLE_ECOS))" "1"
@@ -155,7 +161,7 @@ endif
 
 # This is the biggest repository by far, so it's the last one to be checked out from OpenCores.
 # WARNING: The OC_BLD_ALL task cleans the whole repository every time it runs.
-$(eval $(call subversion_checkout_template,GNUSRC,GNU sources,$(OC_OR_SVN_BASE_URL)/gnu-src))
+$(eval $(call subversion_checkout_template,GNUSRC,GNU sources,$(OC_OR_SVN_BASE_URL)/gnu-stable))
 all: $(GNUSRC_CHECKOUT_SENTINEL)
 $(GNUSRC_CHECKOUT_SENTINEL): $(PREV_SVN_REPO_SENTINEL)
 
@@ -419,7 +425,7 @@ all_tests: $(OR1KSIM_DISTCHECK_SENTINEL)
 
 # ----------- GDB cross-debugger for OpenRISC -----------
 
-GDB_SRC_DIR := $(GNUSRC_CHECKOUT_DIR)/gdb-7.2
+GDB_SRC_DIR := $(GDB_CHECKOUT_DIR)
 GDB_BIN_DIR := $(BARE_TOOLCHAIN_DIR)
 GDB_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
 
@@ -897,7 +903,7 @@ $(PGAVIN_LINUX_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_UCLIBC_SENTINEL)
 
 # TODO:  This is the old 7.2 debugger, we should probably use a newer one.
 
-LINUX_GDB_SRC_DIR := $(GNUSRC_CHECKOUT_DIR)/gdb-7.2
+LINUX_GDB_SRC_DIR := $(GDB_CHECKOUT_DIR)
 LINUX_GDB_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
 LINUX_GDB_AUTOCONF_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
 
@@ -1282,6 +1288,7 @@ SVN_CHECKOUT_GROUP := OR1KSIM_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += DOCS_SVN_CHECKOUT   
 SVN_CHECKOUT_GROUP += ORPSOCV2_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += GNUSRC_SVN_CHECKOUT
+SVN_CHECKOUT_GROUP += GDB_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += MINSOC_SVN_CHECKOUT
 SVN_CHECKOUT_GROUP += ECOS_SVN_CHECKOUT
 
