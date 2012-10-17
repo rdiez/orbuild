@@ -53,6 +53,7 @@ module or10_top
      parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
                                              // the maximum CPU frequency unnecessarily.
      parameter ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
+     parameter ENABLE_INSTRUCTION_EXT  = 1,  // See GCC's switch '-mno-sext'
 
      parameter ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
      parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
@@ -2088,8 +2089,15 @@ module or10_top
                  else
                    should_raise_illegal_exception = 1;
 
-           4'hc: execute_ext_b_h_instruction( can_interrupt );
-           4'hd: execute_ext_w_instruction( can_interrupt );
+           4'hc: if ( ENABLE_INSTRUCTION_EXT )
+                   execute_ext_b_h_instruction( can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
+
+           4'hd: if ( ENABLE_INSTRUCTION_EXT )
+                   execute_ext_w_instruction( can_interrupt );
+                 else
+                   should_raise_illegal_exception = 1;
 
            4'he: if ( ENABLE_INSTRUCTION_CMOV )
                    execute_cmov( can_interrupt );
