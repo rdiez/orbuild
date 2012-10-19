@@ -6,6 +6,11 @@
    Slave module 0 has its own bus and thus can be accessed in parallel to any other target module.
    However, targets 1 to 8 share a bus and cannot be accessed in parallel.
 
+   If a master/initiator was already using the bus, it will continue to do so. Otherwise,
+   initiator 0 has the highest priority.
+
+   WARNING: If the CPU accesses an address not covered by any of the slaves, the bus will just hang.
+
 
    This core connects master and slave Wishbone interfaces together.
 
@@ -567,10 +572,14 @@ assign i7_wb_ack_o = xi7_wb_ack_o | yi7_wb_ack_o;
 assign i7_wb_err_o = xi7_wb_err_o | yi7_wb_err_o;
 
 //
-// From initiators to target 0
+// From multiple initiators (mi) to single target (st) number 0, which has a separate bus.
 //
-minsoc_tc_mi_to_st #(t0_addr_w, t0_addr,
-	0, t0_addr_w, t0_addr) t0_ch(
+minsoc_tc_mi_to_st
+  #( .t0_addr_w ( t0_addr_w ),
+     .t0_addr   ( t0_addr ),
+     .multitarg ( 0 )
+   )
+  t0_ch(
 	.wb_clk_i(wb_clk_i),
 	.wb_rst_i(wb_rst_i),
 
@@ -667,10 +676,19 @@ minsoc_tc_mi_to_st #(t0_addr_w, t0_addr,
 );
 
 //
-// From initiators to targets 1-8 (upper part)
+// From multiple initiators (mi) 1-8 to a virtual single target (st).
 //
-minsoc_tc_mi_to_st #(t1_addr_w, t1_addr,
-	1, t28c_addr_w, t28_addr) t18_ch_upper(
+minsoc_tc_mi_to_st
+  #( .t0_addr_w ( t1_addr_w ),
+     .t0_addr   ( t1_addr ),
+
+     .multitarg ( 1 ),
+
+     .t17_addr_w( t28c_addr_w ),
+     .t17_addr  ( t28_addr )
+   )
+
+  t18_ch_upper(
 	.wb_clk_i(wb_clk_i),
 	.wb_rst_i(wb_rst_i),
 
@@ -767,10 +785,21 @@ minsoc_tc_mi_to_st #(t1_addr_w, t1_addr,
 );
 
 //
-// From initiators to targets 1-8 (lower part)
+// From a virtual single initiator (si) [the upper part's virtual target] to multiple targets (mt) 1-8 (lower part).
 //
-minsoc_tc_si_to_mt #(t1_addr_w, t1_addr, t28i_addr_w, t2_addr, t3_addr,
-	t4_addr, t5_addr, t6_addr, t7_addr, t8_addr) t18_ch_lower(
+minsoc_tc_si_to_mt
+  #( .t0_addr_w ( t1_addr_w ),
+     .t0_addr   ( t1_addr ),
+     .t17_addr_w(t28i_addr_w ),
+     .t1_addr   (t2_addr ),
+     .t2_addr   (t3_addr ),
+     .t3_addr   (t4_addr ),
+     .t4_addr   (t5_addr ),
+     .t5_addr   (t6_addr ),
+     .t6_addr   (t7_addr ),
+     .t7_addr   (t8_addr ) )
+
+  t18_ch_lower(
 
 	.i0_wb_cyc_i(z_wb_cyc_i),
 	.i0_wb_stb_i(z_wb_stb_i),
