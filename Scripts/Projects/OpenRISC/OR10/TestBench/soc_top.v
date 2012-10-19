@@ -98,13 +98,18 @@ module soc_top ( input wire         wb_clk_i,
    wire         wb_ss_err_o;
 
 
-   `define APP_INT_UART  2
-   `define APP_INT_ETH   4
+   // If you update this list, remember to update the APP_INT_REST_x constants below.
+   localparam APP_INT_UART = 2;
+   localparam APP_INT_ETH  = 4;
 
-   wire [31:0] pic_ints;
-   assign pic_ints = 0;
-   assign pic_ints[`APP_INT_ETH  ] = eth_int_i;
-   assign pic_ints[`APP_INT_UART ] = uart_int_i;
+   reg [31:0] pic_ints;
+
+   always @(*)
+     begin
+        pic_ints = 0;
+        pic_ints[APP_INT_ETH  ] = eth_int_i;
+        pic_ints[APP_INT_UART ] = uart_int_i;
+     end
 
 
    // CPU debug interface.
