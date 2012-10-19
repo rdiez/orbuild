@@ -407,6 +407,22 @@ start_tests:
         CLEAR_REG r4
         l.sb 0(r5), r4
         REPORT_REG_TO_CONSOLE r4
+
+        // Address starting with 0xF0 are not normally covered by any peripheral and should generate an access violation.
+        // Note that this test is known to hang with most Wishbone switch/interconnect implementations
+        // used with OpenRISC CPUs (as of Oct 2012).
+        LOAD_IMMEDIATE r5, 0xF0000000
+        CLEAR_REG r4
+        l.lbs r4, 0(r5)
+        REPORT_REG_TO_CONSOLE r4
         
+        // Address starting with 0x90 are normally handled by the UART, which often does not decode the whole address range.
+        // This test checks that all invalid addresses are caught properly.
+        LOAD_IMMEDIATE r5, 0x90001000
+        CLEAR_REG r4
+        l.lbs r4, 0(r5)
+        REPORT_REG_TO_CONSOLE r4
+
+
         POP LINK_REGISTER_R9
         RETURN_TO_LINK_REGISTER_R9
