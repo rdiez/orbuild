@@ -204,20 +204,20 @@ module soc_top ( input wire         wb_clk_i,
 
    // Given that the OR10 CPU has only one Wishbone interface,
    // we could use a simpler Wishbone Traffic Switch (Interconnect).
-   minsoc_tc_top #(`APP_ADDR_DEC_W,
-                   `APP_ADDR_SRAM,
-                   `APP_ADDR_DEC_W,
-                   `APP_ADDR_FLASH,
-                   `APP_ADDR_DECP_W,
-                   `APP_ADDR_PERIP,
-                   `APP_ADDR_DEC_W,
-                   `APP_ADDR_SPI,
-                   `APP_ADDR_ETH,
-                   `APP_ADDR_AUDIO,
-                   `APP_ADDR_UART,
-                   `APP_ADDR_PS2,
-                   `APP_ADDR_JSP,
-                   `APP_ADDR_RES2
+   minsoc_tc_top #( .t0_addr_w( `APP_ADDR_DEC_W ),
+                    .t0_addr( `APP_ADDR_FLASH ),
+                    .t1_addr_w( `APP_ADDR_DEC_W ),
+                    .t1_addr( `APP_ADDR_SRAM ),
+                    .t28c_addr_w( `APP_ADDR_DECP_W ),
+                    .t28_addr( `APP_ADDR_PERIP ),
+                    .t28i_addr_w( `APP_ADDR_DEC_W ),
+                    .t2_addr( `APP_ADDR_SPI ),
+                    .t3_addr( `APP_ADDR_ETH ),
+                    .t4_addr( `APP_ADDR_AUDIO ),
+                    .t5_addr( `APP_ADDR_UART ),
+                    .t6_addr( `APP_ADDR_PS2 ),
+                    .t7_addr( `APP_ADDR_JSP ),
+                    .t8_addr( `APP_ADDR_RES2 )
                    ) tc_top (
 
     // WISHBONE common
@@ -225,6 +225,8 @@ module soc_top ( input wire         wb_clk_i,
     .wb_rst_i   ( wb_rst_i ),
 
     // WISHBONE Initiator 0 (unused)
+    // Initiator 0 has the highest priority, as long as no other initiator
+    // was already using the bus.
     .i0_wb_cyc_i    ( 1'b0 ),
     .i0_wb_stb_i    ( 1'b0 ),
     .i0_wb_adr_i    ( 32'h0000_0000 ),
@@ -268,7 +270,7 @@ module soc_top ( input wire         wb_clk_i,
     .i3_wb_ack_o    ( ),
     .i3_wb_err_o    ( ),
 
-    // WISHBONE Initiator 4
+    // WISHBONE Initiator 4 (unused)
     .i4_wb_cyc_i    ( 1'b0 ),
     .i4_wb_stb_i    ( 1'b0 ),
     .i4_wb_adr_i    ( 32'h0000_0000 ),
@@ -279,7 +281,7 @@ module soc_top ( input wire         wb_clk_i,
     .i4_wb_ack_o    ( ),
     .i4_wb_err_o    ( ),
 
-    // WISHBONE Initiator 5
+    // WISHBONE Initiator 5 (the OR10 CPU)
     .i5_wb_cyc_i    ( wb_cpu_cyc_o ),
     .i5_wb_stb_i    ( wb_cpu_stb_o ),
     .i5_wb_adr_i    ( wb_cpu_adr_o ),
@@ -312,29 +314,30 @@ module soc_top ( input wire         wb_clk_i,
     .i7_wb_ack_o    ( ),
     .i7_wb_err_o    ( ),
 
-    // WISHBONE Target 0 - SRAM controller
+    // WISHBONE Target 0 (unused)
     // NOTE: This target has its own bus and can be accessed in parallel
-    //       to the other targets.
-    .t0_wb_cyc_o    ( wb_ss_cyc_i ),
-    .t0_wb_stb_o    ( wb_ss_stb_i ),
-    .t0_wb_adr_o    ( wb_ss_adr_i ),
-    .t0_wb_sel_o    ( wb_ss_sel_i ),
-    .t0_wb_we_o     ( wb_ss_we_i  ),
-    .t0_wb_dat_o    ( wb_ss_dat_i ),
-    .t0_wb_dat_i    ( wb_ss_dat_o ),
-    .t0_wb_ack_i    ( wb_ss_ack_o ),
-    .t0_wb_err_i    ( wb_ss_err_o ),
+    //       to the other targets. Left unconnected in the hope that the synthesis tool
+    //       will optimise the bus completely away.
+    .t0_wb_cyc_o    ( ),
+    .t0_wb_stb_o    ( ),
+    .t0_wb_adr_o    ( ),
+    .t0_wb_sel_o    ( ),
+    .t0_wb_we_o     ( ),
+    .t0_wb_dat_o    ( ),
+    .t0_wb_dat_i    ( 32'h0000_0000 ),
+    .t0_wb_ack_i    ( 1'b0 ),
+    .t0_wb_err_i    ( 1'b1 ),
 
-    // WISHBONE Target 1 - Flash controller
-    .t1_wb_cyc_o    ( ),
-    .t1_wb_stb_o    ( ),
-    .t1_wb_adr_o    ( ),
-    .t1_wb_sel_o    ( ),
-    .t1_wb_we_o ( ),
-    .t1_wb_dat_o    ( ),
-    .t1_wb_dat_i    ( 32'h0000_0000 ),
-    .t1_wb_ack_i    ( 1'b0 ),
-    .t1_wb_err_i    ( 1'b1 ),
+    // WISHBONE Target 1 - SRAM controller
+    .t1_wb_cyc_o    ( wb_ss_cyc_i ),
+    .t1_wb_stb_o    ( wb_ss_stb_i ),
+    .t1_wb_adr_o    ( wb_ss_adr_i ),
+    .t1_wb_sel_o    ( wb_ss_sel_i ),
+    .t1_wb_we_o     ( wb_ss_we_i  ),
+    .t1_wb_dat_o    ( wb_ss_dat_i ),
+    .t1_wb_dat_i    ( wb_ss_dat_o ),
+    .t1_wb_ack_i    ( wb_ss_ack_o ),
+    .t1_wb_err_i    ( wb_ss_err_o ),
 
     // WISHBONE Target 2 (unused)
     .t2_wb_cyc_o    ( ),
