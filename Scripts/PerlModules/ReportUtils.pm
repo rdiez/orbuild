@@ -234,12 +234,14 @@ sub convert_text_file_to_html ( $ $ $ )
   open( my $srcFile, "<$srcFilename" )
     or die "Cannot open file \"$srcFilename\": $!\n";
 
+  # Turning on the encoding here slows reads down considerably.
   binmode( $srcFile, ":encoding($defaultEncoding)" );  # Also avoids CRLF conversion.
 
   open( my $destFile, ">$destFilename" )
     or die "Cannot open for writing file \"$destFilename\": $!\n";
 
   binmode( $destFile );  # Avoids CRLF conversion.
+  $destFile->autoflush( 0 );  # Make sure the file is being buffered, for performance reasons.
 
   # Alternative with HTML::FromText
   #   my $logFilenameContents = FileUtils::read_whole_binary_file( $logFilename );
@@ -294,6 +296,32 @@ sub convert_text_file_to_html ( $ $ $ )
 
   my $htmlBr = "<br/>";
 
+
+  # This loop is rather slow. I've tried the following, which wasn't any faster after all:
+  #
+  #  1) use File::Slurp;
+  #     my @lines = read_file( $srcFilename, binmode => ":encoding($defaultEncoding)" );
+  #
+  #  2) my @all = readline( $file );
+  #
+  #  3) Reading the whole file as a single string at once, in the hope that the UTF-8
+  #     conversion was done faster on a whole single string:
+  #
+  #       binmode( $file, ":encoding($default_encoding)" );  # Also avoids CRLF conversion.
+  #       my $read_res = read( $file, $file_content, $file_size );
+  #
+  #     And then I split the lines with:
+  #
+  #       my @all_lines = split( /\x0A/, $file_content );
+  #
+  # The one thing I haven't tried is a trick like follows, which turns a string into hex:
+  #
+  #   $file_content =~ s/(.)/sprintf("%x",ord($1))/eg;
+  #
+  # I could be possible to modify the regex and map the calls in some way so that the routine
+  # gets called on each match, without modifying the original string.
+
+
   for ( my $lineNumber = 1; ; ++$lineNumber )
   {
     my $line = readline( $srcFile );
@@ -305,8 +333,9 @@ sub convert_text_file_to_html ( $ $ $ )
 
     if ( 0 != length( $line ) )
     {
+      # Function encode_entities() is rather slow, but I haven't found anything faster yet.
       # $line = "<code>" . encode_entities( $line ) . "</code>";
-      $line = encode_entities( $line );
+      encode_entities( $line );
 
       # Git shows and updates every second or so a progress message like this:
       #    Checking out files:   0% (2/38541)
