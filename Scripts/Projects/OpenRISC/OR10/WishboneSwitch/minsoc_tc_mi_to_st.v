@@ -30,6 +30,7 @@
 ////                                                              ////
 //////////////////////////////////////////////////////////////////////
 
+`include "simulator_features.v"
 `include "minsoc_tc_defines.v"
 
 //
@@ -39,7 +40,7 @@ module minsoc_tc_mi_to_st (
 	wb_clk_i,
 	wb_rst_i,
 
-	i0_wb_cyc_i,
+	i0_wb_cyc_i,  // If somebody was already using the bus, it will continue to do so. Otherwise, Initiator 0 has the highest priority.
 	i0_wb_stb_i,
 	i0_wb_adr_i,
 	i0_wb_sel_i,
@@ -136,9 +137,11 @@ module minsoc_tc_mi_to_st (
 //
 parameter		t0_addr_w = 2;
 parameter		t0_addr = 2'b00;
+
 parameter		multitarg = 1'b0;
-parameter		t17_addr_w = 2;
-parameter		t17_addr = 2'b00;
+
+parameter		t17_addr_w = 2;    // Only used if multitarg == 1.
+parameter		t17_addr = 2'b00;  // Only used if multitarg == 1.
 
 //
 // I/O Ports
@@ -366,16 +369,16 @@ assign i7_out = (req_won == 3'd7) ? t0_in : {`TC_TIN_W{1'b0}};
 // assign zeros.
 //
 assign t0_out = (req_won == 3'd0) ? i0_in :
-		(req_won == 3'd1) ? i1_in :
-		(req_won == 3'd2) ? i2_in :
-		(req_won == 3'd3) ? i3_in :
-		(req_won == 3'd4) ? i4_in :
-		(req_won == 3'd5) ? i5_in :
-		(req_won == 3'd6) ? i6_in :
-		(req_won == 3'd7) ? i7_in : {`TC_IIN_W{1'b0}};
+                (req_won == 3'd1) ? i1_in :
+                (req_won == 3'd2) ? i2_in :
+                (req_won == 3'd3) ? i3_in :
+                (req_won == 3'd4) ? i4_in :
+                (req_won == 3'd5) ? i5_in :
+                (req_won == 3'd6) ? i6_in :
+                (req_won == 3'd7) ? i7_in : {`TC_IIN_W{1'b0}};
 
 //
-// Determine if an initiator has address of the target.
+// Determine if the initiator has the address of one of the targets.
 //
 assign req_i[0] = i0_wb_cyc_i &
 	((i0_wb_adr_i[`TC_AW-1:`TC_AW-t0_addr_w] == t0_addr) |
@@ -426,7 +429,7 @@ assign req_won = req_cont ? req_r :
 // it does, assert req_cont.
 //
 always @(req_r or req_i)
-	case (req_r)	// synopsys parallel_case
+     `UNIQUE case (req_r)	// synopsys parallel_case
 		3'd0: req_cont = req_i[0];
 		3'd1: req_cont = req_i[1];
 		3'd2: req_cont = req_i[2];
