@@ -177,12 +177,12 @@ sub read_whole_binary_file ( $ )
 
   if ( not defined($read_res) )
   {
-    die qq<Error reading from file "$file_path": $!>; 
+    die qq<Error reading from file "$file_path": $!\n>;
   }
 
   if ( $read_res != $file_size )
   {
-    die qq<Error reading from file "$file_path".>; 
+    die qq<Error reading from file "$file_path".\n>;
   }
 
   close_or_die( *FILE );
