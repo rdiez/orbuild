@@ -88,8 +88,6 @@ module test_bench ( input wire clock,
         .int_o      ( uart_int )
         );
 
-     assign wb_uart_err = 1'b0;  // The UART DPI module does not support signal wb_err yet.
-
    `else  // `ifdef ENABLE_DPI_MODULES
 
      assign wb_uart_dat_from_uart = 32'h0000_0000;
