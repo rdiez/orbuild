@@ -4117,7 +4117,7 @@ module or10_top
                end
          endcase
 
-         if ( shift_bit_count == 1 )
+         if ( shift_bit_count == 5'b1 )
            begin
               schedule_register_write_during_next_cycle( shift_dest_reg, res );
 
@@ -4137,7 +4137,7 @@ module or10_top
          else
            begin
               shift_result    <= res;
-              shift_bit_count <= shift_bit_count - 1;
+              shift_bit_count <= shift_bit_count - 5'b1;
            end
       end
    endtask
