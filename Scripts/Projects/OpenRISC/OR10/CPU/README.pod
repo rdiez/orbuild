@@ -38,7 +38,8 @@ See the Verilog source code for the Wishbone datasheet.
 =item * Non-pipelined implementation (slow).
 
 It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
-and 4 cycles for instructions which access memory.
+and 4 cycles for instructions which access memory. For shift and rotate instructions, if you
+choose the serial shifter, it takes one extra clock cycle per shift/rotate bit count.
 
 =item * Designed mainly for FPGAs. Tested only on a smallish Xilinx Spartan-6 FPGA (XC6SLX16).
 
@@ -46,9 +47,19 @@ and 4 cycles for instructions which access memory.
 
 =item * No instruction or data caches, no MMU.
 
-=item * Does not implement the multiplication or division instructions yet, let alone floating-point or anything advanced.
+=item * All ORBIS32 instructions are available.
 
-However, all other ORBIS32 instructions are available.
+=item * The multiplication instructions are implemented somewhat suboptimally.
+
+The Xilinx FPGA synthesiser does infer the usage of hardware multipliers, but given
+that the result must be available in the same execution clock cycle, the maximum
+overall CPU frequency suffers quite a lot.
+
+=item * The division instructions are not synthesisable yet.
+
+=item * Choice of barrel or serial shifter for the rotate and shift instructions.
+
+=item * Does not implement floating-point or anything advanced.
 
 =item * Debug Unit for JTAG debugging (see below for more information).
 
