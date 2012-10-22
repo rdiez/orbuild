@@ -4,6 +4,9 @@
 
 Generates an HTML report of the last orbuild run.
 
+Note that this tool looks at the log file dates an skips generating the HTML logs
+if they are up to date (like GNU Make does).
+
 =head1 USAGE
 
 perl GenerateBuildReport.pl <internal reports dir> <public reports base path> <public reports subdir (without path)> <html output filename (without path)>
@@ -326,12 +329,13 @@ sub main ()
 
   my $defaultEncoding = ReportUtils::get_default_encoding();
   my $injectedHtml = "";
+  my $skippedHtmlFileCount = 0;
 
 
   # Generate the top-level table.
 
   $injectedHtml .= generate_table_header();
-  $injectedHtml .= generate_report_table_entries( \@topLevelReports, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding );
+  $injectedHtml .= generate_report_table_entries( \@topLevelReports, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding, \$skippedHtmlFileCount );
   $injectedHtml .= generate_table_footer();
 
 
@@ -362,7 +366,7 @@ sub main ()
     $injectedHtml .= qq{ <a name="$anchorName"></a>  <h2> $groupName </h2> \n };
 
     $injectedHtml .= generate_table_header();
-    $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $outputSubDir, $defaultEncoding );
+    $injectedHtml .= generate_report_table_entries( $allGroupReports, "", $outputSubDir, $defaultEncoding, \$skippedHtmlFileCount );
     $injectedHtml .= generate_table_footer();
   }
 
@@ -442,7 +446,14 @@ sub main ()
   my $cmdToRun = qq[bash -c "$escapedCmd"];
   ProcessUtils::run_process_exit_code_0( $cmdToRun );
 
-  write_stdout( "HTML report finished.\n" );
+  my $skippedMsg = "";
+
+  if ( $skippedHtmlFileCount > 0 )
+  {
+    $skippedMsg = " ($skippedHtmlFileCount up-to-date HTML log files skipped)";
+  }
+
+  write_stdout( "HTML report finished$skippedMsg.\n" );
 
   return MiscUtils::EXIT_CODE_SUCCESS;
 }
@@ -518,12 +529,13 @@ sub generate_table_footer ()
 }
 
 
-sub generate_report_table_entries ( $ $ $ $ )
+sub generate_report_table_entries ( $ $ $ $ $ )
 {
   my $allReports               = shift;
   my $makefileUserFriendlyName = shift;
   my $outputSubDir             = shift;
   my $defaultEncoding          = shift;
+  my $skippedHtmlFileCount     = shift;
 
   my @sortedReports = ReportUtils::sort_reports( $allReports, $makefileUserFriendlyName );
 
@@ -531,19 +543,20 @@ sub generate_report_table_entries ( $ $ $ $ )
 
   foreach my $report ( @sortedReports )
   {
-    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding );
+    $injectedHtml .= process_report( $report, $makefileUserFriendlyName, $outputSubDir, $defaultEncoding, $skippedHtmlFileCount );
   }
 
   return $injectedHtml;
 }
 
 
-sub process_report ( $ $ $ $ )
+sub process_report ( $ $ $ $ $ )
 {
   my $report                   = shift;
   my $makefileUserFriendlyName = shift;
   my $outputSubDir             = shift;
   my $defaultEncoding          = shift;
+  my $skippedHtmlFileCount     = shift;
 
   my $logFilename      = $report->{ "LogFile" };
   my $userFriendlyName = $report->{ "UserFriendlyName" };
@@ -567,7 +580,13 @@ sub process_report ( $ $ $ $ )
   else
   {
     my $drillDownTarget = $report->{ "DrillDownLink" };
-    $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $outputSubDir, $defaultEncoding, $drillDownTarget );
+    my $htmlLogFileCreationSkippedAsItWasUpToDate;
+    $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $outputSubDir, $defaultEncoding, $drillDownTarget,
+                                                                 \$htmlLogFileCreationSkippedAsItWasUpToDate );
+    if ( $htmlLogFileCreationSkippedAsItWasUpToDate )
+    {
+      ++$$skippedHtmlFileCount;
+    }
   }
 
   $html .= "</tr>\n";

@@ -4,6 +4,9 @@
 
 Generates an HTML report of the last update of the OpenRISC git svn mirrors.
 
+Note that this tool looks at the log file dates an skips generating the HTML logs
+if they are up to date (like GNU Make does).
+
 =head1 USAGE
 
 perl GenerateGitSvnMirrorReport.pl <internal reports dir>  <public reports subdir (without path)>  <git base dir>  <makefile report filename> <html output filename>
@@ -236,7 +239,9 @@ sub process_report ( $ $ $ $ )
 
   my $defaultEncoding = ReportUtils::get_default_encoding();
 
-  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $publicReportsSubdir, $defaultEncoding, undef );
+  my $htmlLogFileCreationSkippedAsItWasUpToDate;
+  $html .= ReportUtils::generate_html_log_file_and_cell_links( $logFilename, $publicReportsSubdir, $defaultEncoding, undef,
+                                                               \$htmlLogFileCreationSkippedAsItWasUpToDate );
 
   $html.= "<td>$gitCloneUrlCellContents</td>\n";
 

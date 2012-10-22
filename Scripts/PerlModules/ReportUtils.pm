@@ -368,12 +368,13 @@ sub convert_text_file_to_html ( $ $ $ )
 }
 
 
-sub generate_html_log_file_and_cell_links ( $ $ $ $ )
+sub generate_html_log_file_and_cell_links ( $ $ $ $ $ )
 {
   my $logFilename     = shift;
   my $reportsSubdir   = shift;
   my $defaultEncoding = shift;
   my $drillDownTarget = shift;  # Can be undef.
+  my $htmlLogFileCreationSkippedAsItWasUpToDate = shift;
 
   my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
 
@@ -385,7 +386,33 @@ sub generate_html_log_file_and_cell_links ( $ $ $ $ )
 
   my $htmlLogFilename = FileUtils::cat_path( $volume, $directories, $htmlLogFilenameOnly );
 
-  convert_text_file_to_html( $logFilename, $htmlLogFilename, $defaultEncoding );
+
+  # Skip the HTML log file creation if already up to date.
+
+  $$htmlLogFileCreationSkippedAsItWasUpToDate = MiscUtils::FALSE;
+
+  my ( $dev2, $ino2, $mode2, $nlink2, $uid2, $gid2, $rdev2, $size2,
+       $atime2, $mtime2, $ctime2, $blksize2, $blocks2 ) = stat( $htmlLogFilename );
+
+  if ( defined( $mtime2 ) )
+  {
+    my ( $dev1, $ino1, $mode1, $nlink1, $uid1, $gid1, $rdev1, $size1,
+         $atime1, $mtime1, $ctime1, $blksize1, $blocks1 ) = stat( $logFilename );
+
+    # If the text log file does not exist, let it fail later on during the conversion attempt.
+    if ( defined( $mtime1 ) )
+    {
+      if ( $mtime2 >= $mtime1 )
+      {
+        $$htmlLogFileCreationSkippedAsItWasUpToDate = MiscUtils::TRUE;
+      }
+    }
+  }
+
+  if ( not $$htmlLogFileCreationSkippedAsItWasUpToDate )
+  {
+    convert_text_file_to_html( $logFilename, $htmlLogFilename, $defaultEncoding );
+  }
 
 
   my $html = "";
