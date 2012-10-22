@@ -15,6 +15,7 @@ use Encode;
 use StringUtils;
 use FileUtils;
 use ConfigFile;
+use MiscUtils;
 
 # In order of priority in the HTML report.
 use constant RT_GROUP      => 1;
@@ -362,8 +363,8 @@ sub convert_text_file_to_html ( $ $ $ )
   (print $destFile $footer) or
       die "Cannot write to file \"$destFilename\": $!\n";
 
-  FileUtils::close_or_die( $destFile );
-  FileUtils::close_or_die( $srcFile  );
+  MiscUtils::close_or_die( $destFile );
+  MiscUtils::close_or_die( $srcFile  );
 }
 
 
@@ -372,7 +373,7 @@ sub generate_html_log_file_and_cell_links ( $ $ $ $ )
   my $logFilename     = shift;
   my $reportsSubdir   = shift;
   my $defaultEncoding = shift;
-  my $drillDownTarget = shift;
+  my $drillDownTarget = shift;  # Can be undef.
 
   my ( $volume, $directories, $logFilenameOnly ) = File::Spec->splitpath( $logFilename );
 
