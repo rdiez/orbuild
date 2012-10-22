@@ -49,6 +49,8 @@ module or10_top
      parameter ENABLE_PIC_UNIT        = 1,
 
      parameter ENABLE_INSTRUCTION_ROR  = 1,  // See GCC's switch '-mno-ror' . This saves a few FPGA resources, but not many.
+     parameter ENABLE_SERIAL_SHIFTER   = 1,  // A serial shifter is slower but needs fewer FPGA resources.
+                                             // This affects l.sll, l.slli, l.sra, l.srai, l.srl, l.srli, l.ror, l.rori.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
      parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
                                              // the maximum CPU frequency unnecessarily.
@@ -197,6 +199,10 @@ module or10_top
 
    localparam STATE_DEBUG_STALLED                   = 7;
    localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 8;
+
+
+   localparam STATE_SHIFTING = 9;  // TODO: maybe move up
+
 
    reg [3:0]  current_state;  // See the STATE_xxx constants.
 
@@ -352,6 +358,11 @@ module or10_top
 
    // TODO: maybe we don't need to store all 32 bits of the watchpoint address.
    reg [AW-1:0]        watchpoints[ (1<<WATCHPOINT_INDEX_WIDTH)-1:0 ];
+
+   reg [2:0]              shift_operation; // See the `OR10_SHIFTINST_xxx constants.
+   reg [4:0]              shift_bit_count;
+   reg [DW-1:0]           shift_result;
+   reg [`OR10_REG_NUMBER] shift_dest_reg;
 
 
    // ------------- Address helper functions -------------
@@ -1886,11 +1897,91 @@ module or10_top
    endtask
 
 
+   task automatic trace_shift_instruction;
+
+      input reg [2:0]              opcode;  // See the `OR10_SHIFTINST_xxx constants.
+      input reg [4:0]              shift_amount;
+      input reg [`OR10_REG_NUMBER] amount_reg;
+
+      input reg [`OR10_REG_NUMBER] src_reg;
+      input reg [DW-1:0] src;
+      input reg [`OR10_REG_NUMBER] dest_reg;
+
+      input reg          is_result_available;
+      input reg [DW-1:0] result;
+
+      reg [6 * 8 - 1:0]  instruction_name;
+
+      begin
+         `UNIQUE case ( opcode )
+                   OR10_SHIFTINST_SLL:   instruction_name = {8'h00, "l.sll"};
+                   OR10_SHIFTINST_SLLI:  instruction_name = {"l.slli"};
+                   OR10_SHIFTINST_SRA:   instruction_name = {8'h00, "l.sra"};
+                   OR10_SHIFTINST_SRAI:  instruction_name = {"l.srai"};
+                   OR10_SHIFTINST_SRL:   instruction_name = {8'h00, "l.srl"};
+                   OR10_SHIFTINST_SRLI:  instruction_name = {"l.srli"};
+                   OR10_SHIFTINST_ROR:   instruction_name = {8'h00, "l.ror"};
+                   OR10_SHIFTINST_RORI:  instruction_name = {"l.rori"};
+         endcase
+
+         `UNIQUE case ( opcode )
+
+                   OR10_SHIFTINST_SLL, OR10_SHIFTINST_SRA, OR10_SHIFTINST_SRL, OR10_SHIFTINST_ROR:
+                     if ( TRACE_ASM_EXECUTION )
+                       begin
+                          if ( is_result_available )
+                            $display( "0x%08h: %0s r%0d, r%0d, r%0d (0x%08h by %0d, result 0x%08h)",
+                                      `OR10_TRACE_PC_VAL,
+                                      instruction_name,
+                                      dest_reg,
+                                      src_reg,
+                                      amount_reg,
+                                      src,
+                                      shift_amount,
+                                      result );
+                          else
+                            $display( "0x%08h: %0s r%0d, r%0d, r%0d (0x%08h by %0d, see result below)",
+                                      `OR10_TRACE_PC_VAL,
+                                      instruction_name,
+                                      dest_reg,
+                                      src_reg,
+                                      amount_reg,
+                                      src,
+                                      shift_amount );
+                       end
+
+                   OR10_SHIFTINST_SLLI, OR10_SHIFTINST_SRAI, OR10_SHIFTINST_SRLI, OR10_SHIFTINST_RORI:
+                     if ( TRACE_ASM_EXECUTION )
+                       begin
+                          if ( is_result_available )
+                            $display( "0x%08h: %0s r%0d, r%0d, %0d (src val 0x%08h, result 0x%08h)",
+                                      `OR10_TRACE_PC_VAL,
+                                      instruction_name,
+                                      dest_reg,
+                                      src_reg,
+                                      shift_amount,
+                                      src,
+                                      result );
+                          else
+                            $display( "0x%08h: %0s r%0d, r%0d, %0d (src val 0x%08h, see result below)",
+                                      `OR10_TRACE_PC_VAL,
+                                      instruction_name,
+                                      dest_reg,
+                                      src_reg,
+                                      shift_amount,
+                                      src );
+                       end
+         endcase
+      end
+   endtask
+
+
    task automatic execute_shift_instruction_2;
 
       input reg [2:0]              opcode;  // See the `OR10_SHIFTINST_xxx constants.
       input reg [4:0]              shift_amount;
       input reg [`OR10_REG_NUMBER] amount_reg;  // Only for 2nd operand register (non-immediate) instructions, for logging purposes only.
+      inout reg                    can_interrupt;
 
       reg [`OR10_REG_NUMBER] src_reg;
       reg [`OR10_REG_NUMBER] dest_reg;
@@ -1898,15 +1989,36 @@ module or10_top
       reg [DW-1:0] src;
       reg [DW-1:0] result;
 
-      reg[6 * 8 - 1:0] instruction_name;
-
       begin
          dest_reg = wb_dat_i[`OR10_IOP_DEST_GPR];
          src_reg  = wb_dat_i[`OR10_IOP_GPR1];
 
          src = gpr_register_value_read_1;
 
-         `UNIQUE case ( opcode )
+         if ( ENABLE_SERIAL_SHIFTER )
+           begin
+              if ( shift_amount == 0 )
+                begin
+                   result = src;
+                   schedule_register_write_during_next_cycle( dest_reg, result );
+                   trace_shift_instruction( opcode, shift_amount, amount_reg, src_reg, src, dest_reg, 1, result );
+                end
+              else
+                begin
+                   trace_shift_instruction( opcode, shift_amount, amount_reg, src_reg, src, dest_reg, 0, result );
+
+                   shift_operation <= opcode;
+                   shift_bit_count <= shift_amount;
+                   shift_result <= src;
+                   shift_dest_reg <= dest_reg;
+
+                   can_interrupt = 0;
+                   current_state <= STATE_SHIFTING;
+                end
+           end
+         else
+           begin
+              `UNIQUE case ( opcode )
 
                    OR10_SHIFTINST_SLL, OR10_SHIFTINST_SLLI:  result = src << shift_amount;
                    OR10_SHIFTINST_SRL, OR10_SHIFTINST_SRLI:  result = src >> shift_amount;
@@ -1919,45 +2031,11 @@ module or10_top
                           `ASSERT_FALSE;
                           result = {DW{1'bx}};
                        end
-                 endcase
+              endcase
 
-         `UNIQUE case ( opcode )
-
-                   OR10_SHIFTINST_SLL:   instruction_name = {8'h00, "l.sll"};
-                   OR10_SHIFTINST_SLLI:  instruction_name = {"l.slli"};
-                   OR10_SHIFTINST_SRA:   instruction_name = {8'h00, "l.sra"};
-                   OR10_SHIFTINST_SRAI:  instruction_name = {"l.srai"};
-                   OR10_SHIFTINST_SRL:   instruction_name = {8'h00, "l.srl"};
-                   OR10_SHIFTINST_SRLI:  instruction_name = {"l.srli"};
-                   OR10_SHIFTINST_ROR:   instruction_name = {8'h00, "l.ror"};
-                   OR10_SHIFTINST_RORI:  instruction_name = {"l.rori"};
-
-                 endcase
-
-         `UNIQUE case ( opcode )
-
-                   OR10_SHIFTINST_SLL, OR10_SHIFTINST_SRA, OR10_SHIFTINST_SRL, OR10_SHIFTINST_ROR:
-                     if ( TRACE_ASM_EXECUTION )
-                       $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h)",
-                                 `OR10_TRACE_PC_VAL,
-                                 instruction_name,
-                                 dest_reg,
-                                 src_reg,
-                                 amount_reg,
-                                 result );
-
-                   OR10_SHIFTINST_SLLI, OR10_SHIFTINST_SRAI, OR10_SHIFTINST_SRLI, OR10_SHIFTINST_RORI:
-                     if ( TRACE_ASM_EXECUTION )
-                       $display( "0x%08h: %0s r%0d, r%0d, %0d (result 0x%08h)",
-                                 `OR10_TRACE_PC_VAL,
-                                 instruction_name,
-                                 dest_reg,
-                                 src_reg,
-                                 shift_amount,
-                                 result );
-                 endcase
-
-         schedule_register_write_during_next_cycle( dest_reg, result );
+              schedule_register_write_during_next_cycle( dest_reg, result );
+              trace_shift_instruction( opcode, shift_amount, amount_reg, src_reg, src, dest_reg, 1, result );
+           end
       end
    endtask
 
@@ -1985,12 +2063,12 @@ module or10_top
               should_raise_illegal_exception = 0;
 
               case ( opcode )
-                4'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLL, shift_amount, amount_reg );
-                4'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRL, shift_amount, amount_reg );
-                4'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRA, shift_amount, amount_reg );
+                4'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLL, shift_amount, amount_reg, can_interrupt );
+                4'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRL, shift_amount, amount_reg, can_interrupt );
+                4'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRA, shift_amount, amount_reg, can_interrupt );
                 4'h3:
                   if ( ENABLE_INSTRUCTION_ROR )
-                    execute_shift_instruction_2( OR10_SHIFTINST_ROR, shift_amount, amount_reg );
+                    execute_shift_instruction_2( OR10_SHIFTINST_ROR, shift_amount, amount_reg, can_interrupt );
                   else
                     should_raise_illegal_exception = 1;
 
@@ -2028,11 +2106,11 @@ module or10_top
               should_raise_illegal_exception = 0;
 
               `UNIQUE case ( opcode )
-                        2'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
-                        2'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
-                        2'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRAI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                        2'h0: execute_shift_instruction_2( OR10_SHIFTINST_SLLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}}, can_interrupt );
+                        2'h1: execute_shift_instruction_2( OR10_SHIFTINST_SRLI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}}, can_interrupt );
+                        2'h2: execute_shift_instruction_2( OR10_SHIFTINST_SRAI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}}, can_interrupt );
                         2'h3: if ( ENABLE_INSTRUCTION_ROR )
-                                execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}} );
+                                execute_shift_instruction_2( OR10_SHIFTINST_RORI, shift_amount, {GPR_NUMBER_WIDTH{1'bx}}, can_interrupt );
                               else
                                 should_raise_illegal_exception = 1;
                       endcase
@@ -4014,6 +4092,57 @@ module or10_top
    endtask
 
 
+   task automatic do_state_shifting;
+
+      reg [DW-1:0] res;
+      reg          was_interrupt_triggered;
+
+      begin
+         res = {DW{1'bx}};  // Place this before the 'case' statement to prevent a C++ compilation warning with Verilator.
+
+         `UNIQUE case ( shift_operation )
+
+           OR10_SHIFTINST_SLL, OR10_SHIFTINST_SLLI:  res = shift_result << 1;
+           OR10_SHIFTINST_SRL, OR10_SHIFTINST_SRLI:  res = shift_result >> 1;
+           OR10_SHIFTINST_SRA, OR10_SHIFTINST_SRAI:  res = $signed(shift_result) >>> 1;
+           OR10_SHIFTINST_ROR, OR10_SHIFTINST_RORI:
+             if ( ENABLE_INSTRUCTION_ROR )
+               begin
+                  res = shift_result >> 1;
+                  res[DW-1] = shift_result[0];
+               end
+             else
+               begin
+                  `ASSERT_FALSE;
+               end
+         endcase
+
+         if ( shift_bit_count == 1 )
+           begin
+              schedule_register_write_during_next_cycle( shift_dest_reg, res );
+
+             if ( TRACE_ASM_EXECUTION )
+               $display( "%sShift/Rotate instruction result: 0x%08h.",
+                         TRACE_ASM_INDENT,
+                         res );
+
+             was_interrupt_triggered = 0;
+             check_interrupt( cpureg_pc + 1, cpureg_spr_sr, was_interrupt_triggered );
+             if ( !was_interrupt_triggered )
+               start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc + 1 ) );
+
+              shift_result    <= {DW{1'bx}};
+              shift_bit_count <= {5{1'bx}};
+           end
+         else
+           begin
+              shift_result    <= res;
+              shift_bit_count <= shift_bit_count - 1;
+           end
+      end
+   endtask
+
+
    task automatic do_state_debug_waiting_for_wishbone_debug_interface_cycle;
       begin
         if ( wb_ack_i )
@@ -4081,11 +4210,12 @@ module or10_top
            STATE_WAITING_FOR_INSTRUCTION_FETCH:    do_state_waiting_for_instruction_fetch;
            STATE_WAITING_FOR_WISHBONE_DATA_CYCLE:  do_state_waiting_for_wishbone_data_cycle;
            STATE_SLEEP:                            do_state_sleep;
-           STATE_DEBUG_WAITING_FOR_ACK_ASSERT:     if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_ack_assert;
-           STATE_DEBUG_WAITING_FOR_STB_DEASSERT:   if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_stb_deassert;
-           STATE_DEBUG_WAITING_FOR_REG_FILE_READ:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_reg_file_read;
-           STATE_DEBUG_STALLED:                    if ( ENABLE_DEBUG_UNIT ) do_state_debug_stalled;
-           STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_wishbone_debug_interface_cycle;
+           STATE_SHIFTING:                         if ( ENABLE_SERIAL_SHIFTER ) do_state_shifting;                    else begin `ASSERT_FALSE; end
+           STATE_DEBUG_WAITING_FOR_ACK_ASSERT:     if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_ack_assert;    else begin `ASSERT_FALSE; end
+           STATE_DEBUG_WAITING_FOR_STB_DEASSERT:   if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_stb_deassert;  else begin `ASSERT_FALSE; end
+           STATE_DEBUG_WAITING_FOR_REG_FILE_READ:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_reg_file_read; else begin `ASSERT_FALSE; end
+           STATE_DEBUG_STALLED:                    if ( ENABLE_DEBUG_UNIT ) do_state_debug_stalled;                   else begin `ASSERT_FALSE; end
+           STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_wishbone_debug_interface_cycle; else begin `ASSERT_FALSE; end
 
            default:
              begin
