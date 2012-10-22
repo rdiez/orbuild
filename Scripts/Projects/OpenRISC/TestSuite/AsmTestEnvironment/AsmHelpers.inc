@@ -231,11 +231,51 @@
 
 // ----------- Jump helpers -----------
 
-// A version of the or1200 processor without a jump delay slot is planned.
-// This macro helps remove all those delay slots at once.
+// Depending on the GCC compilation flags (-mcompat-delay, -mno-delay, -mdelay),
+// one of the following symbols gets automatically defined.
+// This code makes sure that one and only one of the those symbols is defined.
+
+#if   defined(__OR1K_NODELAY__)
+#  if defined(__OR1K_DELAY__) || defined(__OR1K_DELAY_COMPAT__)
+#    error "Only one of __OR1K_NODELAY__, __OR1K_DELAY__ and __OR1K_DELAY_COMPAT__ must be defined."
+#  endif
+#elif defined(__OR1K_DELAY__)
+#  if defined(__OR1K_NODELAY__) || defined(__OR1K_DELAY_COMPAT__)
+#    error "Only one of __OR1K_NODELAY__, __OR1K_DELAY__ and __OR1K_DELAY_COMPAT__ must be defined."
+#  endif
+#elif defined(__OR1K_DELAY_COMPAT__)
+#  if defined(__OR1K_DELAY__) || defined(__OR1K_NODELAY__)
+#    error "Only one of __OR1K_NODELAY__, __OR1K_DELAY__ and __OR1K_DELAY_COMPAT__ must be defined."
+#  endif
+#else
+#error "One of __OR1K_NODELAY__, __OR1K_DELAY__ or __OR1K_DELAY_COMPAT__ must be defined."
+#endif
+
+
+// The OR10 CPU has no jump delay slot. This macro helps write assembly code
+// that is compatible with CPUs with and without jump delay slots,
+// while still keeping the code easy to read and maintain.
+// Some performance is wasted when targetting CPUs with a jump delay slot,
+// see the OR10 readme file for more information and alternative macros.
+
 .macro EMPTY_DELAY_SLOT
+
+#if   defined(__OR1K_NODELAY__)
+    // Issue no delay instruction, helps reduce the code size when targetting this platform.
+#elif defined(__OR1K_DELAY__)
+    // This wastes some performance when targetting this platform, but helps keep
+    // the code easy to read and maintain.
     l.nop 0
+#elif defined(__OR1K_DELAY_COMPAT__)
+    l.nop 0
+#else
+#  error "One of __OR1K_NODELAY__, __OR1K_DELAY__ or __OR1K_DELAY_COMPAT__ must be defined."
+#endif
+
 .endm
+
+
+// Other jump helpers.
 
 .macro CALL overwritten_reg, subroutine_name
     LOAD_IMMEDIATE \overwritten_reg, \subroutine_name
