@@ -35,11 +35,7 @@ OR10 is an open-source, hacker-friendly, 32-bit CPU for embedded systems written
 
 See the Verilog source code for the Wishbone datasheet.
 
-=item * Non-pipelined implementation (slow).
-
-It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
-and 4 cycles for instructions which access memory. For shift and rotate instructions, if you
-choose the serial shifter, it takes one extra clock cycle per shift/rotate bit count.
+=item * Non-pipelined implementation (slow). See below for more information.
 
 =item * Designed mainly for FPGAs. Tested only on a smallish Xilinx Spartan-6 FPGA (XC6SLX16).
 
@@ -63,7 +59,9 @@ overall CPU frequency suffers quite a lot.
 
 =item * Debug Unit for JTAG debugging (see below for more information).
 
-=item * Implements a few l.nop opcodes like NOP_EXIT and NOP_REPORT (simulation only).
+=item * Implements a few I<< l.nop >> opcodes like NOP_EXIT and NOP_REPORT (simulation only).
+
+See file F<< Scripts/Projects/OpenRISC/TestSuite/LibcBare/simulator-commands.h >> for how to emit such I<< l.nop >> instructions correctly in C/C++ code.
 
 =item * Implements the Tick Timer and the PIC (all interrupts are level-triggered and maskable).
 
@@ -103,11 +101,14 @@ There are some things that could be done to improve FPGA area consumption:
 
 =over
 
-=item * Implement a serial bit shifter for l.ror and the like.
+=item * Implement a balanced bit shifter for l.ror and the like.
+
+At the moment, the options are serial (very slow) and barrel (uses lots of FPGA resources).
+A balanced implementation would probably be a better fit.
 
 =item * Implement a pipelined multiplier and divider.
 
-=item * Do not do a full decode on all instruction opcodes.
+=item * Do not perform a full decode on all instruction opcodes etc.
 
 Without a full decode, the CPU will not error (raise exceptions) on all invalid opcodes,
 SPR numbers and so on. This could save FPGA resources at the cost of harder error diagnostics.
@@ -211,53 +212,103 @@ which I believe it is the case at least for the OR1200 implementation.
 
 =item * There is a Wishbone specification table at the beginning of I<< or10_top >>.
 
+=item * When synthesising with Xilinx XST, you need to manually define symbol MY_XILINX_XST.
+
+See file F<< Scripts/Projects/OpenRISC/OR10/Misc/simulator_features.v >> for details.
+
 =back
 
 =head3 About the jump delay slot
 
+The OR10 CPU does not have a jump delay slot.
+Special Purpose Register "CPU Configuration Register" (SPR CPUCFGR) has bit 10 set
+to indicate the lack of such slots, but this flag not in the official OpenRISC
+specification yet (bit 10 is marked as 'reserved').
+
 Not having a jump delay slot makes the I<< OR10 >> incompatible with most existing OpenRISC software.
-However, this is only an issue for hand-written assembly code. In order to adapt old code,
-search all manually-written assembly code for instructions that start with l.j and l.b
+However, this is only an issue for hand-written assembly code (I<< .S >> files or inline assembly sections),
+see below for more information.
+
+For C/C++ code to run on the OR10 CPU, you just need to recompile with Peter Gavin's toolchain with I<< -mcompat-delay >> or I<< -mno-delay >>,
+or with Stefan Kristiansson's LLVM/Clang toolchain with I<< -disable-or1k-delay-filler >>.
+Note that the I<< orbuild >> framework can automatically download and build both sets of tools for you.
+
+Peter Gavin's version of I<< or1ksim >> can also simulate a CPU without a jump delay slot,
+but you need to specify in the configuration file a value for SPR CPUCFGR which has bit 10 set,
+look at the or1ksim*.cfg files distributed with I<< orbuild >> for an example. Note however that using
+or1ksim is generally discouraged, see further below.
+
+=head4 Writing code independent from the jump delay slot
+
+It is normally best to write code that runs on both types of platform (with and without the jump delay slot).
+This way, there is only one binary version to build and distribute, and a single code path to maintain.
+
+Given that the future probably belongs to CPUs without a jump delay slot, but currently most implementions do have one,
+my recommendation at present is:
+
+=over
+
+=item * Add an I<< l.nop >> after every jump or branch instruction.
+
+Search all manually-written assembly code for instructions that start with l.j and l.b
 (instruction l.rfe does not have a jump delay slot). The affected instructions are:
 
     l.bf  l.bnf
     l.j   l.jr  l.jal  l.jalr
 
-ThoSe instructions should swap places with the next instruction, unless the instruction
-after the jump is an l.nop, in which case you can just remove it.
+It's best to use a macro like EMPTY_DELAY_SLOT (see F<< Scripts/Projects/OpenRISC/TestSuite/AsmTestEnvironment/AsmHelpers.inc >>)
+instead of a plain I<< l.nop >>, or the next forgetful developer may be tempted to remove it. With such a macro, it's also easier
+to search for the affected places later on, should you wish to review or optimise them further.
 
-For C/C++ code, you just need to recompile with Peter Gavin's toolchain (with I<< -mcompat-delay >> or I<< -mno-delay >>)
-or Stefan Kristiansson's LLVM/Clang compiler (with -disable-or1k-delay-filler).
-Note that the I<< orbuild >> framework can automatically download and build both sets of tools for you.
+Adding I<< l.nop >> instructions will make the code lose some performance on CPUs with a jump delay slot,
+and grow a little in size (unless you compile specifically
+for CPUs without a jump delay slot, in which case the macro above will emit no code).
 
-Special Purpose Register "CPU Configuration Register" (SPR CPUCFGR) has bit 10 set
-to indicate the lack of jump delay slot, but this is not in the official OpenRISC
-specification yet (this bit is marked as 'reserved').
+=item * For performance-critical assembly loops, write 2 versions and decide at runtime which one to run, based on the SPR CPUCFGR flag.
 
-Peter Gavin's version of I<< or1ksim >> can also simulate a CPU without a jump delay slot,
-but you need to specify in the configuration file a value for SPR CPUCFGR which has bit 10 set,
-look at the or1ksim*.cfg files distributed with I<< orbuild >> for an example. Note however that using
-or1ksim is generally discouraged, see below.
+=item * Build assembly and C/C++ modules with GCC option I<< -mcompat-delay >>.
 
-=head4 Writing code independent from the jump delay slot
+Remember to specify the I<< -mcompat-delay >> flag in the linker options too, so that the right library versions are selected.
 
-It is normally best to write code that runs on both type of platforms (with and without the jump delay slot).
-This way, there is only one binary version to build and distribute, and a single code path to maintain.
-
-For hand-written assembly code, you just need to add an I<< l.nop >> after every jump or branch instruction.
-It's best to use some EMPTY_JUMP_DELAY_SLOT macro instead of a plain I<< l.nop >>,
-or the next forgetful developer may be tempted to remove it. With such a macro, it's also easier
-to search for the affected places later on.
-
-The code will lose some performance on CPUs with a jump delay slot, and grow a little in size.
-For those small loops were speed is critical, you can write two versions and decide at runtime
-which one to use.
-
-For C/C++ code, use flag I<< -mcompat-delay >>. Inline assembly sections can follow the same advice as above.
 If needs be, you can use separate compilation flags for critical C/C++ modules, but the performance gains
 are not normally worth the extra hassle with the makefiles.
 
-=head3 Pitfalls when using or1ksim for simulation
+Inline assembly (I<< asm >>) sections should follow the same advice as above.
+
+=back
+
+=head4 Further information
+
+Peter Gavin's toolchain provides macros OR1K_DELAYED and OR1K_DELAYED_NOP for hand-written assembly code
+which can help target CPUs with a jump delay slot more optimally (at compilation time only)
+at the cost of code readability. The macros are defined here:
+
+L<< https://github.com/openrisc/or1k-src/blob/or1k/newlib/libc/machine/or1k/include/or1k-asm.h >>
+
+Note that, depending on the compilation flag used (I<< -mcompat-delay >>, I<< -mno-delay >>, I<< -mdelay >>), GCC defines one of the following symbols:
+
+  -mdelay         __OR1K_DELAY__
+  -mno-delay:     __OR1K_NODELAY__
+  -mcompat-delay: __OR1K_DELAY_COMPAT__
+
+When compiling with I<< -mno-delay >>, GCC emits a I<< .nodelay >> directive in the intermediate I<< .S >> file
+for GAS, which sets flag EF_OR1K_NODELAY in the ELF header indicating that the binary does not use jump delay slots.
+
+=head2 Instruction execution time
+
+It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
+and 4 cycles for instructions which access memory.
+
+For shift and rotate instructions, if you choose the serial shifter, it takes one extra clock cycle per shift/rotate bit to shift.
+Therefore, a shift instruction can take 2 + 31 clock cycles to complete.
+
+If you choose to implement an external multiplier, the multiplication instructions will take
+2 + EXTERNAL_MULTIPLIER_DELAY_IN_CLOCK_TICKS cycles to execute.
+
+Stopping the CPU with a JTAG debugger will introduce a delay of one clock cycle, which may impact
+code that relies on exact instruction execution timing.
+
+=head2 Pitfalls when using or1ksim for simulation
 
 The or1ksim simulator does not behave exactly like the OR10 CPU, so it's best to test you software
 on a OR10 SoC simulation. Verilator and Xilinx' ISim are much faster than Icarus Verilog, they should be fast
@@ -275,7 +326,7 @@ Known differences between or1ksim and OR10 are (but note that there may be more)
 
 OR10 always clears the Carry flag for those instructions.
 
-=item * or1ksim does take the l.trap argument into account.
+=item * or1ksim does take the I<< l.trap >> argument into account.
 
 All other OpenRISC CPU implementations ignore it.
 
@@ -301,7 +352,7 @@ Other OpenRISC implementations I know of are:
 
 =item * The L<< AltOr32|http://opencores.org/project,altor32 >> implementation.
 
-=item * Julius Baxter's L<< mor1kx|https://github.com/openrisc/mor1kx >>
+=item * Julius Baxter's L<< mor1kx|https://github.com/openrisc/mor1kx >> CPU.
 
 =back
 
