@@ -83,6 +83,7 @@ module test_bench ( input wire clock,
         .wb_stb_i   ( wb_uart_stb ),
         .wb_cyc_i   ( wb_uart_cyc ),
         .wb_ack_o   ( wb_uart_ack ),
+        .wb_err_o   ( wb_uart_err ),
         .wb_sel_i   ( wb_uart_sel ),
 
         .int_o      ( uart_int )
