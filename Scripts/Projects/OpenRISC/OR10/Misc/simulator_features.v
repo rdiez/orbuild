@@ -21,8 +21,8 @@
 
 // Define UNIQUE, IS_SIMULATION, etc. depending on the platform.
 
-`ifdef MY_XILINX_XST  // I could not find a predefined macro for XST, so I had to add one to the ISE project configuration.
-
+`ifdef MY_XILINX_XST  // I could not find a predefined macro for XST, so I had to add one to the ISE project configuration,
+                      // under "Synthesize - XST", "Synthesis Options", "-define" (Verilog Macros), add "MY_XILINX_XST=1".
   `define UNIQUE
   `define IS_SIMULATION 0
   `define FINISH_WITH_ERROR_EXIT_CODE
@@ -74,6 +74,7 @@
   `define CAN_ACCESS_INTERNAL_SIGNALS defined
 
 `else
+  // If you are using Xilinx XST, you need to manually define symbol MY_XILINX_XST, see above for details.
   `error "Unknown platform."
 `endif
 
