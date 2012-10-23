@@ -181,9 +181,17 @@ sub main ()
 
     if ( scalar( @capturedSingleLine ) == 5 )
     {
+      my $absFilepath = Cwd::abs_path( $capturedSingleLine[2] );
+      if ( not defined $absFilepath )
+      {
+        # This can happen with precompiled libraries, as the original source code
+        # is not at the same location (if available at all).
+        $absFilepath = $capturedSingleLine[2];
+      }
+
       write_error_message( $capturedSingleLine[0],
                            $capturedSingleLine[1],
-                           Cwd::abs_path( $capturedSingleLine[2] ),
+                           $absFilepath,
                            $capturedSingleLine[3],
                            remove_trailing_eol( $capturedSingleLine[4] ) );
       next;
