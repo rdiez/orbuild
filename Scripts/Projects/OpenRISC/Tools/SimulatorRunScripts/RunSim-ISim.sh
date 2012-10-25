@@ -32,7 +32,13 @@ pushd "$ISIM_EXE_DIR" >/dev/null
 
 FIRMWARE_SIZE_IN_BYTES="$(wc -w <"$SIM_DIRNAME/$SIM_FILENAME.hex")"
 
-echo "run all" >"$BATCH_FILENAME"
+{
+  # This runs for a while without line logging, then enables it:
+  #   echo "run 1 us"
+  #   echo "isim ltrace on"
+
+  echo "run all"
+}>"$BATCH_FILENAME"
 
 RUN_CMD="$ORBUILD_PROJECT_DIR/Tools/RunXilinxTool.sh $ISIM_EXE_FILENAME"
 RUN_CMD+=" -tclbatch $BATCH_FILENAME"
