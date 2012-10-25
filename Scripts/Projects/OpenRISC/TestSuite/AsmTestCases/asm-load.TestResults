@@ -145,7 +145,17 @@ report(0x00000003);
 report(0x12345678);  # Reading.
 report(0x12345678);  # Writing.
 report(0x12345678);
-report(0x12345678);
 
+# UART address range.
+report(0x12345678);  # Reading byte.
+report(0x12345678);  # Writing byte.
+report(0x12345678);  # Reading word.
+report(0x12345678);  # Writing word.
+
+# Ethernet address range.
+report(0x12345678);  # Reading byte.
+report(0x12345678);  # Writing byte.
+report(0x12345678);  # Reading word.
+report(0x12345678);  # Writing word.
 
 exit(0)
