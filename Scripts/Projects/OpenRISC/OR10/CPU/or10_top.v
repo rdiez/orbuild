@@ -66,8 +66,9 @@ module or10_top
 
      parameter ENABLE_INSTRUCTION_EXT  = 1,  // See GCC's switch '-mno-sext'
 
-     parameter ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
-     parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
+     parameter ENABLE_WATCHPOINTS = 0,  // TODO: Should be = ENABLE_DEBUG_UNIT. Experimental status, don't turn on yet!
+     parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. The higher the count, the more FPGA resources are consumed.
+                                        // If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
 
      parameter TRACE_ASM_EXECUTION = 0,
      parameter TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
