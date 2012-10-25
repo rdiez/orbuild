@@ -52,9 +52,18 @@ module or10_top
      parameter ENABLE_SERIAL_SHIFTER   = 1,  // A serial shifter is slower but needs fewer FPGA resources.
                                              // This affects l.sll, l.slli, l.sra, l.srai, l.srl, l.srli, l.ror, l.rori.
      parameter ENABLE_INSTRUCTION_CMOV = 1,  // See GCC's switch '-mno-cmov'. This does not seem to save many FPGA resources.
-     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The current implementation is not pipelined and limits
-                                             // the maximum CPU frequency unnecessarily.
+
+     parameter ENABLE_INSTRUCTION_MUL  = 1,  // See GCC's switch '-msoft-mul'. The default implementation is not pipelined and limits
+                                             // the maximum CPU frequency unnecessarily, see ENABLE_EXTERNAL_MULTIPLIER for an alternative implementation.
+     parameter ENABLE_EXTERNAL_MULTIPLIER = 0,  // If you enable this, you'll have to manually modify the Verilog sources,
+                                                // see the readme file for details.
+     parameter EXTERNAL_MULTIPLIER_DELAY_IN_CLOCK_TICKS = 1,  // Must match what you specified in the external multiplier. Only used if ENABLE_EXTERNAL_MULTIPLIER has been set.
+
+
      parameter ENABLE_INSTRUCTION_DIV  = 1,  // See GCC's switch '-msoft-div'. The current implementation is not synthesisable, at least for Xilinx FPGAs.
+     parameter ENABLE_EXTERNAL_DIVIDER = 0,  // If you enable this, you'll have to manually modify the Verilog sources,
+                                             // see the readme file for details.
+
      parameter ENABLE_INSTRUCTION_EXT  = 1,  // See GCC's switch '-mno-sext'
 
      parameter ENABLE_WATCHPOINTS = 0, // ENABLE_DEBUG_UNIT,  TODO: Experimental status, don't turn on yet!
@@ -161,6 +170,11 @@ module or10_top
 
    localparam STATE_SLEEP                           = 3;
 
+   localparam STATE_SHIFTING                        = 4;  // Used only when ENABLE_SERIAL_SHIFTER      is set.
+   localparam STATE_MULTIPLYING                     = 5;  // Used only when ENABLE_EXTERNAL_MULTIPLIER is set.
+   localparam STATE_DIVIDING                        = 6;  // Used only when ENABLE_EXTERNAL_DIVIDER    is set.
+
+
    // All STATE_DEBUG_xxx states have to do with the Debug Interface. During a Debug Interface operation,
    // the CPU is temporarily stalled. This is necessary so as to avoid conflicts with the running software,
    // as the Register File has only 2 ports (1 read and 1 read/write) for normal operation.
@@ -188,20 +202,17 @@ module or10_top
    // the stall status is not stale at that point in time. That is, if the CPU is stalled,
    // it means it has already completed the next instruction in single-step mode.
 
-   localparam STATE_DEBUG_WAITING_FOR_REG_FILE_READ = 4;  // This state helps simplify the Register File address logic. We could probably optimise it
+   localparam STATE_DEBUG_WAITING_FOR_REG_FILE_READ = 7;  // This state helps simplify the Register File address logic. We could probably optimise it
                                                           // away and cut one clock cycle from the Debug Interface's response time.
                                                           // Note that not all accesses involve the Register File, but all reads go through this state anyway.
 
-   localparam STATE_DEBUG_WAITING_FOR_ACK_ASSERT    = 5;  // This state implements a delay between presenting valid data in dbg_data_o and dbg_err_o
+   localparam STATE_DEBUG_WAITING_FOR_ACK_ASSERT    = 8;  // This state implements a delay between presenting valid data in dbg_data_o and dbg_err_o
                                                           // and asserting dbg_ack_o. The delay is necessary for clock domain crossing purposes.
 
-   localparam STATE_DEBUG_WAITING_FOR_STB_DEASSERT  = 6;
+   localparam STATE_DEBUG_WAITING_FOR_STB_DEASSERT  = 9;
 
-   localparam STATE_DEBUG_STALLED                   = 7;
-   localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 8;
-
-
-   localparam STATE_SHIFTING = 9;  // TODO: maybe move up
+   localparam STATE_DEBUG_STALLED                   = 10;
+   localparam STATE_DEBUG_WAITING_FOR_WISHBONE_DEBUG_INTERFACE_CYCLE = 11;
 
 
    reg [3:0]  current_state;  // See the STATE_xxx constants.
@@ -1646,6 +1657,182 @@ module or10_top
    endtask
 
 
+   // These registers are shared between the external multiplier and divider support code,
+   // in the hope that this will save some FPGA fabric resources.
+
+   reg [DW:0]             muldiv_operand_a;  // For division, this is the dividend.
+   reg [DW:0]             muldiv_operand_b;  // For division, this is the divisor.
+   reg                    muldiv_is_unsigned;
+   reg [`OR10_REG_NUMBER] muldiv_dest_reg;
+
+
+   // External multiplier support.
+
+   wire [DW*2+1:0]        mul_result;
+   reg [3:0]              mul_delay;
+
+   generate if ( ENABLE_EXTERNAL_MULTIPLIER )
+     begin
+        or10_external_multiplier hardware_multiplier_instance ( .clk( wb_clk_i ),
+                                                                .a( muldiv_operand_a ),
+                                                                .b( muldiv_operand_b ),
+                                                                .p( mul_result )
+                                                              );
+     end
+   else
+     begin
+        assign mul_result = 66'h_deadf00d_deadf00d;  // This signal should get optimised away.
+     end
+   endgenerate
+
+
+   // External divider support.
+
+   reg                    div_din_tvalid;  // This is a kind of "new data" signal.
+   wire                   div_tready_a;  // For a non-blocking divisor generated by Xilinx' Divider Generator 4.0,
+   wire                   div_tready_b;  // the _a und _b signals are actually the same signal.
+
+   wire                   div_dout_tvalid;  // This signal seems to be asserted just for 1 clock cycle.
+   wire [79:0]            div_dout_tdata;
+
+   generate if ( ENABLE_EXTERNAL_DIVIDER )
+     begin
+        or10_external_divider hardware_divider_instance ( .aclk( wb_clk_i ),
+
+                                                          .s_axis_divisor_tvalid( div_din_tvalid ),
+                                                          .s_axis_divisor_tready( div_tready_b ),
+                                                          .s_axis_divisor_tdata(  { 7'b0, muldiv_operand_b } ),
+
+                                                          .s_axis_dividend_tvalid( div_din_tvalid ),
+                                                          .s_axis_dividend_tready( div_tready_a ),
+                                                          .s_axis_dividend_tdata( { 7'b0, muldiv_operand_a } ),
+
+                                                          .m_axis_dout_tvalid( div_dout_tvalid ),
+                                                          .m_axis_dout_tdata( div_dout_tdata )
+                                                        );
+     end
+   else
+     begin
+        // These signals should get optimised away.
+        assign div_tready_a = 1;
+        assign div_tready_b = 1;
+        assign div_dout_tvalid = 1;
+        assign div_dout_tdata = 80'h_deadf00d_deadf00d;
+     end
+   endgenerate
+
+
+   task automatic trace_mul_instruction;
+
+      input reg          is_unsigned;
+      input reg          is_immediate;
+
+      input reg [`OR10_REG_NUMBER] operand_a_reg;
+      input reg [`OR10_REG_NUMBER] operand_b_reg;
+      input reg [15:0]             operand_b_immediate;
+      input reg [DW-1:0]           operand_a_value;
+      input reg [DW-1:0]           operand_b_value;
+      input reg [`OR10_REG_NUMBER] dest_reg;
+
+      input reg                    is_result_available;
+
+      input reg [DW-1:0]           result;
+      input reg                    carry;
+      input reg                    overflow;
+
+      reg [6 * 8 - 1:0]            instruction_name;
+
+      begin
+         if ( TRACE_ASM_EXECUTION )
+           begin
+              if ( is_immediate )
+                begin
+                   if ( is_result_available )
+                     $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
+                               `OR10_TRACE_PC_VAL,
+                               dest_reg,
+                               operand_a_reg,
+                               operand_b_immediate,
+                               operand_a_value,
+                               operand_b_value,
+                               result,
+                               carry, overflow );
+                   else
+                     $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (0x%08h * 0x%08h, see result below)",
+                               `OR10_TRACE_PC_VAL,
+                               dest_reg,
+                               operand_a_reg,
+                               operand_b_immediate,
+                               operand_a_value,
+                               operand_b_value );
+
+                end
+              else
+                begin
+                   if ( is_unsigned )
+                     instruction_name = "l.mulu";
+                   else
+                     instruction_name = "l.mul";
+
+                   if ( is_result_available )
+                     $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
+                               `OR10_TRACE_PC_VAL,
+                               instruction_name,
+                               dest_reg,
+                               operand_a_reg,
+                               operand_b_reg,
+                               operand_a_value,
+                               operand_b_value,
+                               result,
+                               carry, overflow );
+                   else
+                     $display( "0x%08h: %0s r%0d, r%0d, r%0d (0x%08h * 0x%08h, see result below)",
+                               `OR10_TRACE_PC_VAL,
+                               instruction_name,
+                               dest_reg,
+                               operand_a_reg,
+                               operand_b_reg,
+                               operand_a_value,
+                               operand_b_value );
+                end
+           end
+      end
+   endtask
+
+
+   task automatic calculate_multiplication_carry_overflow;
+
+      input            is_unsigned;
+      input [DW*2+1:0] result66;
+      inout [DW-1:0]   next_sr;
+
+      reg carry;     // Meaningful only when multiplying unsigned integers.
+      reg overflow;  // Meaningful only when multiplying signed   integers.
+
+      begin
+         // Possible optimisation: if we didn't need the Carry and Overflow flags, we don't need
+         // to calculate the top 32-bits of the result, which might save some FPGA resources (I'm not sure).
+
+         if ( is_unsigned )
+           begin
+              overflow = 0;
+              carry    = result66[DW*2+1:DW] != 0;
+           end
+         else
+           begin
+              overflow = result66[DW*2+1:DW] != {34{result66[DW-1]}};
+              // I haven't found a way to calculate the carry flag as if the operands had been unsigned integers.
+              // This is what or1ksim does, but it cheats by doing both a signed and an unsigned multiplications,
+              // which would waste quite a lot of FPGA resources.
+              carry    = 0;
+           end
+
+         next_sr[ `OR1200_SR_CY ] = carry;
+         next_sr[ `OR1200_SR_OV ] = overflow;
+      end
+   endtask
+
+
    task automatic execute_mul_instruction;
 
       input reg          is_unsigned;
@@ -1663,9 +1850,8 @@ module or10_top
       reg [DW:0]             op33_b;
       reg [DW*2+1:0]         result66;
       reg [`OR10_REG_NUMBER] dest_reg;
-      reg [6 * 8 - 1:0]      instruction_name;
-      reg                    carry;     // Meaningful only when multiplying unsigned integers.
-      reg                    overflow;  // Meaningful only when multiplying signed   integers.
+
+      reg                    prevent_unused_warning_with_verilator;
 
       begin
          if ( !is_immediate && ( wb_dat_i[10]  != 0 ||
@@ -1711,63 +1897,107 @@ module or10_top
                   op33_b = { operand_b_value[DW-1], operand_b_value };
                end
 
-             result66 = $signed(op33_a) * $signed(op33_b);
-
-             // Possible optimisation: if we didn't need the Carry and Overflow flags, we don't need
-             // to calculate the top 32-bits of the result, which might save some FPGA resources (I'm not sure).
-
-             if ( is_unsigned )
+              prevent_unused_warning_with_verilator = &{ 1'b0,
+                                                         muldiv_operand_a[32],
+                                                         muldiv_operand_b[32],
+                                                         1'b0 };
+             if ( ENABLE_EXTERNAL_MULTIPLIER )
                begin
-                  overflow = 0;
-                  carry    = result66[DW*2+1:DW] != 0;
+                  muldiv_operand_a   <= op33_a;
+                  muldiv_operand_b   <= op33_b;
+                  muldiv_is_unsigned <= is_unsigned;
+                  muldiv_dest_reg    <= dest_reg;
+                  mul_delay          <= EXTERNAL_MULTIPLIER_DELAY_IN_CLOCK_TICKS;
+
+                  can_interrupt = 0;
+                  current_state <= STATE_MULTIPLYING;
+
+                  trace_mul_instruction( is_unsigned,
+                                         is_immediate,
+                                         operand_a_reg,
+                                         operand_b_reg,
+                                         operand_b_immediate,
+                                         operand_a_value,
+                                         operand_b_value,
+                                         dest_reg,
+                                         0,
+                                         0,
+                                         0,
+                                         0 );
                end
              else
                begin
-                  overflow = result66[DW*2+1:DW] != {34{result66[DW-1]}};
-                  // I haven't found a way to calculate the carry flag as if the operands had been unsigned integers.
-                  // This is what or1ksim does, but it cheats by doing both a signed and an unsigned multiplications,
-                  // which would waste quite a lot of FPGA resources.
-                  carry    = 0;
+                  result66 = $signed(op33_a) * $signed(op33_b);
+
+                  calculate_multiplication_carry_overflow( is_unsigned, result66, next_sr );
+
+                  trace_mul_instruction( is_unsigned,
+                                         is_immediate,
+                                         operand_a_reg,
+                                         operand_b_reg,
+                                         operand_b_immediate,
+                                         operand_a_value,
+                                         operand_b_value,
+                                         dest_reg,
+                                         1,
+                                         result66[DW-1:0],
+                                         next_sr[ `OR1200_SR_CY ],
+                                         next_sr[ `OR1200_SR_OV ] );
+
+                  raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
+
+                  schedule_register_write_during_next_cycle( dest_reg, result66[DW-1:0] );
                end
+           end
+      end
+   endtask
 
-             if ( TRACE_ASM_EXECUTION )
-               begin
-                  if ( is_immediate )
-                    $display( "0x%08h: l.muli r%0d, r%0d, 0x%04h (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
-                              `OR10_TRACE_PC_VAL,
-                              dest_reg,
-                              operand_a_reg,
-                              operand_b_immediate,
-                              operand_a_value,
-                              operand_b_value,
-                              result66[DW-1:0],
-                              carry, overflow );
-                  else
-                    begin
-                       if ( is_unsigned )
-                         instruction_name = "l.mulu";
-                       else
-                         instruction_name = "l.mul";
 
-                       $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d)",
-                                 `OR10_TRACE_PC_VAL,
-                                 instruction_name,
-                                 dest_reg,
-                                 operand_a_reg,
-                                 operand_b_reg,
-                                 operand_a_value,
-                                 operand_b_value,
-                                 result66[DW-1:0],
-                                 carry, overflow );
-                    end
-               end
+   task automatic trace_div_instruction;
 
-             next_sr[ `OR1200_SR_CY ] = carry;
-             next_sr[ `OR1200_SR_OV ] = overflow;
+      input reg                    is_unsigned;
+      input reg [`OR10_REG_NUMBER] operand_a_reg;
+      input reg [`OR10_REG_NUMBER] operand_b_reg;
+      input reg [DW-1:0]           operand_a_value;
+      input reg [DW-1:0]           operand_b_value;
+      input reg [DW-1:0]           result;
+      input reg [DW-1:0]           remainder;
+      input reg [`OR10_REG_NUMBER] dest_reg;
+      input reg                    carry;
 
-             raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
+      input reg is_result_available;
 
-             schedule_register_write_during_next_cycle( dest_reg, result66[DW-1:0] );
+      reg [6 * 8 - 1:0] instruction_name;
+
+      begin
+         if ( TRACE_ASM_EXECUTION )
+           begin
+              if ( is_unsigned )
+                instruction_name = "l.divu";
+              else
+                instruction_name = "l.div";
+
+              if ( is_result_available )
+                $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h / 0x%08h = 0x%08h, remainder 0x%08h [debug only], CY=%d)",
+                          `OR10_TRACE_PC_VAL,
+                          instruction_name,
+                          dest_reg,
+                          operand_a_reg,
+                          operand_b_reg,
+                          operand_a_value,
+                          operand_b_value,
+                          result,
+                          remainder,
+                          carry );
+              else
+                $display( "0x%08h: %0s r%0d, r%0d, r%0d (0x%08h / 0x%08h, see result below)",
+                          `OR10_TRACE_PC_VAL,
+                          instruction_name,
+                          dest_reg,
+                          operand_a_reg,
+                          operand_b_reg,
+                          operand_a_value,
+                          operand_b_value );
            end
       end
    endtask
@@ -1787,9 +2017,8 @@ module or10_top
       reg [DW:0]             op33_a;
       reg [DW:0]             op33_b;
       reg [DW:0]             result33;
-      reg [DW:0]             reminder33;
+      reg [DW:0]             remainder33;
       reg [`OR10_REG_NUMBER] dest_reg;
-      reg [6 * 8 - 1:0]      instruction_name;
       reg                    carry;
 
       begin
@@ -1817,8 +2046,19 @@ module or10_top
               if ( operand_b_value == 0 )
                 begin
                    carry = 1;
-                   result33   = 0;  // For logging purposes only.
-                   reminder33 = 0;  // For logging purposes only.
+                   result33    = 0;  // For logging purposes only.
+                   remainder33 = 0;  // For logging purposes only.
+
+                   trace_div_instruction( is_unsigned,
+                                          operand_a_reg,
+                                          operand_b_reg,
+                                          operand_a_value,
+                                          operand_b_value,
+                                          result33[DW-1:0],
+                                          remainder33[DW-1:0],
+                                          dest_reg,
+                                          carry,
+                                          1 );
                 end
               else
                 begin
@@ -1841,53 +2081,76 @@ module or10_top
                         op33_b = { operand_b_value[DW-1], operand_b_value };
                      end
 
-                   result33   = $signed(op33_a) / $signed(op33_b);
-                   // Note that the reminder is not actually available to the software,
-                   // so at the moment it's calculated for tracing purposes only.
-                   reminder33 = $signed(op33_a) % $signed(op33_b);
-
-                   // If I have understood 2's complement correctly, we only need sign extension
-                   // for unsigned 32-bit numbers. Check that the results match the expectations.
-                   if ( is_unsigned )
+                   if ( ENABLE_EXTERNAL_DIVIDER )
                      begin
-                        if ( result33  [DW] != 0 ||
-                             reminder33[DW] != 0 )
+                        if ( div_din_tvalid != 0 )
                           begin
                              `ASSERT_FALSE;
                           end
+
+                        muldiv_operand_a    <= op33_a;
+                        muldiv_operand_b    <= op33_b;
+                        muldiv_is_unsigned  <= is_unsigned;
+                        muldiv_dest_reg     <= dest_reg;
+                        div_din_tvalid      <= 1;
+
+                        can_interrupt = 0;
+                        current_state <= STATE_DIVIDING;
+
+                        trace_div_instruction( is_unsigned,
+                                               operand_a_reg,
+                                               operand_b_reg,
+                                               operand_a_value,
+                                               operand_b_value,
+                                               0,
+                                               0,
+                                               dest_reg,
+                                               0,
+                                               0 );
                      end
                    else
                      begin
-                        if ( result33  [DW] != result33  [DW-1] ||
-                             reminder33[DW] != reminder33[DW-1] )
+                        result33   = $signed(op33_a) / $signed(op33_b);
+                        // Note that the remainder is not actually available to the software,
+                        // so at the moment it's calculated for tracing purposes only.
+                        remainder33 = $signed(op33_a) % $signed(op33_b);
+
+                        // If I have understood 2's complement correctly, we only need sign extension
+                        // for unsigned 32-bit numbers. Check that the results match the expectations.
+                        if ( is_unsigned )
                           begin
-                             `ASSERT_FALSE;
+                             if ( result33  [DW]  != 0 ||
+                                  remainder33[DW] != 0 )
+                               begin
+                                  `ASSERT_FALSE;
+                               end
                           end
+                        else
+                          begin
+                             if ( result33  [DW]  != result33  [DW-1] ||
+                                  remainder33[DW] != remainder33[DW-1] )
+                               begin
+                                  `ASSERT_FALSE;
+                               end
+                          end
+
+                        schedule_register_write_during_next_cycle( dest_reg, result33[DW-1:0] );
+
+                        trace_div_instruction( is_unsigned,
+                                               operand_a_reg,
+                                               operand_b_reg,
+                                               operand_a_value,
+                                               operand_b_value,
+                                               result33[DW-1:0],
+                                               remainder33[DW-1:0],
+                                               dest_reg,
+                                               carry,
+                                               1 );
                      end
-
-                   schedule_register_write_during_next_cycle( dest_reg, result33[DW-1:0] );
                 end
 
-              if ( TRACE_ASM_EXECUTION )
-                begin
-                   if ( is_unsigned )
-                     instruction_name = "l.divu";
-                   else
-                     instruction_name = "l.div";
-
-                   $display( "0x%08h: %0s r%0d, r%0d, r%0d (result 0x%08h / 0x%08h = 0x%08h, reminder 0x%08h, CY=%d)",
-                             `OR10_TRACE_PC_VAL,
-                             instruction_name,
-                             dest_reg,
-                             operand_a_reg,
-                             operand_b_reg,
-                             operand_a_value,
-                             operand_b_value,
-                             result33[DW-1:0],
-                             reminder33[DW-1:0],
-                             carry );
-                end
-
+              // This code is executed when using the external multiplier too, as the carry flag
+              // is known in advance.
               next_sr[ `OR1200_SR_CY ] = carry;
               next_sr[ `OR1200_SR_OV ] = 0;
 
@@ -3678,6 +3941,10 @@ module or10_top
          for ( watchpoint_index = 0; watchpoint_index < WATCHPOINT_COUNT; watchpoint_index = watchpoint_index + 1 )
            watchpoints[ watchpoint_index ] <= 0;
 
+
+         // If we catch a reset signal, make sure the external divider does not start taking new data randomly.
+         div_din_tvalid <= 1;
+
          // Note that the General Purpose Registers are not cleared at this point.
          // According to the OpenRISC specification, it is not necessary to initialise them.
 
@@ -4143,6 +4410,148 @@ module or10_top
    endtask
 
 
+   task automatic do_state_multiplying;
+
+      reg [DW-1:0] next_sr;
+      reg          can_interrupt;
+      reg          was_interrupt_triggered;
+
+      begin
+         /*
+         $display("Result: 0x%08h * 0x%08h = 0x%016h, delay left: %0d",
+                  muldiv_operand_a,
+                  muldiv_operand_b,
+                  muldiv_result,
+                  muldiv_mul_delay );
+         */
+
+         if ( mul_delay == 0 )
+           begin
+              mul_delay <= {4{1'bx}};  // We don't need the counter any more.
+
+              next_sr = cpureg_spr_sr;
+
+              calculate_multiplication_carry_overflow( muldiv_is_unsigned, mul_result, next_sr );
+
+              cpureg_spr_sr <= next_sr;
+
+              schedule_register_write_during_next_cycle( muldiv_dest_reg, mul_result[DW-1:0] );
+
+              if ( TRACE_ASM_EXECUTION )
+                $display( "%sMultiplication instruction result: 0x%08h * 0x%08h = 0x%08h, CY=%d, OV=%d.",
+                          TRACE_ASM_INDENT,
+                          muldiv_operand_a[DW-1:0],
+                          muldiv_operand_b[DW-1:0],
+                          mul_result[DW-1:0],
+                          next_sr[ `OR1200_SR_CY ],
+                          next_sr[ `OR1200_SR_OV ] );
+
+              can_interrupt = 1;
+
+              raise_ov_range_exception_if_necessary( next_sr, can_interrupt );
+
+              if ( can_interrupt )
+                begin
+                   was_interrupt_triggered = 0;
+                   check_interrupt( cpureg_pc + 1, next_sr, was_interrupt_triggered );
+                   if ( !was_interrupt_triggered )
+                     start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc + 1 ) );
+                end
+              else
+                begin
+                   // An exception has been raised, so we don't need to do anything else here.
+                end
+           end
+         else
+           begin
+              mul_delay <= mul_delay - 4'b1;
+           end
+      end
+   endtask
+
+
+   task automatic do_state_dividing;
+
+      reg [DW:0]   result33;
+      reg [DW-1:0] remainder32;
+      reg          prevent_unused_warning_with_verilator;
+
+      reg          was_interrupt_triggered;
+
+      begin
+         prevent_unused_warning_with_verilator = &{ 1'b0,
+                                                    div_dout_tdata[79:73],
+                                                    div_dout_tdata[39:32],
+                                                    1'b0 };
+         remainder32 = div_dout_tdata[DW-1:0];
+         result33    = div_dout_tdata[72:40];
+
+         /*
+         $display("Result: 0x%08h / 0x%08h = 0x%8h (remainder 0x%08h for debug only), result available: %0d, tready a: %0d, tready b: %0d",
+                  muldiv_operand_a,
+                  muldiv_operand_b,
+                  result33[DW-1:0],
+                  remainder32,
+                  div_dout_tvalid,
+                  div_tready_a,
+                  div_tready_b );
+          */
+
+         // div_tready_a and div_tready_b should actually be the same signal.
+         if ( div_tready_a != div_tready_b )
+           begin
+              `ASSERT_FALSE;
+           end
+
+         if ( div_tready_a )
+           begin
+              if ( div_din_tvalid == 0 )
+              begin
+                 `ASSERT_FALSE;
+              end
+
+              div_din_tvalid <= 0;
+           end
+
+
+         if ( div_dout_tvalid )
+           begin
+              // If I have understood 2's complement correctly, we only need sign extension
+              // for unsigned 32-bit numbers. Check that the results match the expectations.
+              if ( muldiv_is_unsigned )
+                begin
+                   if ( result33[DW] != 0 )
+                     begin
+                        `ASSERT_FALSE;
+                     end
+                end
+              else
+                begin
+                   if ( result33[DW] != result33[DW-1] )
+                     begin
+                        `ASSERT_FALSE;
+                     end
+                end
+
+              schedule_register_write_during_next_cycle( muldiv_dest_reg, result33[DW-1:0] );
+
+              if ( TRACE_ASM_EXECUTION )
+                $display( "%sDivision instruction result: 0x%08h / 0x%08h = 0x%08h (remainder 0x%08h for debug only), CY=0, OV=0.",
+                          TRACE_ASM_INDENT,
+                          muldiv_operand_a[DW-1:0],
+                          muldiv_operand_b[DW-1:0],
+                          result33[DW-1:0],
+                          remainder32 );
+
+              was_interrupt_triggered = 0;
+              check_interrupt( cpureg_pc + 1, cpureg_spr_sr, was_interrupt_triggered );
+              if ( !was_interrupt_triggered )
+                start_wishbone_instruction_fetch_cycle( pc_addr_to_32( cpureg_pc + 1 ) );
+           end
+      end
+   endtask
+
+
    task automatic do_state_debug_waiting_for_wishbone_debug_interface_cycle;
       begin
         if ( wb_ack_i )
@@ -4210,7 +4619,9 @@ module or10_top
            STATE_WAITING_FOR_INSTRUCTION_FETCH:    do_state_waiting_for_instruction_fetch;
            STATE_WAITING_FOR_WISHBONE_DATA_CYCLE:  do_state_waiting_for_wishbone_data_cycle;
            STATE_SLEEP:                            do_state_sleep;
-           STATE_SHIFTING:                         if ( ENABLE_SERIAL_SHIFTER ) do_state_shifting;                    else begin `ASSERT_FALSE; end
+           STATE_SHIFTING:                         if ( ENABLE_SERIAL_SHIFTER )      do_state_shifting;               else begin `ASSERT_FALSE; end
+           STATE_MULTIPLYING:                      if ( ENABLE_EXTERNAL_MULTIPLIER ) do_state_multiplying;            else begin `ASSERT_FALSE; end
+           STATE_DIVIDING:                         if ( ENABLE_EXTERNAL_DIVIDER    ) do_state_dividing;               else begin `ASSERT_FALSE; end
            STATE_DEBUG_WAITING_FOR_ACK_ASSERT:     if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_ack_assert;    else begin `ASSERT_FALSE; end
            STATE_DEBUG_WAITING_FOR_STB_DEASSERT:   if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_stb_deassert;  else begin `ASSERT_FALSE; end
            STATE_DEBUG_WAITING_FOR_REG_FILE_READ:  if ( ENABLE_DEBUG_UNIT ) do_state_debug_waiting_for_reg_file_read; else begin `ASSERT_FALSE; end
@@ -4236,6 +4647,9 @@ module or10_top
         wb_stb_o = 0;
         gpr_write_enable_1 = 0;  // May not be actually necessary.
         dbg_ack_o = 0;
+        div_din_tvalid = 0;    // Prevent that the external divider starts dividing immediately.
+        muldiv_operand_a = 0;  // Initialised to zero to prevent assert in FakeExternalComponents/or10_external_multiplier.v when not multiplying.
+        muldiv_operand_b = 0;
      end
 
 

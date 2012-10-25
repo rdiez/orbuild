@@ -45,14 +45,6 @@ See the Verilog source code for the Wishbone datasheet.
 
 =item * All ORBIS32 instructions are available.
 
-=item * The multiplication instructions are implemented somewhat suboptimally.
-
-The Xilinx FPGA synthesiser does infer the usage of hardware multipliers, but given
-that the result must be available in the same execution clock cycle, the maximum
-overall CPU frequency suffers quite a lot.
-
-=item * The division instructions are not synthesisable yet.
-
 =item * Choice of barrel or serial shifter for the rotate and shift instructions.
 
 =item * Does not implement floating-point or anything advanced.
@@ -101,12 +93,12 @@ There are some things that could be done to improve FPGA area consumption:
 
 =over
 
-=item * Implement a balanced bit shifter for l.ror and the like.
+=item * Implement a balanced bit shifter for I<< l.ror >> and the like.
 
-At the moment, the options are serial (very slow) and barrel (uses lots of FPGA resources).
-A balanced implementation would probably be a better fit.
+At the moment, the options are a serial implementation (very slow) and a barrel implementation (uses lots of FPGA resources
+and limits the overall CPU frequency). A balanced implementation would probably be a better fit.
 
-=item * Implement a pipelined multiplier and divider.
+=item * Implement an external multiplier and/or divider. See below for more information.
 
 =item * Do not perform a full decode on all instruction opcodes etc.
 
@@ -305,8 +297,85 @@ Therefore, a shift instruction can take 2 + 31 clock cycles to complete.
 If you choose to implement an external multiplier, the multiplication instructions will take
 2 + EXTERNAL_MULTIPLIER_DELAY_IN_CLOCK_TICKS cycles to execute.
 
+If you choose to implement an external divider, the division instructions will take
+longer to execute. Exactly how long it takes tends to depend on the dividend and divisor values.
+
 Stopping the CPU with a JTAG debugger will introduce a delay of one clock cycle, which may impact
 code that relies on exact instruction execution timing.
+
+=head2 How to use the FPGA hardware multipliers
+
+If you leave ENABLE_EXTERNAL_MULTIPLIER set to 0, the OR10 CPU uses the standard Verilog multiplication operator.
+The Xilinx FPGA synthesiser does infer the usage of built-in hardware multipliers for it,
+but given that the multiplication result must be available
+in the same execution clock cycle, the maximum overall CPU frequency suffers accordingly.
+
+As an alternative, Xilinx provides an IP core generator that can create multiplication logic with different
+optimisations and features. These multipliers usually take several clock cycles to run and can also take advantage
+of the FPGA built-in hardware multipliers.
+
+If you wish to use such a multi-cycle multiplier (which is normally a good idea for OR10),
+you need to generate a 33x33=66 bits signed integer multiplier named "or10_external_multiplier".
+The operands are 33 bits long, instead of 32, so that the same signed multiplier can perform
+both signed and unsigned 32-bit multiplications.
+
+After some experimentation with the Xilinx generator, I have obtained good results with
+options "Use Mults", "Speed Optimized" and "Pipeline Stages: 1", but your mileage may vary.
+On my Spartan-6 FPGA the generated multiplier ended up using 4 of the built-in DSP48A1s elements.
+
+Keep in mind that, if the multiplier is very fast and needs few but busier clock cycles,
+it may limit the maximum overall CPU frequency. The OR10 CPU cannot take advange of a pipelined implementation,
+as only one multiplication is issued per assembly instruction.
+
+You then need to remove from the sources
+the "fake" external multiplier, which does not actually work and is there just to get the Verilator sources to
+compile without errors. Alternatively, you can remove the F<< FakeExternalComponents >> directory
+from the Verilog module search path, look at the scripts in directory F<< SimulatorBuildScripts >>.
+These manual changes could probably be avoided if the source code used Verilog's I<< config >> / I<< endconfig >> feature.
+
+To switch from the standard Verilog implementation to the new multiplier core,
+set parameter ENABLE_EXTERNAL_MULTIPLIER to 1 and update parameter EXTERNAL_MULTIPLIER_DELAY_IN_CLOCK_TICKS accordingly.
+
+=head2 How to use an external divider
+
+If you leave ENABLE_EXTERNAL_DIVIDER set to 0, the OR10 CPU uses the standard Verilog division operator.
+Given that the division result must be available in the same execution clock cycle,
+the synthesiser generates a huge amount of logic (if at all possible),
+and the result is often not synthesisable.
+
+As an alternative, Xilinx provides an IP core generator that can create division logic with different
+optimisations and features. Such cores normally consume many clock cycles per division.
+You need to use the Divider Generator 4.0, as version 3.0 does not support divisors that are
+more than 32 bits long.
+
+If you wish to use such a multi-cycle divider (which is normally better than writing your own),
+you need to generate a 33/33 bits signed integer divider named "or10_external_divider".
+The operands are 33 bits long, instead of 32, so that the same signed divider can perform both
+signed and unsigned 32-bit divisions. Select the "NonBlocking" mode, and set the "Remainder Type" to "Remainder".
+
+After some experimentation with the Xilinx generator, I have obtained good results with
+option "Clocks per Division" set to 8, but your mileage may vary. If you specify a value of 1
+for that option, some signals are no longer available and you'll have to modify the OR10 source code accordingly.
+
+Keep in mind that, if the divider is very fast and needs few but busier clock cycles,
+it may limit the maximum overall CPU frequency. The OR10 CPU cannot take advange of a pipelined implementation,
+as only one division is issued per assembly instruction.
+
+You need to select an algorithm type of "Radix2". The "High Radix" type does not
+round towards zero, which is unsuitable for C/C++ software and fails the test suite.
+I tried to correct it by adding a fractional signal output and adjusting any negative value,
+but big positive values also pose problems. Say you want to calculate
+(4294967295 - 1) / 4294967295, which yields 0,999999999767. You would need
+a very long fractional part in order to correct any wrong roudings.
+
+You then need to remove from the sources
+the "fake" external divider, which does not actually work and is there just to get the Verilator sources to
+compile without errors. Alternatively, you can remove the F<< FakeExternalComponents >> directory
+from the Verilog module search path, look at the scripts in directory F<< SimulatorBuildScripts >>.
+These manual changes could probably be avoided if the source code used Verilog's I<< config >> / I<< endconfig >> feature.
+
+To switch from the standard Verilog implementation to the new divider core,
+set parameter ENABLE_EXTERNAL_DIVIDER to 1.
 
 =head2 Pitfalls when using or1ksim for simulation
 

@@ -69,6 +69,7 @@ declare -a INCLUDE_PATHS=(
     -I$OR10_BASE_DIR/WishboneSwitch
     -I$OR10_BASE_DIR/Memory
     -I$OR10_BASE_DIR/CPU
+    -I$OR10_BASE_DIR/CPU/FakeExternalComponents
     -I$OR10_BASE_DIR/Misc
     -I$OR10_BASE_DIR/JTAG
     -I$JTAG_DPI_CHECKOUT_DIR

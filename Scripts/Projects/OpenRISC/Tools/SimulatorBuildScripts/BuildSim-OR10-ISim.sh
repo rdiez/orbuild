@@ -35,6 +35,8 @@ declare -a INCLUDE_PATHS=(
     --include      $OR10_BASE_DIR/CPU
     --sourcelibdir $OR10_BASE_DIR/CPU
 
+    --sourcelibdir $OR10_BASE_DIR/CPU/FakeExternalComponents
+
     --include      $OR10_BASE_DIR/JTAG
     --sourcelibdir $OR10_BASE_DIR/JTAG
 
