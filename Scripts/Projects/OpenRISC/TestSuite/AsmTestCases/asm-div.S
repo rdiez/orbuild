@@ -47,15 +47,15 @@ start_tests:
         
 	    // Divide two negative numbers and check rounding. Should set no flags. 
 	    TEST_INST_I32_I32 l.div, 0xfffffff4, 0xfffffffd
-	    TEST_INST_I32_I32 l.div, 0xfffffff5, 0xfffffffd
+	    TEST_INST_I32_I32 l.div, 0xfffffff5, 0xfffffffd  // -11 / -3 = 3.667, expected 3.
 
 	    // Divide a negative number by a positive number and check rounding. Should set no flags. 
 	    TEST_INST_I32_I32 l.div, 0xfffffff4, 0x00000003
-	    TEST_INST_I32_I32 l.div, 0xfffffff5, 0x00000003
+	    TEST_INST_I32_I32 l.div, 0xfffffff5, 0x00000003  // -11 / 3 = -3.667, expected: -3.
 
 	    // Divide a positive number by a negative number and check rounding. Should set no flags. 
-	    TEST_INST_I32_I32 l.div, 0x0000000c, 0xfffffffd
-	    TEST_INST_I32_I32 l.div, 0x0000000b, 0xfffffffd
+	    TEST_INST_I32_I32 l.div, 0x0000000c, 0xfffffffd  // 12 / -3 = -4 (0xfffffffc)
+	    TEST_INST_I32_I32 l.div, 0x0000000b, 0xfffffffd  // 11 / -3 = -3.667, expected: -3.
 
 	    // Divide by zero. Should set the carry flag.
         LOAD_IMMEDIATE r4, 0x12345678
