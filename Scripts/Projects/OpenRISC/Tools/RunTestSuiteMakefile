@@ -406,13 +406,14 @@ $(eval $(call test_case_simulation_template,ASM_JUMP,asm-jump,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_EXCEPTIONS,asm-exceptions,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_TICK_TIMER,asm-tick-timer,own-test-results))
 $(eval $(call test_case_simulation_template,ASM_FLAG,asm-flag,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_MUL,asm-mul,own-test-results))
+$(eval $(call test_case_simulation_template,ASM_DIV,asm-div,own-test-results))
 
-ifeq "$(strip $(MUL_INSTRUCTIONS))" "with-mul-instructions"
+
+ifeq "$(strip $(MUL_INSTRUCTIONS))" "with-mac-instructions"
   $(eval $(call test_case_simulation_template,ASM_MFSPR_WITH_MAC_SUPPORT,asm-mfspr-with-mac-support,own-test-results))
-  $(eval $(call test_case_simulation_template,ASM_MUL,asm-mul,own-test-results))
-  $(eval $(call test_case_simulation_template,ASM_DIV,asm-div,own-test-results))
   $(eval $(call test_case_simulation_template,ASM_MAC,asm-mac,own-test-results))
-else ifeq "$(strip $(MUL_INSTRUCTIONS))" "without-mul-instructions"
+else ifeq "$(strip $(MUL_INSTRUCTIONS))" "without-mac-instructions"
   # No extra tests to do here.
 else
   $(call assertion_failure,Variable MUL_INSTRUCTIONS has an invalid value of "$(MUL_INSTRUCTIONS)")
