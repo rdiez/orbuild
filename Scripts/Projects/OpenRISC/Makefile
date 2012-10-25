@@ -1047,37 +1047,37 @@ else
 endif
 
 ORTS_OR1KSIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_OR1KSIM
-ORTS_OR1KSIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR1KSIM_OBJ_DIR)\" ORTS_OR1KSIM $(ORTS_OR1KSIM_JUMP_DELAY_SLOT) with-mul-instructions
+ORTS_OR1KSIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR1KSIM_OBJ_DIR)\" ORTS_OR1KSIM $(ORTS_OR1KSIM_JUMP_DELAY_SLOT) with-mac-instructions
 ORTS_OR1KSIM_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_OR1KSIM,Test Suite against or1ksim,$(SHELL) -c "$(ORTS_OR1KSIM_CMD)"))
 
 ORTS_PGAVIN_CGEN_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_PGAVIN_CGEN
-ORTS_PGAVIN_CGEN_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_PGAVIN_CGEN_OBJ_DIR)\" ORTS_PGAVIN_CGEN with-jump-delay-slot with-mul-instructions
+ORTS_PGAVIN_CGEN_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_PGAVIN_CGEN_OBJ_DIR)\" ORTS_PGAVIN_CGEN with-jump-delay-slot with-mac-instructions
 ORTS_PGAVIN_CGEN_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_PGAVIN_CGEN,Test Suite against Peter Gavin's CGEN simulator,$(SHELL) -c "$(ORTS_PGAVIN_CGEN_CMD)"))
 
 ORTS_ORPSOC_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_ORPSOC_IVERILOG
-ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG with-jump-delay-slot with-mul-instructions
+ORTS_ORPSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_ORPSOC_IVERILOG_OBJ_DIR)\" ORTS_ORPSOC_IVERILOG with-jump-delay-slot with-mac-instructions
 ORTS_ORPSOC_IVERILOG_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_ORPSOC_IVERILOG,Test Suite against ORPSoC V2 with Icarus Verilog,$(SHELL) -c "$(ORTS_ORPSOC_IVERILOG_CMD)"))
 
 ORTS_MINSOC_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_MINSOC_IVERILOG
-ORTS_MINSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_IVERILOG_OBJ_DIR)\" ORTS_MINSOC_IVERILOG with-jump-delay-slot with-mul-instructions
+ORTS_MINSOC_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_MINSOC_IVERILOG_OBJ_DIR)\" ORTS_MINSOC_IVERILOG with-jump-delay-slot with-mac-instructions
 ORTS_MINSOC_IVERILOG_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_MINSOC_IVERILOG,Test Suite against MinSoC with Icarus Verilog,$(SHELL) -c "$(ORTS_MINSOC_IVERILOG_CMD)"))
 
 ORTS_OR10_VERILATOR_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_OR10_VERILATOR
-ORTS_OR10_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_VERILATOR_OBJ_DIR)\" ORTS_OR10_VERILATOR without-jump-delay-slot without-mul-instructions
+ORTS_OR10_VERILATOR_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_VERILATOR_OBJ_DIR)\" ORTS_OR10_VERILATOR without-jump-delay-slot without-mac-instructions
 ORTS_OR10_VERILATOR_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_OR10_VERILATOR,Test Suite against or10 with Verilator,$(SHELL) -c "$(ORTS_OR10_VERILATOR_CMD)"))
 
 ORTS_OR10_IVERILOG_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_OR10_IVERILOG
-ORTS_OR10_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_IVERILOG_OBJ_DIR)\" ORTS_OR10_IVERILOG without-jump-delay-slot without-mul-instructions
+ORTS_OR10_IVERILOG_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_IVERILOG_OBJ_DIR)\" ORTS_OR10_IVERILOG without-jump-delay-slot without-mac-instructions
 ORTS_OR10_IVERILOG_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_OR10_IVERILOG,Test Suite against or10 with Icarus Verilog,$(SHELL) -c "$(ORTS_OR10_IVERILOG_CMD)"))
 
 ORTS_OR10_ISIM_OBJ_DIR := $(ORBUILD_BUILD_DIR)/temp/ORTS_OR10_ISIM
-ORTS_OR10_ISIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_ISIM_OBJ_DIR)\" ORTS_OR10_ISIM without-jump-delay-slot without-mul-instructions
+ORTS_OR10_ISIM_CMD := $(ORTS_COMMON_CMD) \"$(ORTS_OR10_ISIM_OBJ_DIR)\" ORTS_OR10_ISIM without-jump-delay-slot without-mac-instructions
 ORTS_OR10_ISIM_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,ORTS_OR10_ISIM,Test Suite against or10 with Xilinx' ISim,$(SHELL) -c "$(ORTS_OR10_ISIM_CMD)"))
 
