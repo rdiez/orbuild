@@ -101,10 +101,9 @@ get_make_j_val MAKE_J_VAL
 
 # Debug flags: export OPT="-O0 -g -Wall -Wwrite-strings -DDEBUG"
 export OPT="-O3 -g -Wall -Wwrite-strings -DNDEBUG"
-if [ $ENABLE_DPI_MODULES -eq 0 ]; then
-  # I haven't way any other way to prevent the C++ compilation warnings that come up in this case.
-  OPT+=" -Wno-unused-but-set-variable"
-fi
+
+# I haven't way any other practical way to prevent some of the C++ compilation warnings that come up in this case.
+OPT+=" -Wno-unused-but-set-variable"
 
 CMD="make -f \"V$TOP_LEVEL_MODULE.mk\" -j \"$MAKE_J_VAL\""
 printf "$CMD\n\n"
