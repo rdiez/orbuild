@@ -124,6 +124,8 @@ module simple_wishbone_switch
   );
 
 
+   // This 'always' block calculates who the next master should be.
+
    localparam CURRENT_MASTER_WIDTH = 1;
    localparam DEFAULT_MASTER = 0;
    reg at_least_one_master_is_requesting;
@@ -148,6 +150,7 @@ module simple_wishbone_switch
      end
 
 
+   // This 'always' block routes the right master to the right slave.
    reg [CURRENT_MASTER_WIDTH-1:0] current_master;
 
    reg prevent_changing_master;  // Keep the current master if a bus transaction is taking place.
@@ -168,8 +171,6 @@ module simple_wishbone_switch
           begin
              current_master = next_master;
           end
-
-        // --- The rest of this always block routes the right master to the right slave ---
 
         // By default, all slaves are disconnected from the central switch.
 
@@ -359,7 +360,7 @@ module simple_wishbone_switch
                     end
 
                   // A bus transaction is in place. When the slave answers, it marks the end of the transaction,
-                  // so we can switch masters at the beginning of the nex transaction.
+                  // so we can switch masters at the beginning of the next transaction.
 
                   if ( selm_wb_ack != 0 ||
                        selm_wb_err != 0 )
