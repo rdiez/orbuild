@@ -93,18 +93,23 @@ There are some things that could be done to improve FPGA area consumption:
 
 =over
 
+=item * Implement an external multiplier and/or divider. See below for more information.
+
 =item * Implement a balanced bit shifter for I<< l.ror >> and the like.
 
 At the moment, the options are a serial implementation (very slow) and a barrel implementation (uses lots of FPGA resources
 and limits the overall CPU frequency). A balanced implementation would probably be a better fit.
 
-=item * Implement an external multiplier and/or divider. See below for more information.
-
 =item * Do not perform a full decode on all instruction opcodes etc.
 
 Without a full decode, the CPU will not error (raise exceptions) on all invalid opcodes,
 SPR numbers and so on. This could save FPGA resources at the cost of harder error diagnostics.
-For an example on how this could be done, look for symbol OR1200_SYS_FULL_DECODE in ORPCSoC V2.
+For an example on how this could be implemented, look for symbol OR1200_SYS_FULL_DECODE in ORPCSoC V2.
+
+=item * Make the Carry and Overflow flags optional.
+
+Most OpenRISC software can function without the Carry and Overflow flags. Look for
+OR1200_IMPL_CY and OR1200_IMPL_OV in the OR1200 CPU for an example on how this could be implemented.
 
 =back
 
@@ -207,6 +212,10 @@ which I believe it is the case at least for the OR1200 implementation.
 =item * When synthesising with Xilinx XST, you need to manually define symbol MY_XILINX_XST.
 
 See file F<< Scripts/Projects/OpenRISC/OR10/Misc/simulator_features.v >> for details.
+
+=item * The software should not perform divisions shortly after reset when using an external divider.
+
+See below for more information.
 
 =back
 
@@ -376,6 +385,21 @@ These manual changes could probably be avoided if the source code used Verilog's
 
 To switch from the standard Verilog implementation to the new divider core,
 set parameter ENABLE_EXTERNAL_DIVIDER to 1.
+
+=head3 The software should not perform divisions shortly after reset
+
+The OR10 CPU never resets the divider, which means the whole divider reset logic can be optimised away
+in order to save FPGA resources. The trouble is, if the CPU is reset in the middle of a division operation,
+the divider will not be affected.
+
+Therefore, the software should not attempt to perform a division shortly after a CPU reset, or it may
+get a result from the last operation before the reset. The start-up logic is normally long enough
+to honour this limit, but, to make sure, you can add a software delay at the beginning.
+How long you need to wait depends on the divider latency, which is displayed in the Divider Generator GUI.
+With the parameters suggested above, the divisor normally has a 38-cycle latency (33 bit delays + 5 fixed overhead).
+
+If you are considering implementing a proper divisor reset logic, keep in mind that the Xilinx dividers
+need the reset signal to be asserted for 2 clock cycles, which further complicates the standard reset logic.
 
 =head2 Pitfalls when using or1ksim for simulation
 
