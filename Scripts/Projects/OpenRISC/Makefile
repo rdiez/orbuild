@@ -979,7 +979,7 @@ $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables
 #   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Autogen.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
 # Force a rebuild of all simulators and a re-run of all tests every time, for development purposes only.
 # There is a special rule in RunTestSuiteMakefile so that deleting this file re-runs everything.
-   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Install.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+#   $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/ORTS_EXES.Install.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
 
 
 # Build the "GDB to JTAG Bridge" as a standard autoconf project.
