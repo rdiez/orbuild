@@ -457,4 +457,3 @@ always @(posedge wb_clk_i)
 		req_r <= req_won;
 
 endmodule
-
