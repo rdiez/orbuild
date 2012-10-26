@@ -21,6 +21,10 @@ shift
 
 create_dir_if_not_exists "$ECOS_OBJ_DIR"
 
+echo
+echo "------- Building eCos' Redboot -------"
+echo "Buildin in directory $ECOS_OBJ_DIR"
+
 pushd "$ECOS_OBJ_DIR" >/dev/null
 
 export ECOS_REPOSITORY="$ECOS_CHECKOUT_DIR/packages"
@@ -40,21 +44,27 @@ echo "$CMD"
 eval "$CMD"
 
 
-echo "------- Modifying the IP configuration -------"
+CFG_FILENAME="ecos.ecc"
+echo
+echo "------- Modifying the $CFG_FILENAME configuration file -------"
 # Here we do some crude editing of the configuration file:
 
-# 1) Set a default IP address.
-CFG_FILENAME="ecos.ecc"
+CHANGE_MARKER="#  The following setting was added by script $(basename $0)"
+
+# Set a default IP address.
 DEF_IP_LINE="cdl_component CYGDAT_REDBOOT_DEFAULT_IP_ADDR {"
 IP_ADDR="user_value 1 \"192, 168, 254, 1\""
-sed --in-place -e"s/$DEF_IP_LINE/$DEF_IP_LINE\n$IP_ADDR/" "$CFG_FILENAME"
+sed --in-place -e"s/$DEF_IP_LINE/$DEF_IP_LINE\n  $CHANGE_MARKER\n  $IP_ADDR/" "$CFG_FILENAME"
 
-# 2) Disable DHCP/BOOTP, to prevent having to wait for the attempts to timeout
-#    before using Redboot's console.
+# Disable DHCP/BOOTP, to prevent having to wait for the attempts to timeout
+# before using Redboot's console.
 NO_BOOTP_LINE="cdl_option CYGSEM_REDBOOT_DEFAULT_NO_BOOTP {"
 NO_BOOTP_SETTING="user_value 1"
-sed --in-place -e"s/$NO_BOOTP_LINE/$NO_BOOTP_LINE\n$NO_BOOTP_SETTING/" "$CFG_FILENAME"
+sed --in-place -e"s/$NO_BOOTP_LINE/$NO_BOOTP_LINE\n  $CHANGE_MARKER\n  $NO_BOOTP_SETTING/" "$CFG_FILENAME"
 
+# Back up the modified configuration file. The eCos configuration tool reparses and regenerates it,
+# so our changes are reformatted. However, the original file we changed is useful when developing this script.
+cp "$CFG_FILENAME" "${CFG_FILENAME}_as_modified_by_$(basename $0)"
 
 echo
 echo "------- Checking the eCos' Redboot configuration -------"
