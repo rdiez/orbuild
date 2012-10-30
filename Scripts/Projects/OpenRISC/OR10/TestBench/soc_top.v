@@ -443,7 +443,7 @@ module soc_top ( input wire         wb_clk_i,
            .wb_clk_i   ( wb_clk_i ),
            .wb_rst_i   ( wb_rst_i ),
 
-           // Wishbone Master 1 (Ethernet Wishbone master for DMA transfers).
+           // Wishbone Master 0 (Ethernet Wishbone master for DMA transfers).
            // This master should generally have a higher priority than the CPU or it may never get hold of the bus for its DMA transfers.
            .m0_wb_cyc_i    ( wb_ethm_cyc_i ),
            .m0_wb_stb_i    ( wb_ethm_stb_i ),
@@ -488,7 +488,7 @@ module soc_top ( input wire         wb_clk_i,
            .s1_wb_ack_i    ( wb_eth_ack_i ),
            .s1_wb_err_i    ( wb_eth_err_i ),
 
-           // Wishbone Slave 1 (UART)
+           // Wishbone Slave 2 (UART)
            .s2_wb_cyc_o    ( wb_uart_cyc_o ),
            .s2_wb_stb_o    ( wb_uart_stb_o ),
            .s2_wb_adr_o    ( wb_uart_adr_o_32 ),
