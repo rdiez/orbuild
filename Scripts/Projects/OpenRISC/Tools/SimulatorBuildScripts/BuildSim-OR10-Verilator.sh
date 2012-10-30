@@ -87,6 +87,19 @@ CMD+=" -sv --cc --exe"
 
 CMD+=" -Wall -Wno-fatal --error-limit 10000"
 CMD+=" -O3 --assert"
+
+WARN_FLAGS="-Wall -Wwrite-strings"
+# I haven't way any other practical way to prevent some of the C++ compilation warnings that come up in this case.
+WARN_FLAGS+=" -Wno-unused-but-set-variable"
+
+# Debug flags: OPT_FLAGS="-O0 -g -DDEBUG"
+OPT_FLAGS="-O3 -g -flto -DNDEBUG"
+
+# Remember that the optimisation flags (-flto -O3) must be passed to the linker too.
+
+CMD+=" -CFLAGS \"$OPT_FLAGS $WARN_FLAGS\""
+CMD+=" -LDFLAGS \"$OPT_FLAGS\""
+
 if [ $ENABLE_DPI_MODULES -ne 0 ]; then
   CMD+=" +define+ENABLE_DPI_MODULES+$ENABLE_DPI_MODULES"
 fi
@@ -101,12 +114,6 @@ printf "$CMD\n\n"
 eval "$CMD"
 
 get_make_j_val MAKE_J_VAL
-
-# Debug flags: export OPT="-O0 -g -Wall -Wwrite-strings -DDEBUG"
-export OPT="-O3 -g -Wall -Wwrite-strings -DNDEBUG"
-
-# I haven't way any other practical way to prevent some of the C++ compilation warnings that come up in this case.
-OPT+=" -Wno-unused-but-set-variable"
 
 CMD="make -f \"V$TOP_LEVEL_MODULE.mk\" -j \"$MAKE_J_VAL\""
 printf "$CMD\n\n"
