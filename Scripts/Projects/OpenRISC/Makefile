@@ -273,6 +273,7 @@ $(eval $(call git_checkout_template,VERILATOR,Verilator,http://git.veripool.org/
 
 # Build Verilator as a standard autoconf project.
 VERILATOR_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
+# VERILATOR_EXTRA_CONFIG_ARGS := --enable-ccwarn
 $(eval $(call autotool_project_template,VERILATOR,Verilator,$(VERILATOR_CHECKOUT_DIR)))
 
 # Before running the standard autoconf project operations, let autoconf generate the necessary files.
