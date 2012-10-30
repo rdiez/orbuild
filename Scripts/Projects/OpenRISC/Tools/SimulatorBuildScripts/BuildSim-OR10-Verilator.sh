@@ -81,7 +81,10 @@ CMD="verilator"
 CMD+=" ${INCLUDE_PATHS[@]}"
 CMD+=" --Mdir \"$VERILATOR_EXE_DIR\""
 CMD+=" -sv --cc --exe"
-CMD+=" --autoflush"  # Reduces performance, but allows you to see more accurately where the simulation hangs.
+
+# Flushing is now manually done in the main() routine, in the top-level .cpp file.
+#   CMD+=" --autoflush"  # Reduces performance, but allows you to see more accurately where the simulation hangs.
+
 CMD+=" -Wall -Wno-fatal --error-limit 10000"
 CMD+=" -O3 --assert"
 if [ $ENABLE_DPI_MODULES -ne 0 ]; then

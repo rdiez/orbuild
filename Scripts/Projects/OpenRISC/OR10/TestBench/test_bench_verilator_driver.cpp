@@ -82,6 +82,13 @@ int main ( int argc, char ** argv, char ** env )
 
       // Provide an early warning against the remote possibility of a wrap-around.
       assert( current_simulation_time < UINT64_MAX / 100000 );
+
+      // This provides a good balance between flush frequency and performance.
+      if ( current_simulation_time % 256 == 0 )
+      {
+        if ( EOF == fflush( stdout ) )
+          throw std::runtime_error( "Error calling fflush()." );
+      }
     }
 
     top->final();
