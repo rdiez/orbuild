@@ -137,6 +137,7 @@ module test_bench ( input wire clock,
    `ifdef ENABLE_DPI_MODULES
 
      ethernet_dpi
+       #( .INSERT_WAIT_STATE_BETWEEN_DMA_ACCESSES( 0 ) )
      ethernet_dpi_instance1
        (
         .wb_clk_i   ( clock ),
