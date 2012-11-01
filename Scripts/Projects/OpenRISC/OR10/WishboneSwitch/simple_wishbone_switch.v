@@ -1,4 +1,7 @@
-/* Simple Wishbone switch, many masters to many slaves, just one internal bus.
+
+/* Simple Wishbone switch, connects many masters to many slaves, has just one internal bus,
+   has a default slave that allows switch chaining, performs consistency checks during simulation.
+
 
    About master priority:
 
@@ -8,29 +11,49 @@
      and the others will have to wait. That is, a master can lose the bus
      in the middle of a cycle between consecutive Wishbone transactions,
      even if it keeps its wb_cyc signal asserted between the transactions. Therefore,
-     to a low-priority master, some transactions will seem to last a long time.
+     to a low-priority master, some transactions may seem to last a long time.
 
      The Wishbone B4 specification states that a master should not keep its wb_cyc signal
-     asserted all the time in order to prevent possible arbitration problems. This advice
-     would lead to unnecessary wait states on the CPU Wishbone interface, therefore
-     I have decided to let the Wishbone switch interrupt a chain of transfers whenever
-     a higher-priority master comes in.
+     asserted all the time in order to prevent possible arbitration problems. However,
+     this advice would lead to unnecessary wait states on the CPU Wishbone interface.
+     Therefore,  I have decided to let the Wishbone switch interrupt a chain of transfers whenever
+     a higher-priority master comes in, as described above.
+
+     The priority interrupt logic is rather simple because the switch does not support
+     Wishbone pipelining or burst transfers.
+
 
    About the default slave:
 
      Slave 0 is the default: if no other slave is responsible for a given Wishbone address,
-     that master will get the transaction.
-     Having a default slave allows the chaining of Wishbone switches.
+     slave 0 will get the transaction request. Having a default slave allows the chaining
+     of Wishbone switches.
 
-     The default master should fully decode the address and issue a bus error for all invalid ones.
+     The default slave should fully decode the address and issue a bus error for all invalid addresses.
      Otherwise, the CPU may hang when trying to access an invalid address.
+
+
+   About the consistency checks:
+
+     This switch contains some consistency checks that may prove useful during simulation:
+
+     1) If a master requests the bus by asserting mX_wb_cyc_i, it cannot change its mind and
+        deassert it without completing at least one transaction.
+
+     2) Check that mX_wb_cyc_i and mX_wb_stb_i are the same signal. This is not required by the standard
+        and could be commented out. However, it's normally the case.
+
+     3) A slave is only allowed to assert wb_ack or wb_err when wb_cyc and wb_stb are asserted.
+
+     4) A slave may not assert wb_ack and wb_err at the same time.
+
 
    About adding masters or slaves:
 
      Unfortunately, adding masters or slaves must be done manually by editing the source code,
      but it should be pretty straightforward to do.
 
-     Remember to update CURRENT_MASTER_WIDTH if necessary.
+     Remember to update MASTER_INDEX_WIDTH and SLAVE_INDEX_WIDTH if necessary.
 
 
    Copyright (C) 2012, R. Diez
@@ -55,11 +78,14 @@ module simple_wishbone_switch
   #(
     parameter DW = 32,
     parameter AW = 32,
-    parameter SELW = 4,
+    parameter SELW = 4,  // For the wb_sel_i signals.
+
+    // Slave 0 is the default if an address is not handled by any other slave.
     parameter SLAVE_1_ADDR_PREFIX = 8'h01,
     parameter SLAVE_2_ADDR_PREFIX = 8'h02,
 
     parameter ENABLE_TRACING = 0,
+    parameter ENABLE_CONSISTENCY_CHECKS = 1,
     parameter TRACE_PREFIX = "Wishbone Switch: "
    )
   (
@@ -124,38 +150,50 @@ module simple_wishbone_switch
   );
 
 
-   // This 'always' block calculates who the next master should be.
+   localparam SLAVE_INDEX_WIDTH = 2;
 
-   localparam CURRENT_MASTER_WIDTH = 1;
+   localparam MASTER_INDEX_WIDTH = 1;
+   localparam MASTER_COUNT = 2;
+
    localparam DEFAULT_MASTER = 0;
-   reg at_least_one_master_is_requesting;
-   reg [CURRENT_MASTER_WIDTH-1:0] next_master;
+   localparam DEFAULT_SLAVE  = 0;
 
-   always @( * )
+   // This 'always' block calculates which master has the highest priority, among all those who are requesting the bus.
+
+   reg at_least_one_master_is_requesting;
+   reg [MASTER_INDEX_WIDTH-1:0] highest_priority_requesting_master;
+
+   always @(*)
      begin
         at_least_one_master_is_requesting = 1;
 
         // We could also look at the mX_wb_stb_i signals.
 
         case ( 1 )
-          m0_wb_cyc_i:  next_master = 0;
-          m1_wb_cyc_i:  next_master = 1;
+          m0_wb_cyc_i:  highest_priority_requesting_master = 0;
+          m1_wb_cyc_i:  highest_priority_requesting_master = 1;
           default:
             begin
                // Default to master 0 when no master is requesting.
-               next_master = DEFAULT_MASTER;
+               highest_priority_requesting_master = DEFAULT_MASTER;
                at_least_one_master_is_requesting = 0;
             end
         endcase
      end
 
 
-   // This 'always' block routes the right master to the right slave.
-   reg [CURRENT_MASTER_WIDTH-1:0] current_master;
+   // When a master initiates a transaction, it cannot be swapped out until the transaction finishes.
+   reg                           is_master_locked;
+   reg [MASTER_INDEX_WIDTH-1:0]  locked_master_index;
 
-   reg prevent_changing_master;  // Keep the current master if a bus transaction is taking place.
+   wire [MASTER_INDEX_WIDTH-1:0] master_to_connect_now;
+
+   // Calculate which master should be connected at this point in time.
+   assign master_to_connect_now = is_master_locked ? locked_master_index : highest_priority_requesting_master;
+
 
    // Central switch lines.
+   reg            selm_wb_cyc;
    reg            selm_wb_stb;
    reg [AW-1:0]   selm_wb_adr;
    reg [SELW-1:0] selm_wb_sel;
@@ -165,12 +203,124 @@ module simple_wishbone_switch
    reg            selm_wb_ack;
    reg            selm_wb_err;
 
-   always @( * )
+   reg [SLAVE_INDEX_WIDTH-1:0]  slave_to_connect_now;
+
+
+   // This 'always' block routes the current master's outputs to the central exchange.
+   //
+   // It must be separated from the next "always @(*)" block or the simulators (Icarus Verilog, Verilator)
+   // will have feedback problems and slow down.
+
+   always @(*)
      begin
-        if ( !prevent_changing_master )
-          begin
-             current_master = next_master;
-          end
+        case ( master_to_connect_now )
+          0:
+            begin
+               selm_wb_cyc = m0_wb_cyc_i;  // This could be just '= 1'.
+               selm_wb_stb = m0_wb_stb_i;
+               selm_wb_adr = m0_wb_adr_i;
+               selm_wb_sel = m0_wb_sel_i;
+               selm_wb_we  = m0_wb_we_i;
+               selm_wb_dat_master_to_slave = m0_wb_dat_i;
+            end
+          1:
+            begin
+               selm_wb_cyc = m1_wb_cyc_i;  // This could be just '= 1'.
+               selm_wb_stb = m1_wb_stb_i;
+               selm_wb_adr = m1_wb_adr_i;
+               selm_wb_sel = m1_wb_sel_i;
+               selm_wb_we  = m1_wb_we_i;
+               selm_wb_dat_master_to_slave = m1_wb_dat_i;
+            end
+
+          default:
+            begin
+               $display( "ERROR: Invalid master_to_connect_now value of %d", master_to_connect_now );
+               `ASSERT_FALSE;
+            end
+        endcase
+
+        if ( ENABLE_TRACING )
+          $display( "%sConnecting master %d.", TRACE_PREFIX, master_to_connect_now );
+     end
+
+
+   // This 'always' block does the rest of the routine between the current master and right slave.
+
+   always @(*)
+     begin
+        // Route the current slave's outputs to the central exchange.
+
+        case ( selm_wb_adr[31:24] )
+          SLAVE_1_ADDR_PREFIX:  slave_to_connect_now = 1;
+          SLAVE_2_ADDR_PREFIX:  slave_to_connect_now = 2;
+          default:              slave_to_connect_now = DEFAULT_SLAVE;
+        endcase
+
+        case ( slave_to_connect_now )
+          0:
+            begin
+               selm_wb_ack = s0_wb_ack_i;
+               selm_wb_err = s0_wb_err_i;
+               selm_wb_dat_slave_to_master = s0_wb_dat_i;
+            end
+
+          1:
+            begin
+               selm_wb_ack = s1_wb_ack_i;
+               selm_wb_err = s1_wb_err_i;
+               selm_wb_dat_slave_to_master = s1_wb_dat_i;
+            end
+
+          2:
+            begin
+               selm_wb_ack = s2_wb_ack_i;
+               selm_wb_err = s2_wb_err_i;
+               selm_wb_dat_slave_to_master = s2_wb_dat_i;
+            end
+
+          default:
+            begin
+               `ASSERT_FALSE;
+            end
+        endcase
+
+
+        // By default, all masters are disconnected from the central switch.
+        // If any are issuing a bus request, they should get ack == err == 0
+        // until they get hold of the bus and a slave is connected.
+
+        m0_wb_ack_o = 1'b0;
+        m0_wb_err_o = 1'b0;
+        m0_wb_dat_o = {DW{1'bx}};
+
+        m1_wb_ack_o = 1'b0;
+        m1_wb_err_o = 1'b0;
+        m1_wb_dat_o = {DW{1'bx}};
+
+        // Route the central exchange to the current master's inputs.
+
+        case ( master_to_connect_now )
+          0:
+            begin
+               m0_wb_dat_o = selm_wb_dat_slave_to_master;
+               m0_wb_ack_o = selm_wb_ack;
+               m0_wb_err_o = selm_wb_err;
+            end
+          1:
+            begin
+               m1_wb_dat_o = selm_wb_dat_slave_to_master;
+               m1_wb_ack_o = selm_wb_ack;
+               m1_wb_err_o = selm_wb_err;
+            end
+
+          default:
+            begin
+               $display( "ERROR: Invalid master_to_connect_now value of %d", master_to_connect_now );
+               `ASSERT_FALSE;
+            end
+        endcase
+
 
         // By default, all slaves are disconnected from the central switch.
 
@@ -196,193 +346,207 @@ module simple_wishbone_switch
         s2_wb_dat_o = {DW{1'bx}};
 
 
-        // By default, all masters are disconnected from the central switch.
-        // If any are issuing a bus request, they should get ack == err == 0
-        // until they get hold of the bus and a slave is connected.
-
-        m0_wb_ack_o = 1'b0;
-        m0_wb_err_o = 1'b0;
-        m0_wb_dat_o = {DW{1'bx}};
-
-        m1_wb_ack_o = 1'b0;
-        m1_wb_err_o = 1'b0;
-        m1_wb_dat_o = {DW{1'bx}};
-
-
-        // Route the current master's inputs to the central exchange.
-
-        case ( current_master )
-          0:
-            begin
-               selm_wb_stb = m0_wb_stb_i;
-               selm_wb_adr = m0_wb_adr_i;
-               selm_wb_sel = m0_wb_sel_i;
-               selm_wb_we  = m0_wb_we_i;
-               selm_wb_dat_master_to_slave = m0_wb_dat_i;
-            end
-          1:
-            begin
-               selm_wb_stb = m1_wb_stb_i;
-               selm_wb_adr = m1_wb_adr_i;
-               selm_wb_sel = m1_wb_sel_i;
-               selm_wb_we  = m1_wb_we_i;
-               selm_wb_dat_master_to_slave = m1_wb_dat_i;
-            end
-
-          default:
-            begin
-               // $display( "ERROR: Invalid current_master value of %d", current_master );
-               `ASSERT_FALSE;
-            end
-        endcase
-
-
-        // Route the current slave's inputs to the central exchange.
+        // Route the central exchange to the current slave's inputs.
 
         case ( selm_wb_adr[31:24] )
           SLAVE_1_ADDR_PREFIX:
             begin
-               selm_wb_ack = s1_wb_ack_i;
-               selm_wb_err = s1_wb_err_i;
-               selm_wb_dat_slave_to_master = s1_wb_dat_i;
-            end
-          SLAVE_2_ADDR_PREFIX:
-            begin
-               selm_wb_ack = s2_wb_ack_i;
-               selm_wb_err = s2_wb_err_i;
-               selm_wb_dat_slave_to_master = s2_wb_dat_i;
-            end
-
-          default:
-            begin
-               // Slave 0 is the default.
-               selm_wb_ack = s0_wb_ack_i;
-               selm_wb_err = s0_wb_err_i;
-               selm_wb_dat_slave_to_master = s0_wb_dat_i;
-            end
-        endcase
-
-
-        // Route the central exchange to the current master's outputs.
-        case ( current_master )
-          0:
-            begin
-               m0_wb_dat_o = selm_wb_dat_slave_to_master;
-               m0_wb_ack_o = selm_wb_ack;
-               m0_wb_err_o = selm_wb_err;
-            end
-          1:
-            begin
-               m1_wb_dat_o = selm_wb_dat_slave_to_master;
-               m1_wb_ack_o = selm_wb_ack;
-               m1_wb_err_o = selm_wb_err;
-            end
-
-          default:
-            begin
-               `ASSERT_FALSE;
-            end
-        endcase
-
-
-        // Route the central exchange to the current slave's outputs.
-        case ( selm_wb_adr[31:24] )
-          SLAVE_1_ADDR_PREFIX:
-            begin
-               s1_wb_cyc_o = 1;
+               s1_wb_cyc_o = selm_wb_cyc;
                s1_wb_stb_o = selm_wb_stb;
                s1_wb_adr_o = selm_wb_adr;
                s1_wb_sel_o = selm_wb_sel;
-               s1_wb_we_o =  selm_wb_we;
+               s1_wb_we_o  = selm_wb_we;
                s1_wb_dat_o = selm_wb_dat_master_to_slave;
             end
 
           SLAVE_2_ADDR_PREFIX:
             begin
-               s2_wb_cyc_o = 1;
+               s2_wb_cyc_o = selm_wb_cyc;
                s2_wb_stb_o = selm_wb_stb;
                s2_wb_adr_o = selm_wb_adr;
                s2_wb_sel_o = selm_wb_sel;
-               s2_wb_we_o =  selm_wb_we;
+               s2_wb_we_o  = selm_wb_we;
                s2_wb_dat_o = selm_wb_dat_master_to_slave;
             end
 
           default:
             begin
                // Slave 0 is the default.
-               s0_wb_cyc_o = 1;
+               s0_wb_cyc_o = selm_wb_cyc;
                s0_wb_stb_o = selm_wb_stb;
                s0_wb_adr_o = selm_wb_adr;
                s0_wb_sel_o = selm_wb_sel;
-               s0_wb_we_o =  selm_wb_we;
+               s0_wb_we_o  = selm_wb_we;
                s0_wb_dat_o = selm_wb_dat_master_to_slave;
             end
         endcase
 
         if ( ENABLE_TRACING )
-          $display( "%sCurrent master: %d, addr: 0x%08h", TRACE_PREFIX, current_master, selm_wb_adr );
+          $display( "%sConnecting slave %d for transaction address 0x%08h.",
+                    TRACE_PREFIX, slave_to_connect_now, selm_wb_adr );
      end
 
+
+   reg [ MASTER_COUNT - 1 : 0 ] master_must_still_be_requesting;
 
    initial
      begin
         // In case the reset signal is not asserted at the beginning, initialise this module properly here.
-        prevent_changing_master = 0;
+        is_master_locked = 0;
+        locked_master_index = {MASTER_INDEX_WIDTH{1'bx}};
 
         // These signals don't actually need to be initialised, but otherwise simulators like Icarus Verilog
         // or Xilinx' ISim will do one run with a value of 'x', which will trigger the asserts above.
-        current_master = DEFAULT_MASTER;
-        next_master = DEFAULT_MASTER;
+        highest_priority_requesting_master = DEFAULT_MASTER;
         at_least_one_master_is_requesting = 0;
+
+        master_must_still_be_requesting = {MASTER_COUNT{1'b0}};
      end
+
+
+   task automatic check_master_request_is_consistent;
+
+      input reg [MASTER_INDEX_WIDTH-1:0] master_index;
+      input reg master_cyc;
+      input reg master_stb;
+
+      begin
+         if ( !master_cyc && master_must_still_be_requesting[ master_index ] )
+           begin
+              $display( "%sERROR: Master %d should still be requesting the bus, but is not.",
+                        TRACE_PREFIX, master_index );
+              `ASSERT_FALSE;
+           end
+
+         if ( master_cyc != master_stb )
+           begin
+              $display( "%sERROR: master %d is asserting different values in wb_cyc and wb_stb, which is unusal. This may not be an error, so you may need to disable this check.",
+                        TRACE_PREFIX, master_index );
+              `ASSERT_FALSE;
+           end
+      end
+   endtask
+
+
+   task automatic check_slave_response_is_consistent;
+
+      input reg [SLAVE_INDEX_WIDTH-1:0] slave_index;
+      input reg slave_cyc;
+      input reg slave_stb;
+      input reg slave_ack;
+      input reg slave_err;
+
+      begin
+         if ( ( !slave_cyc || !slave_stb ) && ( slave_ack || slave_err ) )
+           begin
+              $display( "%sERROR: Slave %d is asserting wb_ack or wb_err, but its wb_cyc and wb_stb signals are not being asserted. This may be a problem in this slave or in the current master, which may have given up before the end of the transaction.",
+                        TRACE_PREFIX, slave_index );
+              `ASSERT_FALSE;
+           end
+
+
+         if ( slave_ack && slave_err )
+           begin
+              $display( "%sERROR: Slave %d is asserting both wb_ack and wb_err at the same time, which is not allowed by the Wishbone specification.",
+                        TRACE_PREFIX, slave_index );
+              `ASSERT_FALSE;
+           end
+      end
+   endtask
 
 
    always @( posedge wb_clk_i )
      begin
-         if ( ENABLE_TRACING )
-           $display( "%sSwitch tick begin.", TRACE_PREFIX );
+        if ( ENABLE_TRACING )
+          $display( "%sClock posedge begin.", TRACE_PREFIX );
 
         if ( wb_rst_i )
           begin
-             prevent_changing_master <= 0;
+             is_master_locked <= 0;
+             locked_master_index <= {MASTER_INDEX_WIDTH{1'bx}};
+
+             master_must_still_be_requesting <= {MASTER_COUNT{1'b0}};
           end
         else
           begin
-             if ( prevent_changing_master )
+             if ( ENABLE_CONSISTENCY_CHECKS )
                begin
-                  if ( selm_wb_ack != 0 &&
-                       selm_wb_err != 0 )
+                  check_master_request_is_consistent( 0, m0_wb_cyc_i, m0_wb_stb_i );
+                  check_master_request_is_consistent( 1, m1_wb_cyc_i, m1_wb_stb_i );
+
+                  if ( m0_wb_cyc_i && m0_wb_stb_i )  master_must_still_be_requesting[0] <= 1;
+                  if ( m1_wb_cyc_i && m1_wb_stb_i )  master_must_still_be_requesting[1] <= 1;
+
+                  check_slave_response_is_consistent( 0, s0_wb_cyc_o, s0_wb_stb_o, s0_wb_ack_i, s0_wb_err_i );
+                  check_slave_response_is_consistent( 1, s1_wb_cyc_o, s1_wb_stb_o, s1_wb_ack_i, s1_wb_err_i );
+                  check_slave_response_is_consistent( 2, s2_wb_cyc_o, s2_wb_stb_o, s2_wb_ack_i, s2_wb_err_i );
+               end
+
+             if ( is_master_locked )
+               begin
+                  // A bus transaction is taking place.
+
+                  if ( locked_master_index != master_to_connect_now )
                     begin
-                       if ( ENABLE_TRACING )
-                         $display( "%sA slave is asserting both wb_ack and wb_err at the same time, which is not allowed by the Wishbone specification.",
-                                   TRACE_PREFIX );
                        `ASSERT_FALSE;
                     end
 
-                  // A bus transaction is in place. When the slave answers, it marks the end of the transaction,
-                  // so we can switch masters at the beginning of the next transaction.
+                  if ( ENABLE_TRACING )
+                    $display( "%sBus transaction in flight, master %d is connected to slave %d, address is 0x%08h.",
+                              TRACE_PREFIX, locked_master_index, slave_to_connect_now, selm_wb_adr );
 
+                  // When the slave answers, it marks the end of the transaction,
+                  // so we can switch masters at the beginning of the next transaction if necessary.
                   if ( selm_wb_ack != 0 ||
                        selm_wb_err != 0 )
                     begin
                        if ( ENABLE_TRACING )
-                         $display( "%sBus transaction end.", TRACE_PREFIX );
-                       prevent_changing_master <= 0;
+                         $display( "%sBus transaction ended.", TRACE_PREFIX );
+
+                       is_master_locked <= 0;
+                       locked_master_index <= {MASTER_INDEX_WIDTH{1'bx}};
+
+                       master_must_still_be_requesting[ locked_master_index ] <= 0;
                     end
                end
              else
                begin
                   if ( at_least_one_master_is_requesting )
                     begin
+                       if ( selm_wb_ack || selm_wb_err  )
+                         begin
+                            // The transaction can finish straight away if the slave has a combinatorial path
+                            // between its inputs and its wb_ack or wb_err signals. This means that the wb_stb
+                            // and wb_ack/wb_err signals will be asserted just for one clock posedge.
+                            // Examples where this happens are memories that do asynchronous reads or slaves that are
+                            // hard-wired to error immediately for their whole address ranges (typical for unused slave ports).
+                            if ( ENABLE_TRACING )
+                              $display( "%sSingle-cycle bus transaction, master %d is connected to slave %d, address is 0x%08h, ack %d, err %d.",
+                                        TRACE_PREFIX, highest_priority_requesting_master, slave_to_connect_now,
+                                        selm_wb_adr, selm_wb_ack, selm_wb_err );
+                         end
+                       else
+                         begin
+                            locked_master_index <= highest_priority_requesting_master;
+                            is_master_locked <= 1;
+
+                            if ( ENABLE_TRACING )
+                              begin
+                                 $display( "%sBus transaction started, master %d is connected to slave %d, address is 0x%08h.",
+                                           TRACE_PREFIX, highest_priority_requesting_master, slave_to_connect_now, selm_wb_adr );
+                              end
+                         end
+                    end
+                  else
+                    begin
                        if ( ENABLE_TRACING )
-                         $display( "%sBus transaction started or in flight.", TRACE_PREFIX );
-                       prevent_changing_master <= 1;
+                         $display( "%sThe bus is idle.", TRACE_PREFIX );
                     end
                end
           end
 
         if ( ENABLE_TRACING )
-          $display( "%sSwitch tick end.", TRACE_PREFIX );
+          $display( "%sClock posedge end.", TRACE_PREFIX );
      end
 
 endmodule
