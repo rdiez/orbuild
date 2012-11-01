@@ -99,6 +99,7 @@ There are some things that could be done to improve FPGA area consumption:
 
 At the moment, the options are a serial implementation (very slow) and a barrel implementation (uses lots of FPGA resources
 and limits the overall CPU frequency). A balanced implementation would probably be a better fit.
+See Xilinx Application Note XAPP195 titled "Implementing Barrel Shifters Using Multipliers".
 
 =item * Do not perform a full decode on all instruction opcodes etc.
 

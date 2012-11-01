@@ -93,7 +93,7 @@ module test_bench ( input wire clock,
 
      assign wb_uart_dat_from_uart = 32'h0000_0000;
      assign wb_uart_ack = 0;
-     assign wb_uart_err = 1;
+     assign wb_uart_err = wb_uart_cyc && wb_uart_stb;
      assign uart_int = 0;
 
      wire prevent_unused_warning_with_verilator_uart = &{ 1'b0,
@@ -173,7 +173,7 @@ module test_bench ( input wire clock,
 
      assign wb_eth_dat_from_eth = 32'h0000_0000;
      assign wb_eth_ack = 0;
-     assign wb_eth_err = 1;
+     assign wb_eth_err = wb_eth_cyc && wb_eth_stb;
 
      assign wb_ethm_adr = 0;
      assign wb_ethm_dat_from_eth = 0;
