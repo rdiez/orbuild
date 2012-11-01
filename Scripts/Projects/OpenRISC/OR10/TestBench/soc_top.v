@@ -207,7 +207,7 @@ module soc_top ( input wire         wb_clk_i,
                                                    1'b0 };
 
    // Note that the MinSoC Wishbone switch is known to hand when accessing invalid addresses.
-   localparam USE_MINSOC_TC = 0;
+   localparam USE_MINSOC_TC = 1;
 
    generate if ( USE_MINSOC_TC )
      begin
