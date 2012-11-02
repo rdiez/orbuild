@@ -31,13 +31,13 @@ ENABLE_PGAVIN := 0  # Build and use Peter Gavin's toolchain, which supports Open
 ENABLE_LLVM := 0
 ENABLE_LLVM_CHECK := 0
 
-ENABLE_ICARUS_VERILOG := 0  # If you enable this flag, orbuild will build its own Icarus Verilog
-                            # from the latest sources. Alternatively, you can install Icarus Verilog
-                            # from your Linux distribution's repository.
+ENABLE_OWN_ICARUS_VERILOG := 0  # If you enable this flag, orbuild will build its own Icarus Verilog
+                                # from the latest sources. Alternatively, you can install Icarus Verilog
+                                # from your Linux distribution's repository.
 
-ENABLE_VERILATOR := 0       # If you enable this flag, orbuild will build its own Verilator
-                            # from the latest sources. Alternatively, you can install Verilator
-                            # from your Linux distribution's repository.
+ENABLE_OWN_VERILATOR := 0       # If you enable this flag, orbuild will build its own Verilator
+                                # from the latest sources. Alternatively, you can install Verilator
+                                # from your Linux distribution's repository.
 
 ENABLE_XILINX := 0  # If enabled, orbuild assumes the Xilinx ISim simulator and other such tools
                     # are available. Please do not source the usual settings64.sh or similar
@@ -262,7 +262,7 @@ ICARUS_VERILOG_AUTOGEN_CMD = $(SHELL) autoconf.sh
 $(eval $(call autogen_project_template,ICARUS_VERILOG,Icarus Verilog))
 $(ICARUS_VERILOG_AUTOGEN_SENTINEL): $(ICARUS_VERILOG_CHECKOUT_SENTINEL)
 
-ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
+ifeq "$(strip $(ENABLE_OWN_ICARUS_VERILOG))" "1"
   all: $(ICARUS_VERILOG_INSTALL_SENTINEL)
 endif
 
@@ -281,7 +281,7 @@ VERILATOR_AUTOGEN_CMD = autoconf --warnings=all
 $(eval $(call autogen_project_template,VERILATOR,Verilator))
 $(VERILATOR_AUTOGEN_SENTINEL): $(VERILATOR_CHECKOUT_SENTINEL)
 
-ifeq "$(strip $(ENABLE_VERILATOR))" "1"
+ifeq "$(strip $(ENABLE_OWN_VERILATOR))" "1"
   all: $(VERILATOR_INSTALL_SENTINEL)
 endif
 
@@ -440,7 +440,7 @@ all: $(GDB_INSTALL_SENTINEL)
 
 # ----------- Verilog Tools Path -----------
 
-ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
+ifeq "$(strip $(ENABLE_OWN_ICARUS_VERILOG))" "1"
   IVERILOG_PREREQ := $(ICARUS_VERILOG_INSTALL_SENTINEL)
   IVERILOG_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin
 else
@@ -448,7 +448,7 @@ else
   IVERILOG_PATH :=
 endif
 
-ifeq "$(strip $(ENABLE_VERILATOR))" "1"
+ifeq "$(strip $(ENABLE_OWN_VERILATOR))" "1"
   VERILATOR_PREREQ := $(VERILATOR_INSTALL_SENTINEL)
   VERILATOR_PATH := $(VERILATOR_BIN_DIR)/bin
 else
@@ -531,13 +531,13 @@ $(ORPSOC_NAME)_RTL_TESTS_MAKEFLAGS_FILTER := clear
 
 $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
 
-ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
+ifeq "$(strip $(ENABLE_OWN_ICARUS_VERILOG))" "1"
   $(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH := $(ICARUS_VERILOG_BIN_DIR)/bin:$($(ORPSOC_NAME)_RTL_TESTS_PREPEND_PATH)
 endif
 
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_RTL_TESTS,ORPSoC v2 RTL tests,$(SHELL) -c "$(value $(ORPSOC_NAME)_RTL_TESTS_CMD)"))
 
-ifeq "$(strip $(ENABLE_ICARUS_VERILOG))" "1"
+ifeq "$(strip $(ENABLE_OWN_ICARUS_VERILOG))" "1"
   $(value $(ORPSOC_NAME)_RTL_TESTS_SENTINEL): $(ICARUS_VERILOG_INSTALL_SENTINEL)
 endif
 
