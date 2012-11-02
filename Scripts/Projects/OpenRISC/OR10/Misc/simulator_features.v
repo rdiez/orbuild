@@ -82,6 +82,9 @@
 `ifdef __ICARUS__
  `define IF_ICARUS_FLUSH_DISPLAY_OUTPUT  $fflush(0); $fflush(1)
 `else
+ // If you are using Verilator, you can flush in your main .cpp loop every now and then
+ // with fflush( stdout ), see file test_bench_verilator_driver.cpp for an example.
+ // You can also use flag --autoflush, but that is quite slower.
  `define IF_ICARUS_FLUSH_DISPLAY_OUTPUT
 `endif
 
