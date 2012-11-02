@@ -168,7 +168,7 @@ BUILD_OR10_ISIM_SIM_CMD +=    \"$(ISIM_EXE_FILENAME)\"
 
 BUILD_OR10_ISIM_SIM_MAKEFLAGS_FILTER := clear
 
-$(eval $(call run_and_report_template,BUILD_OR10_ISIM_SIM,Icarus Verilog OR10 simulator,$(SHELL) -c "$(BUILD_OR10_ISIM_SIM_CMD)"))
+$(eval $(call run_and_report_template,BUILD_OR10_ISIM_SIM,Xilinx ISim simulator,$(SHELL) -c "$(BUILD_OR10_ISIM_SIM_CMD)"))
 
 $(BUILD_OR10_ISIM_SIM_SENTINEL): $(ORTS_EXES_INSTALL_SENTINEL)
 
