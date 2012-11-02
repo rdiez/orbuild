@@ -1,5 +1,7 @@
 
-/* Simple Wishbone switch, connects many masters to many slaves, has just one internal bus,
+/* Simple Wishbone switch, version 0.50 beta.
+
+   This Wishbone switch connects many masters to many slaves, has just one internal bus,
    has a default slave that allows switch chaining, performs consistency checks during simulation.
 
 
@@ -31,6 +33,14 @@
 
      The default slave should fully decode the address and issue a bus error for all invalid addresses.
      Otherwise, the CPU may hang when trying to access an invalid address.
+
+
+   About unused slaves:
+     If you are not using a slave port and don't want to remove the port from the source code,
+     you should connect the slave signals like this:
+       assign unused_slave_wb_ack = 0;
+       assign unused_slave_wb_err = unused_slave_wb_cyc && unused_slave_wb_stb;
+     Otherwise, if a master tries to access an address on that slave, it may hang forever.
 
 
    About the consistency checks:
@@ -186,10 +196,13 @@ module simple_wishbone_switch
    reg                           is_master_locked;
    reg [MASTER_INDEX_WIDTH-1:0]  locked_master_index;
 
-   wire [MASTER_INDEX_WIDTH-1:0] master_to_connect_now;
+   reg [MASTER_INDEX_WIDTH-1:0]  master_to_connect_now;
 
    // Calculate which master should be connected at this point in time.
-   assign master_to_connect_now = is_master_locked ? locked_master_index : highest_priority_requesting_master;
+   always @(*)
+     begin
+        master_to_connect_now = is_master_locked ? locked_master_index : highest_priority_requesting_master;
+     end
 
 
    // Central switch lines.
@@ -237,6 +250,13 @@ module simple_wishbone_switch
             begin
                $display( "ERROR: Invalid master_to_connect_now value of %d", master_to_connect_now );
                `ASSERT_FALSE;
+
+               selm_wb_cyc = 1'bx;
+               selm_wb_stb = 1'bx;
+               selm_wb_adr = {AW{1'bx}};
+               selm_wb_sel = {SELW{1'bx}};
+               selm_wb_we  = 1'bx;
+               selm_wb_dat_master_to_slave = {DW{1'bx}};
             end
         endcase
 
@@ -282,6 +302,9 @@ module simple_wishbone_switch
           default:
             begin
                `ASSERT_FALSE;
+               selm_wb_ack = 1'bx;
+               selm_wb_err = 1'bx;
+               selm_wb_dat_slave_to_master = {DW{1'bx}};
             end
         endcase
 
@@ -388,21 +411,6 @@ module simple_wishbone_switch
 
 
    reg [ MASTER_COUNT - 1 : 0 ] master_must_still_be_requesting;
-
-   initial
-     begin
-        // In case the reset signal is not asserted at the beginning, initialise this module properly here.
-        is_master_locked = 0;
-        locked_master_index = {MASTER_INDEX_WIDTH{1'bx}};
-
-        // These signals don't actually need to be initialised, but otherwise simulators like Icarus Verilog
-        // or Xilinx' ISim will do one run with a value of 'x', which will trigger the asserts above.
-        highest_priority_requesting_master = DEFAULT_MASTER;
-        at_least_one_master_is_requesting = 0;
-
-        master_must_still_be_requesting = {MASTER_COUNT{1'b0}};
-     end
-
 
    task automatic check_master_request_is_consistent;
 
@@ -547,6 +555,22 @@ module simple_wishbone_switch
 
         if ( ENABLE_TRACING )
           $display( "%sClock posedge end.", TRACE_PREFIX );
+     end
+
+
+   initial
+     begin
+        // In case the reset signal is not asserted at the beginning, initialise this module properly here.
+        is_master_locked = 0;
+        locked_master_index = {MASTER_INDEX_WIDTH{1'bx}};
+
+        master_must_still_be_requesting = {MASTER_COUNT{1'b0}};
+
+        // These signals don't actually need to be initialised, but otherwise simulators like Icarus Verilog
+        // or Xilinx' ISim will do one run with a value of 'x', which will trigger some asserts above.
+        highest_priority_requesting_master = DEFAULT_MASTER;
+        at_least_one_master_is_requesting = 0;
+        master_to_connect_now = DEFAULT_MASTER;
      end
 
 endmodule
