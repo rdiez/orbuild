@@ -287,7 +287,7 @@ at the cost of code readability. The macros are defined here:
 
 L<< https://github.com/openrisc/or1k-src/blob/or1k/newlib/libc/machine/or1k/include/or1k-asm.h >>
 
-Note that, depending on the compilation flag used (I<< -mcompat-delay >>, I<< -mno-delay >>, I<< -mdelay >>), GCC defines one of the following symbols:
+Depending on the compilation flag used (I<< -mcompat-delay >>, I<< -mno-delay >>, I<< -mdelay >>), GCC defines one of the following symbols:
 
   -mdelay         __OR1K_DELAY__
   -mno-delay:     __OR1K_NODELAY__
@@ -295,6 +295,18 @@ Note that, depending on the compilation flag used (I<< -mcompat-delay >>, I<< -m
 
 When compiling with I<< -mno-delay >>, GCC emits a I<< .nodelay >> directive in the intermediate I<< .S >> file
 for GAS, which sets flag EF_OR1K_NODELAY in the ELF header indicating that the binary does not use jump delay slots.
+
+Note that you need to manually add the I<< .nodelay >> directive yourself if you are assembling your own I<< .S >> files,
+as GCC's flag I<< -mno-delay >> only emits it when the compiler is generating intermediate I<< .S >> files out of C/C++ sources.
+
+
+If you are getting "EF_OR1K_NODELAY flag mismatch with previous modules" errors at the link phase,
+and  you need to find out whether a particular object file was compiled with the I<< .nodelay >> directive, issue the following command:
+
+  or1k-elf-objdump -f my-file.o
+
+If the architecture displayed is I<< or1knd >>, then the file was assembled with I<< .nodelay >>. Otherwise, the architecture
+will be I<< or1k >>.
 
 =head2 Instruction execution time
 
