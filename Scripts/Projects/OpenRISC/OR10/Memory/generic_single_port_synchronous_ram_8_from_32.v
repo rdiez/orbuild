@@ -6,8 +6,12 @@
    Use bin2hex' argument -size_word so that the first 32-bit word contains the file size
    (this check could be disabled in the source code below).
 
-   Xilinx XST infers a Block RAM out of this memory, at least with version 13.4 for an Spartan-6,
-   which helps conserve FPGA LUT resources.
+   Xilinx' XST infers a Block RAM out of this memory, at least with version 13.4 for an Spartan-6,
+   which helps conserve FPGA LUT resources. The exact type inferred is:
+      Found 4096x8-bit single-port RAM <Mram_mem_contents> for signal <mem_contents>.
+
+   Xilinx' XST supports inferring Block RAM byte-write enable signals, therefore it could be possible
+   to write a single 32-bit Wishbone memory component, instead of joining 4 8-bit components together.
 
 
    Copyright (C) 2012, R. Diez
@@ -35,27 +39,29 @@ module generic_single_port_synchronous_ram_8_from_32
      parameter MEMORY_FILE_BYTE_OFFSET = 0   // On a 32-bit memory system, big endian, the 8 bits [31:24] have an offset of 0.
    )
   (
-   input                   clk_i,
-   input                   we_i,   // Write enable.
-   input  [ADDR_WIDTH-1:0] addr_i,
-   input  [7:0]            data_i,
-   output [7:0]            data_o
+   input                  clk_i,
+   input                  we_i, // Write enable.
+   input [ADDR_WIDTH-1:0] addr_i,
+   input [7:0]            data_i,
+   output reg [7:0]       data_o
   );
 
-   reg [7:0]            mem_contents [(1<<ADDR_WIDTH)-1:0];
-   reg [ADDR_WIDTH-1:0] addr_reg;
-
-   assign data_o = mem_contents[ addr_reg ];
-
-   always @(posedge clk_i)
-     begin
-        addr_reg <= addr_i;
-     end
+   reg [7:0]              mem_contents [(1<<ADDR_WIDTH)-1:0];
 
    always @(posedge clk_i)
      begin
         if ( we_i )
-          mem_contents[ addr_i ] <= data_i;
+          begin
+             mem_contents[ addr_i ] <= data_i;
+
+             // There is no need for read/write synchronisation: we are either reading
+             // or writing, but not both at the same clock posedge.
+             data_o <= {8{1'bx}};
+          end
+        else
+          begin
+             data_o <= mem_contents[ addr_i ];
+          end
      end
 
 
