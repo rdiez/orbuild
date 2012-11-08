@@ -43,7 +43,7 @@
   `define FINISH_WITH_ERROR_EXIT_CODE $finish_and_return(1)
 
   // Icarus Verilog does not seem to support `__FILE__ and `__LINE__ yet.
-  `define ASSERT_FALSE $display( "ERROR: Assertion failed." ); `FINISH_WITH_ERROR_EXIT_CODE
+  `define ASSERT_FALSE $display( "ERROR: Assertion failed in module %m." ); `FINISH_WITH_ERROR_EXIT_CODE
 
   // Access to internal signals in submodules is handy when initialising inferred memory.
   `define CAN_ACCESS_INTERNAL_SIGNALS defined
@@ -56,7 +56,7 @@
   // Note that Xilinx ISim does not support $finish_and_return, so there is no special exit code on error.
   `define FINISH_WITH_ERROR_EXIT_CODE $finish
 
-  `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
+  `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d in module %m.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
 
   `define CAN_ACCESS_INTERNAL_SIGNALS defined
 
@@ -69,7 +69,7 @@
   // Note that Verilator does not support $finish_and_return, so there is no special exit code on error.
   `define FINISH_WITH_ERROR_EXIT_CODE $finish
 
-  `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
+  `define ASSERT_FALSE $display( "ERROR: Assertion failed at %0s:%0d in module %m.", `__FILE__, `__LINE__ ); `FINISH_WITH_ERROR_EXIT_CODE
 
   `define CAN_ACCESS_INTERNAL_SIGNALS defined
 
@@ -86,6 +86,20 @@
  // with fflush( stdout ), see file test_bench_verilator_driver.cpp for an example.
  // You can also use flag --autoflush, but that is quite slower.
  `define IF_ICARUS_FLUSH_DISPLAY_OUTPUT
+`endif
+
+
+// In Verilog 2001, we can set the default data type to none,
+// which helps catching any undeclared wires.
+//
+// Do not enable this for Xilinx' ISim and XST, as it requires all input ports to be tagged with "wire",
+// which is a pain.
+`ifndef XILINX_ISIM
+`ifndef MY_XILINX_XST
+
+`default_nettype none
+
+`endif
 `endif
 
 
