@@ -285,6 +285,12 @@ ifeq "$(strip $(ENABLE_OWN_VERILATOR))" "1"
   all: $(VERILATOR_INSTALL_SENTINEL)
 endif
 
+# During development, rebuild Verilator every time.
+ifeq "0" "1"
+  $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/VERILATOR.Make.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+  # Don't really need this:  $(shell rm -rf $(VERILATOR_BIN_DIR))
+endif
+
 ifeq "0" "1"  # Run Verilator's install tests, disabled at the moment.
   # Verilator's install_test script sets its own -j flag for GNU Make, therefore remove any inherited flags from MAKEFLAGS.
   VERILATOR_INSTALL_TEST_CMD := cd $(VERILATOR_CHECKOUT_DIR) && perl nodist/install_test
