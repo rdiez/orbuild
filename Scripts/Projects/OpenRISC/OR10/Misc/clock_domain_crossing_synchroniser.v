@@ -9,6 +9,8 @@
 // here should use such a device. Typically, metastable-hardened ﬂip-ﬂops guarantee
 // that their Q outputs will settle after a given maximum time, no matter how close
 // the data transition is to the ﬂip-ﬂop’s clock edge.
+//
+// If your silicon library supports it, another possibility would be to use a dual-clocked FIFO.
 
 module clock_domain_crossing_synchroniser
 
