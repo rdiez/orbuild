@@ -38,7 +38,9 @@ module generic_single_port_synchronous_ram_32_simulation_only
   #( parameter ADR_WIDTH = 11,  // Each memory location is 32 bits (4 bytes) wide. A width of 11 is then 2^(11+2) = 8 KB of RAM.
      parameter MEMORY_FILENAME = "",
      parameter MEMORY_FILESIZE = 0,  // In 32-bit words.
-     parameter GET_MEMORY_FILENAME_FROM_SIM_ARGS = 0
+     parameter GET_MEMORY_FILENAME_FROM_SIM_ARGS = 0,
+     parameter ENABLE_TRACING = 0,
+     parameter TRACE_PREFIX = "Memory: "
    )
   (
     input             wb_clk_i,
@@ -80,6 +82,9 @@ module generic_single_port_synchronous_ram_32_simulation_only
           begin
              if ( is_out_of_bounds )
                begin
+                  if ( ENABLE_TRACING )
+                    $display( "%sRaising a bus error for address 0x%08h.", TRACE_PREFIX, wb_adr_i );
+
                   wb_err_o <= 1;
                   wb_ack_o <= 0;
                end
@@ -90,6 +95,10 @@ module generic_single_port_synchronous_ram_32_simulation_only
 
                   if ( wb_we_i )
                     begin
+                       if ( ENABLE_TRACING )
+                         $display( "%sWriting to memory address 0x%08h, sel 0x%1h, data 0x%08h.",
+                                   TRACE_PREFIX, wb_adr_i, wb_sel_i, wb_dat_i );
+
                        if ( wb_sel_i[0] ) mem_contents[ wb_adr_i[ADR_WIDTH+1:2] ][ 7: 0] <= wb_dat_i[ 7: 0];
                        if ( wb_sel_i[1] ) mem_contents[ wb_adr_i[ADR_WIDTH+1:2] ][15: 8] <= wb_dat_i[15: 8];
                        if ( wb_sel_i[2] ) mem_contents[ wb_adr_i[ADR_WIDTH+1:2] ][23:16] <= wb_dat_i[23:16];

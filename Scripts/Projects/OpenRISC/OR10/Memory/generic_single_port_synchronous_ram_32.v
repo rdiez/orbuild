@@ -64,7 +64,9 @@ module generic_single_port_synchronous_ram_32
   #( parameter ADR_WIDTH = 11,  // Each memory location is 32 bits (4 bytes) wide. A width of 11 is then 2^(11+2) = 8 KB of RAM.
      parameter MEMORY_FILENAME = "",
      parameter MEMORY_FILESIZE = 0,
-     parameter GET_MEMORY_FILENAME_FROM_SIM_ARGS = 0
+     parameter GET_MEMORY_FILENAME_FROM_SIM_ARGS = 0,
+     parameter ENABLE_TRACING = 0,
+     parameter TRACE_PREFIX = "Top-level 32-bit memory controller: "
    )
   (
     input wb_clk_i,
@@ -113,11 +115,34 @@ module generic_single_port_synchronous_ram_32
      begin
         if ( is_beginning_of_wishbone_operation )
           begin
+             if ( ENABLE_TRACING )
+               $display( "%sBeginning %0s transaction at address 0x%08h, sel 0x%1h.",
+                         TRACE_PREFIX,
+                         wb_we_i ? "write" : "read",
+                         wb_adr_i,
+                         wb_sel_i );
+
              wb_err_o <=  is_out_of_bounds;
              wb_ack_o <= !is_out_of_bounds;
           end
         else
           begin
+             if ( ENABLE_TRACING && ( wb_ack_o || wb_err_o ) )
+               begin
+                  if ( wb_we_i )
+                    $display( "%sFinishing write transaction at address 0x%08h, sel 0x%1h, data written 0x%08h.",
+                              TRACE_PREFIX,
+                              wb_adr_i,
+                              wb_sel_i,
+                              wb_dat_i );
+                    else
+                      $display( "%sFinishing read transaction at address 0x%08h, sel 0x%1h, data read 0x%08h.",
+                                TRACE_PREFIX,
+                                wb_adr_i,
+                                wb_sel_i,
+                                wb_dat_o );
+               end
+
              wb_ack_o <= 0;
              wb_err_o <= 0;
           end
