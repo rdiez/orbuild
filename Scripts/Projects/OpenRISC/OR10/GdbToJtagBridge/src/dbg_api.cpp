@@ -1,5 +1,5 @@
 /*
-   Copyright (C) 2012 R. Diez, the code was almost complete rewritten.
+   Copyright (C) 2012 R. Diez, the code was almost completely rewritten.
    Copyright (C) 2009 - 2011 Nathan Yawn, nyawn@opencores.net
    based on code from jp2 by Marko Mlinar, markom@opencores.org
 
@@ -324,46 +324,79 @@ static uint32_t assemble_bytes ( const uint8_t b1,
 
 
 // NOTE: If the CPU reports an error reading from memory, this routine stops, so the data returned
-//       may contain fewer bytes than requested.
+//       may contain fewer bytes than requested. That matches the specification of GDB RSP command 'm addr,length'.
 
 void dbg_cpu0_read_mem ( const uint32_t start_addr,
                          const uint32_t byte_count,
                          std::vector< uint8_t > * const data_read )
 {
-  if ( !is_aligned_4_len( start_addr ) )
-    throw std::runtime_error( format_msg( "Reading from unaligned memory address 0x%08X is not supported yet.", unsigned(start_addr) ) );
-
-  if ( !is_aligned_4_len( byte_count ) )
-    throw std::runtime_error( format_msg( "Reading from memory with an unaligned length of %d is not supported yet.", unsigned(byte_count) ) );
-
-  for ( unsigned i = 0; i < byte_count / 4; ++i )
+  if ( byte_count == 0 )
   {
-    const uint32_t addr = start_addr + i * 4;
+    assert( false );
+    return;
+  }
 
-    uint32_t val;
-    const bool error_bit = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &val );
+  // The code below assumes that the OR10 CPU is big endian.
+  //
+  // This code can be optimised by having a central loop that reads 4-byte aligned data in chunks.
+  //
+  // If the debug interface supported setting the Wishbone 'sel' signal, we could read single bytes
+  // and 16-bit words where necessary.
 
-    if ( error_bit )
+  uint32_t addr     = start_addr & 0xFFFFFFFC;
+  unsigned byte_pos = start_addr % 4;
+
+  uint8_t b1;
+  uint8_t b2;
+  uint8_t b3;
+  uint8_t b4;
+
+  uint32_t mem_val_1;
+  const bool error_bit_1 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_1 );
+  if ( error_bit_1 )
+  {
+    // printf("Error bit set at mem addr: 0x%08X\n", addr );
+    return;
+  }
+  // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_1 );
+  break_up_into_bytes( mem_val_1, &b1, &b2, &b3, &b4 );
+
+
+  for ( unsigned i = 0; i < byte_count; ++i )
+  {
+    bool is_end_of_32_bit_word = false;
+
+    switch ( byte_pos )
     {
-      // printf("Error bit set at mem addr: 0x%08X\n", addr );
-      break;
+    case 0: data_read->push_back( b1 ); break;
+    case 1: data_read->push_back( b2 ); break;
+    case 2: data_read->push_back( b3 ); break;
+    case 3: data_read->push_back( b4 );
+            is_end_of_32_bit_word = true;
+            break;
+    default:
+      assert( false );
     }
 
-    // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, val );
+    if ( is_end_of_32_bit_word )
+    {
+      byte_pos = 0;
+      addr += 4;
 
-    // Note that this assumes that the OR10 CPU is big endian.
-    assert( sizeof( val ) == 4 );
-
-    uint8_t b1;
-    uint8_t b2;
-    uint8_t b3;
-    uint8_t b4;
-    break_up_into_bytes( val, &b1, &b2, &b3, &b4 );
-
-    data_read->push_back( b1 );
-    data_read->push_back( b2 );
-    data_read->push_back( b3 );
-    data_read->push_back( b4 );
+      uint32_t mem_val_2;
+      const bool error_bit_2 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_2 );
+      if ( error_bit_2 )
+      {
+        // printf("Error bit set at mem addr: 0x%08X\n", addr );
+        break;
+      }
+      // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_2 );
+      break_up_into_bytes( mem_val_2, &b1, &b2, &b3, &b4 );
+    }
+    else
+    {
+      byte_pos++;
+    }
   }
 }
 
@@ -374,70 +407,131 @@ bool dbg_cpu0_write_mem ( const uint32_t start_addr,
                           const uint32_t byte_count,
                           const std::vector< uint8_t > * const data_to_write )
 {
-  if ( !is_aligned_4_len( start_addr ) )
-    throw std::runtime_error( format_msg( "Writing to unaligned memory address 0x%08X is not supported yet.", unsigned(start_addr) ) );
-
-  const int rest_byte_count = byte_count % 4;
-
-  unsigned i;
-  for ( i = 0; i < byte_count / 4; ++i )
+  if ( byte_count == 0 )
   {
-    const uint32_t addr = start_addr + i * 4;
-
-    // Note that this assumes that the OR10 CPU is big endian.
-    const uint32_t val = ( (*data_to_write)[ i * 4     ] << 24 ) |
-                         ( (*data_to_write)[ i * 4 + 1 ] << 16 ) |
-                         ( (*data_to_write)[ i * 4 + 2 ] << 8  ) |
-                         ( (*data_to_write)[ i * 4 + 3 ] );
-
-    // printf( "Writing to mem addr: 0x%08X, value: 0x%08X\n", addr, val );
-
-    if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_ADDR, addr ) )
-      return true;
-
-    if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_DATA, val ) )
-      return true;
+    assert( false );
+    return false;
   }
 
+  assert( byte_count <= data_to_write->size() );
 
-  // Write the last (unaligned) bytes of data.
-  if ( rest_byte_count != 0 )
+  // The code below assumes that the OR10 CPU is big endian.
+  //
+  // This code can be optimised by having a central loop that writes 4-byte aligned data in chunks.
+  //
+  // If the debug interface supported setting the Wishbone 'sel' signal, we could write single bytes
+  // and 16-bit words where necessary.
+
+  uint32_t addr     = start_addr & 0xFFFFFFFC;
+  unsigned byte_pos = start_addr % 4;
+
+  uint8_t b1;
+  uint8_t b2;
+  uint8_t b3;
+  uint8_t b4;
+
+  // If the start memory address is not aligned or we are not writing at least 4 bytes,
+  // some of the bytes at the corresponding starting aligned 32-bit memory position will not be overwritten.
+  // Therefore, we have to read the aligned 32-bit word beforehand,
+  // modify just part of it, and then write the resulting 32-bit word later.
+  if ( byte_pos != 0 || byte_count < 4 )
   {
-    uint32_t data_pos = i * 4;
-    const uint32_t addr = start_addr + data_pos;
+    /*
+    if ( byte_pos != 0 )
+    {
+      printf( "Unaligned at start by %d bytes.\n", byte_pos );
+    }
+    else if ( byte_count < 4 )
+    {
+      printf( "Unaligned length at start of %d bytes.\n", byte_count );
+    }
+    */
 
-    uint32_t val;
-    const bool error_bit = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &val );
+    uint32_t mem_val_1;
 
-    if ( error_bit )
+    const bool error_bit_1 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_1 );
+    if ( error_bit_1 )
     {
       // printf("Error bit set at mem addr: 0x%08X\n", addr );
       return true;
     }
+    // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_1 );
+    break_up_into_bytes( mem_val_1, &b1, &b2, &b3, &b4 );
+  }
 
-    uint8_t b1;
-    uint8_t b2;
-    uint8_t b3;
-    uint8_t b4;
-    break_up_into_bytes( val, &b1, &b2, &b3, &b4 );
 
-    b1 = (*data_to_write)[ data_pos++ ];
+  for ( unsigned i = 0; ; )
+  {
+    assert( i < data_to_write->size() );
 
-    if ( data_pos < byte_count )
-      b2 = (*data_to_write)[ data_pos++ ];
+    const uint8_t current_byte = (*data_to_write)[ i ];
+    bool is_end_of_32_bit_word = false;
 
-    if ( data_pos < byte_count )
-      b3 = (*data_to_write)[ data_pos++ ];
+    switch ( byte_pos )
+    {
+    case 0: b1 = current_byte; break;
+    case 1: b2 = current_byte; break;
+    case 2: b3 = current_byte; break;
+    case 3: b4 = current_byte;
+                 is_end_of_32_bit_word = true;
+                 break;
+    default:
+      assert( false );
+    }
 
-    assert( data_pos == byte_count );
+    ++i;
+    const bool should_exit_loop = ( i == byte_count );
 
-    const uint32_t new_val = assemble_bytes( b1, b2, b3, b4 );
+    if ( is_end_of_32_bit_word || should_exit_loop )
+    {
+      assert( addr % 4 == 0 );
 
-    if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_ADDR, addr ) )
-      return true;
+      if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_ADDR, addr ) )
+        return true;
 
-    if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_DATA, new_val ) )
-      return true;
+      const uint32_t new_val = assemble_bytes( b1, b2, b3, b4 );
+
+      if ( dbg_cpu0_write_spr( OR1200_DU_WRITE_MEM_DATA, new_val ) )
+        return true;
+    }
+
+    if ( should_exit_loop )
+      break;
+
+
+    if ( is_end_of_32_bit_word )
+    {
+      byte_pos = 0;
+      addr += 4;
+    }
+    else
+    {
+      byte_pos++;
+    }
+
+
+    // If less than 4 bytes are left, then not all of the 4 bytes in the next
+    // 32-bit word will be overwritten. Therefore, we must load the existing 32-bit word
+    // beforehand, in order to keep those values when we write the complete word at the end.
+
+    const unsigned byte_count_left = byte_count - i;
+
+    if ( is_end_of_32_bit_word && byte_count_left < 4 )
+    {
+      // printf( "Unaligned at end by %d bytes.\n", byte_count_left );
+      uint32_t mem_val_3;
+
+      assert( addr % 4 == 0 );
+
+      const bool error_bit_3 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_3 );
+      if ( error_bit_3 )
+      {
+        // printf("Error bit set at mem addr: 0x%08X\n", addr );
+        return true;
+      }
+      // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_3 );
+      break_up_into_bytes( mem_val_3, &b1, &b2, &b3, &b4 );
+    }
   }
 
   return false;
