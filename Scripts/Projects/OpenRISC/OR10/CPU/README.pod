@@ -116,7 +116,8 @@ OR1200_IMPL_CY and OR1200_IMPL_OV in the OR1200 CPU for an example on how this c
 
 =head2 Debug Unit and JTAG interface
 
-The Debug Unit supports asynchronous stalling, single-stepping, software breakpoints and accessing Wishbone memory.
+The Debug Unit supports asynchronous stalling, single-stepping, software/hardware breakpoints and accessing Wishbone memory,
+but watchpoints and conditional breakpoints are not implemented.
 It has been tested on an FPGA and with a Verilator simulation too (with the JTAG DPI module emulating a JTAG cable).
 
 OR10's Debug Unit bus and protocol are not compatible with the original OR1200 implementation,
@@ -153,12 +154,6 @@ Therefore, if you do not disconnect from the debugged system gracefully (for exa
 then the CPU will hang forever at the next breakpoint.
 
 Note that this is probably true for most other JTAG implementations too.
-
-=item * The Debug Unit does not support hardware breakpoints yet.
-
-This means that program memory must be writeable,
-as the debugger writes I<< l.trap >> instructions in order to trigger breakpoins. Therefore, it is not possible
-to set breakpoints in ROM or Flash memory.
 
 =item * Wishbone memory accesses are always 32-bit wide.
 

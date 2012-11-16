@@ -4155,44 +4155,35 @@ module or10_top
       integer watchpoint_index;
 
       begin
-         if ( synchronised_dbg_stb_i || dbg_is_stalled_o || stop_at_next_instruction_2 )
+         if ( synchronised_dbg_stb_i )
            begin
-              if ( synchronised_dbg_stb_i )
-                begin
-                   start_debug_interface_operation;
-                   is_debug_unit_active = 1;
-                end
-              else if ( dbg_is_stalled_o )
-                begin
-                   // We never hit this code path with JTAG, as the stall register is set
-                   // over the Debug Interface, which goes to STATE_STALL directly afterwards
-                   // without coming back to STATE_WAITING_FOR_INSTRUCTION_FETCH.
-                   // However, the software might write to the stall register too, which
-                   // would then make the CPU land here. Whether the software should be allowed
-                   // so stall the CPU in this way is another interesting question. After all,
-                   // there is already the "l.trap" way.
-                   current_state <= STATE_DEBUG_STALLED;
-                   is_debug_unit_active = 1;
-                end
-              else if ( stop_at_next_instruction_2 )
-                begin
-                   if ( TRACE_ASM_EXECUTION )
-                     $display( "0x%08h: The CPU has been stalled by the single-step mode after executing one instruction.", `OR10_TRACE_PC_VAL );
-
-                   dbg_is_stalled_o <= 1;
-                   stop_at_next_instruction_2 <= 0;  // The next time around we should execute one instruction more
-                                                          // (assuming the CPU is still in single-step mode).
-                   current_state <= STATE_DEBUG_STALLED;
-                   is_debug_unit_active = 1;
-                end
-              else
-                begin
-                   `ASSERT_FALSE;
-                end
+              start_debug_interface_operation;
+              stop_at_next_instruction_2 <= 0;
+              is_debug_unit_active = 1;
+           end
+         else if ( dbg_is_stalled_o )
+           begin
+              // We never hit this code path with JTAG, as the stall register is set
+              // over the Debug Interface, which goes to STATE_STALL directly afterwards
+              // without coming back to STATE_WAITING_FOR_INSTRUCTION_FETCH.
+              // However, the software might write to the stall register too, which
+              // would then make the CPU land here. Whether the software should be allowed
+              // so stall the CPU in this way is another interesting question. After all,
+              // there is already the "l.trap" way.
+              current_state <= STATE_DEBUG_STALLED;
+              stop_at_next_instruction_2 <= 0;
+              is_debug_unit_active = 1;
            end
          else
            begin
-              if ( ENABLE_WATCHPOINTS )
+              // According to the OpenRISC specification, hardware breakpoints are only enabled if
+              // bit WGB in DMR2 is set. However, it is a waste of FPGA resources to implement DMR2
+              // just for that reason, so we are reusing bit `OR1200_DU_DSR_TE here.
+              //
+              // Don't check hardware breakpoints if we are single-stepping. That allows the user
+              // to single-step out of a hardware breakpoint that has just been hit.
+
+              if ( ENABLE_WATCHPOINTS && is_trap_debug_unit_enabled && !stop_at_next_instruction_1 )
                 for ( watchpoint_index = 0; watchpoint_index < WATCHPOINT_COUNT; watchpoint_index = watchpoint_index + 1 )
                   begin
                      if ( addr_32_to_pc( watchpoints[ watchpoint_index ] ) == cpureg_pc )
@@ -4200,11 +4191,10 @@ module or10_top
                           if ( TRACE_ASM_EXECUTION )
                             $display( "0x%08h: The CPU has been stalled by watchpoint %0d.", `OR10_TRACE_PC_VAL, watchpoint_index );
 
-                          // TODO: Write reason here, or maybe no reason at all!
-                          // TODO: Only stop if bit WGB in DMR2 is set. But just for that reason a new register is probably a waste of time,
-                          //       so maybe reuse bit: is_trap_debug_unit_enabled <= val[ `OR1200_DU_DSR_TE ];
+                          is_stop_reason_trap <= 1;
                           dbg_is_stalled_o <= 1;
                           current_state <= STATE_DEBUG_STALLED;
+                          stop_at_next_instruction_2 <= 0;
                           is_debug_unit_active = 1;
                        end
                   end
@@ -4256,7 +4246,20 @@ module or10_top
 
          if ( ENABLE_DEBUG_UNIT && ( wb_ack_i || wb_err_i || wb_rty_i ) )
            begin
-              check_debug_unit_operation_start( is_debug_unit_active );
+              if ( stop_at_next_instruction_2 )
+                begin
+                   if ( TRACE_ASM_EXECUTION )
+                     $display( "0x%08h: The CPU has been stalled by the single-step mode after executing one instruction.", `OR10_TRACE_PC_VAL );
+
+                   dbg_is_stalled_o <= 1;
+                   stop_at_next_instruction_2 <= 0;
+                   current_state <= STATE_DEBUG_STALLED;
+                   is_debug_unit_active = 1;
+                end
+              else
+                begin
+                   check_debug_unit_operation_start( is_debug_unit_active );
+                end
            end
 
          if ( !is_debug_unit_active )
