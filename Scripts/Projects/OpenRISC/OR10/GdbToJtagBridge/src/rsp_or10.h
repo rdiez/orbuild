@@ -2,6 +2,13 @@
 #ifndef RSP_OR10_H_INCLUDED
 #define RSP_OR10_H_INCLUDED
 
+#include <stdint.h>
+
+
+#define MAX_WATCHPOINT_COUNT 8
+#define WATCHPOINT_ADDR_DISABLED 0  // This means you cannot set a hardware breakpoint at address 0.
+
+
 enum cpu_poll_speed_enum
 {
   CPS_SLOW = 1,
@@ -16,6 +23,11 @@ struct rsp_struct
                        // once a client connection is accepted, and re-open when the client connection is closed or lost.
   int   client_fd;     // Socket file handle for talking to GDB (connection to the client).
   bool  is_first_packet;
+
+  uint32_t spr_upr;  // Unit presence register.
+  uint32_t spr_vr;   // Version register.
+  unsigned watchpoint_count;
+  uint32_t watchpoint_addr[ MAX_WATCHPOINT_COUNT ];
 
   // Whether the GDB client issued a run command, the target CPU is running,
   // and GDB is waiting for a response packet that indicates the CPU stalled at a breakpoint or similar.

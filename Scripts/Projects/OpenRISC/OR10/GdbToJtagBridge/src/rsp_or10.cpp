@@ -127,6 +127,12 @@ static void collect_cpu_stop_reason ( const bool stopped_via_edis )
   }
 
   rsp.sigval = sigval;
+
+  for ( unsigned i = 0; i < rsp.watchpoint_count; ++i )
+  {
+    dbg_cpu0_read_spr_e( SPR_DVR(i), &rsp.watchpoint_addr[ i ] );
+    // printf( "Watchpoint addr: 0x%08X\n", rsp.watchpoint_addr[ i ] );
+  }
 }
 
 
@@ -151,6 +157,19 @@ void attach_to_cpu ( void )
   // Stall the CPU before doing anything else. Otherwise, there would be a window of opportunity
   // for the software to modify the same SPR registers being accessed here.
   stall_cpu();
+
+  uint32_t val;
+  dbg_cpu0_read_spr_e( OR1200_DU_WATCHPOINT_COUNT, &val );
+  rsp.watchpoint_count = val;
+
+  dbg_cpu0_read_spr_e( SPR_VR , &rsp.spr_vr  );
+  dbg_cpu0_read_spr_e( SPR_UPR, &rsp.spr_upr );
+
+  for ( unsigned i = 0; i < MAX_WATCHPOINT_COUNT; ++i )
+    rsp.watchpoint_addr[ i ] = 0;
+
+  printf( "Attached to CPU, SPR VR (version): 0x%08X, SPR UPR (unit presence): 0x%08X\n",
+          rsp.spr_vr, rsp.spr_upr );
 
   // Set up the CPU to break to the Debug Unit on exceptions.
   // Note that the current OR10 implementation only supports breaking on the l.trap instruction (TRAP exception).
@@ -179,6 +198,9 @@ void detach_from_cpu ( void )
 
   // Clear the DSR: Don't transfer control to the Debug Unit for any reason.
   dbg_cpu0_write_spr_e( SPR_DSR, 0 );
+
+  // We could clear the hardware watchpoints here too, if GDB hasn't done that already.
+  // Note that the hardware breakpoints will not trigger anyway, as DSR has been cleared.
 
   set_single_step_mode( false );
 
@@ -471,77 +493,267 @@ static void rsp_write_reg ( const rsp_buf * const buf )
 }
 
 
+static void rsp_watchpoint ( const rsp_buf * const buf )
+{
+  const char REMOVE_WATCHPOINT = 'z';
+  const char INSERT_WATCHPOINT = 'Z';
+  const char cmd_type = buf->data[0];
+
+  assert( cmd_type == INSERT_WATCHPOINT ||
+          cmd_type == REMOVE_WATCHPOINT );
+
+  // We don't support software breakpoints. GDB will read and write memory itself
+  // in order to place the "l.trap" instruction at the software breakpoint positions.
+
+  const char BREAKPOINT_TYPE_HARDWARE = '1';
+  const char watchpoint_type = buf->data[1];
+
+  if ( watchpoint_type != BREAKPOINT_TYPE_HARDWARE )
+  {
+    send_unknown_command_reply( rsp.client_fd );
+    return;
+  }
+
+  unsigned int  addr;
+  unsigned      kind;
+
+  // Break out the fields from the data.
+  // We could check that no other data comes at the end of this command.
+  if ( 2 != sscanf( &buf->data[2], ",%x,%u", &addr, &kind ) )
+  {
+    throw std::runtime_error( "Invalid watchpoint command." );
+  }
+
+  // I don't know what GDB means with a watchpoint kind of 4. This is probably the WP_ACCESS constant.
+  // As far as I know, GDB cannot set any other watchpoint kind.
+  assert( kind == 4 );
+
+  // This is an excerpt of GDB's documentation:
+  // "To avoid potential problems with duplicate packets, the operations should be implemented in an idempotent way."
+
+  if ( cmd_type == REMOVE_WATCHPOINT )
+  {
+    // printf( "Remove hardware breakpoint at addr 0x%08X, kind %u.\n", addr, kind );
+
+    for ( unsigned i = 0; i < rsp.watchpoint_count; ++i )
+    {
+      if ( rsp.watchpoint_addr[i] == addr )
+      {
+        dbg_cpu0_write_spr_e( SPR_DVR(i), WATCHPOINT_ADDR_DISABLED );
+
+        rsp.watchpoint_addr[i] = WATCHPOINT_ADDR_DISABLED;
+
+        // See comment above about being idempotent.
+        send_ok_packet( rsp.client_fd );
+        return;
+      }
+    }
+
+    // This actually means "the hardware breakpoint was not found".
+    put_str_packet( rsp.client_fd, STD_ERROR_CODE );
+  }
+  else
+  {
+    assert( cmd_type == INSERT_WATCHPOINT );
+    // printf( "Insert hardware breakpoint at addr 0x%08X, kind %u.\n", addr, kind );
+
+    for ( unsigned i = 0; i < rsp.watchpoint_count; ++i )
+    {
+      if ( rsp.watchpoint_addr[i] == addr )
+      {
+        // See comment above about being idempotent.
+        send_ok_packet( rsp.client_fd );
+        return;
+      }
+
+      if ( rsp.watchpoint_addr[i] == WATCHPOINT_ADDR_DISABLED )
+      {
+        dbg_cpu0_write_spr_e( SPR_DVR(i), addr );
+
+        rsp.watchpoint_addr[i] = addr;
+        send_ok_packet( rsp.client_fd );
+        return;
+      }
+    }
+
+    // This actually means "no available hardware breakpoints".
+    put_str_packet( rsp.client_fd, STD_ERROR_CODE );
+  }
+}
+
+
 // Handle an RSP qRcmd request, which provides pass-through access to the target system.
 // The user can trigger qRcmd requests with GDB's "monitor" command.
 // The qRcmd commands are target specific, but targets should implement at least a "help" command.
 
-  static const std::string READSPR_PREFIX ( "readspr " );
-  static const std::string WRITESPR_PREFIX( "writespr " );
+static void remove_cmd_separator ( std::string * const str )
+{
+  if ( str->empty() )
+    return;
+
+  const unsigned prev_len = str->size();
+
+  ltrim( str );
+
+  if ( prev_len == str->size() )
+      throw std::runtime_error( "Unknown target-specific command." );
+}
+
+static void send_pass_through_command_text_reply ( const int fd, const char * const text )
+{
+  const std::string text_hex = ascii2hex( text );
+  put_str_packet( fd, &text_hex );
+}
+
 
 static void rsp_pass_through_command ( const rsp_buf * const buf, const int cmd_str_pos )
 {
-  // The actual command follows the "qRcmd," RSP request in ASCII encoded ib hex.
+  static const std::string HELP_PREFIX( "help" );
+  static const std::string READSPR_PREFIX ( "readspr" );
+  static const std::string WRITESPR_PREFIX( "writespr" );
+  static const std::string RESET_PREFIX( "reset" );
 
-  std::string cmd = hex2ascii( &(buf->data[ cmd_str_pos ]) );
-
-  // printf( "Monitor cmd: %s\n", cmd.c_str() );
-
-  if ( cmd == "help" )
+  try
   {
-    std::string help_text = "Available target-specific commands:\n";
-    help_text += "- help\n";
-    help_text += "- readspr <register number in hex>\n";
-    help_text += "  The register value is printed in hex.\n";
-    help_text += "- writespr <register number in hex> <register value in hex>\n";
+    // The actual command follows the "qRcmd," RSP request in ASCII encoded in hex.
 
-    const std::string help_text_hex = ascii2hex( help_text.c_str() );
+    std::string cmd = hex2ascii( &(buf->data[ cmd_str_pos ]) );
+    ltrim( &cmd );
+    rtrim( &cmd );
 
-    put_str_packet( rsp.client_fd, &help_text_hex );
-  }
-  else if ( str_remove_prefix( &cmd, &READSPR_PREFIX ) )
-  {
-    unsigned int regno;
+    if ( cmd.empty() )
+      throw std::runtime_error( "No target-specific command specified." );
 
-    // Parse and return error if we fail.
-    if ( 1 != sscanf( cmd.c_str(), "%x", &regno ) )
+    // printf( "Monitor cmd: %s\n", cmd.c_str() );
+
+    if ( str_remove_prefix( &cmd, &HELP_PREFIX ) )
     {
-      throw std::runtime_error( "Error parsing the target-specific 'readspr' command." );
-    }
+      remove_cmd_separator( &cmd );
 
-    if ( regno >= MAX_SPRS )
+      if ( ! cmd.empty() )
+      {
+        throw std::runtime_error( "Error parsing the target-specific 'help' command: this command does not take any arguments." );
+      }
+
+      std::string help_text = "\nAvailable target-specific commands:\n\n";
+      help_text += "- monitor help\n";
+      help_text += "  Displays this help text.\n";
+      help_text += "\n";
+      help_text += "- monitor readspr <16-bit Special Purpose Register number in hex>\n";
+      help_text += "  The register value is printed in hex.\n";
+      help_text += "  This example reads the Debug Stop Register (DSR), whose number is\n";
+      help_text += "  (6 << 11) [0x3000] + 20 = 0x3014:\n";
+      help_text += "    monitor readspr 3014\n";
+      help_text += "\n";
+      help_text += "- monitor writespr <register number in hex> <register value in hex>\n";
+      help_text += "\n";
+      help_text += "- monitor reset\n";
+      help_text += "  Resets the CPU.\n";
+      help_text += "\n";
+
+      send_pass_through_command_text_reply( rsp.client_fd, help_text.c_str() );
+    }
+    else if ( str_remove_prefix( &cmd, &READSPR_PREFIX ) )
     {
-      throw std::runtime_error( format_msg( "Error parsing the target-specific 'readspr' command: SPR number %u is out of range.", regno ) );
+      remove_cmd_separator( &cmd );
+      unsigned int regno;
+
+      // Parse and return error if we fail.
+      if ( 1 != sscanf( cmd.c_str(), "%x", &regno ) )
+      {
+        throw std::runtime_error( "Error parsing the target-specific 'readspr' command." );
+      }
+
+      if ( regno >= MAX_SPRS )
+      {
+        throw std::runtime_error( format_msg( "Error parsing the target-specific 'readspr' command: SPR number %u is out of range.", regno ) );
+      }
+
+      uint32_t reg_val;
+      dbg_cpu0_read_spr_e( uint16_t( regno ), &reg_val );
+
+      const std::string reply_str = format_msg( "%08x\n", reg_val );
+
+      send_pass_through_command_text_reply( rsp.client_fd, reply_str.c_str() );
     }
-
-    uint32_t reg_val;
-    dbg_cpu0_read_spr_e( uint16_t( regno ), &reg_val );
-
-    const std::string reply_str     = format_msg( "%08x\n", reg_val );
-    const std::string reply_str_hex = ascii2hex( reply_str.c_str() );
-
-    put_str_packet( rsp.client_fd, &reply_str_hex );
-  }
-  else if ( str_remove_prefix( &cmd, &WRITESPR_PREFIX ) )
-  {
-    unsigned int       regno;
-    unsigned long int  val;
-
-    if ( 2 != sscanf( cmd.c_str(), "%x %lx", &regno, &val ) )
+    else if ( str_remove_prefix( &cmd, &WRITESPR_PREFIX ) )
     {
-      throw std::runtime_error( "Error parsing the target-specific 'writespr' command." );
-    }
+      remove_cmd_separator( &cmd );
+      unsigned int       regno;
+      unsigned long int  val;
 
-    if ( regno >= MAX_SPRS )
+      if ( 2 != sscanf( cmd.c_str(), "%x %lx", &regno, &val ) )
+      {
+        throw std::runtime_error( "Error parsing the target-specific 'writespr' command." );
+      }
+
+      if ( regno >= MAX_SPRS )
+      {
+        throw std::runtime_error( format_msg( "Error parsing the target-specific 'writespr' command: SPR number %u is out of range.", regno ) );
+      }
+
+      dbg_cpu0_write_spr_e( uint16_t( regno ), val );
+
+      send_ok_packet( rsp.client_fd );
+    }
+    else if ( str_remove_prefix( &cmd, &RESET_PREFIX ) )
     {
-      throw std::runtime_error( format_msg( "Error parsing the target-specific 'writespr' command: SPR number %u is out of range.", regno ) );
+      remove_cmd_separator( &cmd );
+
+      if ( ! cmd.empty() )
+      {
+        throw std::runtime_error( "Error parsing the target-specific 'reset' command: this command does not take any arguments." );
+      }
+
+      // In order to save FPGA resources, there is no reset signal or command in the Debug Unit.
+      // We reset the CPU here by manually writing all necessary SPRs.
+
+      const uint32_t RESET_SPR_SR = 0x8001;  // See the RESET_SPR_SR constant in the CPU Verilog source code.
+      const uint32_t RESET_VECTOR = 0x0100;  // See the RESET_VECTOR constant in the CPU Verilog source code.
+
+      dbg_cpu0_write_spr_e( SPR_SR , RESET_SPR_SR );
+      dbg_cpu0_write_spr_e( SPR_NPC, RESET_VECTOR );
+
+      dbg_cpu0_write_spr_e( SPR_EPCR_BASE, 0 );
+      dbg_cpu0_write_spr_e( SPR_EEAR_BASE, 0 );
+      dbg_cpu0_write_spr_e( SPR_ESR_BASE, 0 );
+
+      // The CPU uses another initial value for the GPRs, namely 0x12345678, which is fine.
+      // According to the OpenRISC specification, it is not necessary to initialise these registers.
+      const uint32_t INITIAL_GPR_VALUE = 0xABCDEF01;
+
+      for ( int i = 0; i < MAX_GPRS; ++i )
+      {
+        dbg_cpu0_write_spr_e( SPR_GPR_BASE + i, INITIAL_GPR_VALUE );
+      }
+
+      std::string msg( "The basic CPU core was reset.\n" );
+
+      if ( rsp.spr_upr & SPR_UPR_PICP )
+      {
+        dbg_cpu0_write_spr_e( SPR_PICMR, 0 );
+        msg += "The CPU PIC unit (Programmable Interrupt Controller) was reset.\n";
+      }
+
+      if ( rsp.spr_upr & SPR_UPR_TTP )
+      {
+        dbg_cpu0_write_spr_e( SPR_TTMR, 0 );
+        dbg_cpu0_write_spr_e( SPR_TTCR, 0 );
+        msg += "The CPU Tick Timer unit was reset.\n";
+      }
+
+      send_pass_through_command_text_reply( rsp.client_fd, msg.c_str() );
     }
-
-    dbg_cpu0_write_spr_e( uint16_t( regno ), val );
-
-    send_ok_packet( rsp.client_fd );
-  }
-  else
+    else
       throw std::runtime_error( "Unknown target-specific command." );
+  }
+  catch ( const std::exception & e )
+  {
+    std::string err_msg( e.what() );
+    err_msg += "\n";
+
+    send_pass_through_command_text_reply( rsp.client_fd, err_msg.c_str() );
+  }
 }
 
 
@@ -810,8 +1022,11 @@ void process_client_command ( const rsp_buf * const buf )
 
   // ----- These are all packets that we have decided not to support -----
 
-  case 'Z':  // We don't support breakpoints yet. GDB will read and write memory itself
-             // in order to place the "l.trap" instruction at the breakpoint positions.
+  case 'z':
+  case 'Z':
+    rsp_watchpoint( buf );
+    break;
+
   case 'D':  // Detach GDB. I'm not sure what to do in this case. If you type "detach" in the current
              // GDB version it does not close the connection and it triggers error message
              // "A problem internal to GDB has been detected".
