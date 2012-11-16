@@ -42,6 +42,7 @@ struct rsp_buf
   int   len;
 };
 
+extern bool enable_rsp_trace;
 
 bool get_packet ( int fd, bool is_first_packet, rsp_buf * buf );
 void put_packet ( int fd, const rsp_buf * buf );

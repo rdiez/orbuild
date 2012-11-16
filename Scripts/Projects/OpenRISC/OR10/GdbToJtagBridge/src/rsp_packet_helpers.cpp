@@ -35,8 +35,7 @@
 #include "linux_utils.h"
 
 
-static const bool RSP_TRACE_RAW_DATA = 1;
-
+bool enable_rsp_trace = false;
 
 // POSSIBLE OPTIMISATION: Send the data in chunks instead of byte by byte.
 
@@ -192,7 +191,7 @@ bool get_packet ( const int fd, const bool is_first_packet, rsp_buf * const buf 
 {
   const bool res = get_packet_2( fd, is_first_packet, buf );
 
-  if ( res && RSP_TRACE_RAW_DATA )
+  if ( enable_rsp_trace && res )
   {
     printf( "GDB RSP packet received: %s\n", format_packet_for_tracing_purposes( buf ).c_str() );
   }
@@ -220,7 +219,7 @@ static void set_tcp_cork ( const int fd, const bool enable )
 
 void put_packet ( const int fd, const rsp_buf * const buf )
 {
-  if ( RSP_TRACE_RAW_DATA )
+  if ( enable_rsp_trace )
   {
     printf( "GDB RSP packet sent    : %s\n", format_packet_for_tracing_purposes( buf ).c_str() );
   }
