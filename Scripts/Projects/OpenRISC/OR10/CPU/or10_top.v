@@ -44,7 +44,11 @@ module or10_top
    #(
      parameter RESET_VECTOR = `OR10_ADDR_WIDTH'h00000100,  // 0x100 is the standard OpenRISC boot address, it must be 32-bit aligned.
 
-     parameter ENABLE_DEBUG_UNIT      = 1,  // See also WATCHPOINT_COUNT below.
+     parameter ENABLE_DEBUG_UNIT      = 1,
+     parameter ENABLE_WATCHPOINTS     = ENABLE_DEBUG_UNIT,  // From the whole watchpoint functionality, only hardware breakpoints are implemented.
+     parameter WATCHPOINT_COUNT       = 2,  // The maximum is 8. The higher the count, the more FPGA resources are consumed.
+                                            // If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
+
      parameter ENABLE_TICK_TIMER_UNIT = 1,
      parameter ENABLE_PIC_UNIT        = 1,
 
@@ -65,10 +69,6 @@ module or10_top
                                              // see the readme file for details.
 
      parameter ENABLE_INSTRUCTION_EXT  = 1,  // See GCC's switch '-mno-sext'
-
-     parameter ENABLE_WATCHPOINTS = 0,  // TODO: Should be = ENABLE_DEBUG_UNIT. Experimental status, don't turn on yet!
-     parameter WATCHPOINT_COUNT   = 1,  // The maximum is 8. The higher the count, the more FPGA resources are consumed.
-                                        // If > 0, remember to set ENABLE_WATCHPOINTS and ENABLE_DEBUG_UNIT too.
 
      parameter TRACE_ASM_EXECUTION = 0,
      parameter TRACE_EXCEPTIONS    = TRACE_ASM_EXECUTION,
@@ -276,7 +276,9 @@ module or10_top
    localparam WOPW_16_Z  = 3;
    localparam WOPW_16_S  = 4;
 
-   localparam RESET_SPR_SR = `OR10_OPERAND_WIDTH'b0000000000000000_1000000000000001;  // Only bits FO (Fixed One, a constant '1') and SM (Supervisor Mode) are set.
+   // If you modify this value, make sure to update the CPU reset logic in GdbToJtagBridge too.
+   // Only bits FO (Fixed One, a constant '1') and SM (Supervisor Mode) are set.
+   localparam RESET_SPR_SR = `OR10_OPERAND_WIDTH'b0000000000000000_1000000000000001;
 
 
    // Clock domain crossing synchroniser for the Debug Interface.
@@ -2607,7 +2609,7 @@ module or10_top
 
            default:
              if ( ENABLE_WATCHPOINTS &&
-                  // effective_spr_number >= `OR1200_DU_DVR0 &&  Prevent warning "Comparison is constant due to unsigned arithmetic"
+                  // effective_spr_number >= `OR1200_DU_DVR0 &&  --> Commented out to prevent warning "Comparison is constant due to unsigned arithmetic"
                   effective_spr_number < `OR1200_DU_DVR0 + WATCHPOINT_COUNT )
                begin
                   watchpoint_index = `OR1200_DU_DVR0 + effective_spr_number;
@@ -2943,9 +2945,15 @@ module or10_top
                 val[ `OR1200_DU_DMR1_ST ] = stop_at_next_instruction_1;
              end
 
+           `OR1200_DU_WATCHPOINT_COUNT:
+             if ( ENABLE_WATCHPOINTS )
+               val = WATCHPOINT_COUNT;
+             else
+               val = 0;
+
            default:
              if ( ENABLE_WATCHPOINTS &&
-                  // effective_spr_number >= `OR1200_DU_DVR0 &&  Prevent warning "Comparison is constant due to unsigned arithmetic"
+                  // effective_spr_number >= `OR1200_DU_DVR0 &&  --> Commented out to prevent warning "Comparison is constant due to unsigned arithmetic"
                   effective_spr_number < `OR1200_DU_DVR0 + WATCHPOINT_COUNT )
                begin
                   watchpoint_index = `OR1200_DU_DVR0 + effective_spr_number;
@@ -2988,7 +2996,7 @@ module or10_top
                                     read_spr_tt( effective_spr_number, val, should_raise_range_exception );
                                   else
                                     is_invalid_spr_group = 1;
-           `OR1200_SPR_GROUP_DU:  read_spr_du ( effective_spr_number, val, should_raise_range_exception );
+           `OR1200_SPR_GROUP_DU:  read_spr_du( effective_spr_number, val, should_raise_range_exception );
 
            default:
              is_invalid_spr_group = 1;
@@ -3914,10 +3922,13 @@ module or10_top
          // transaction immediately upon receiving a reset indication, we have to wait for the next clock cycle
          // where reset is not asserted any more.
          //
-         // In order to help the FPGA optimiser optimise as much reset logic as possible away,
+         // In order to help the FPGA synthesiser optimise as much reset logic as possible away,
          // we could move most of the initialisation statements below to an 'initial' section.
          // If the reset signal is actually used, we would need to initialise the same values
          // again in a separate "if ( wb_rst_i )" statement.
+         //
+         // If you modify this code, keep in mind that the GdbToJtagBridge tool manually resets the CPU
+         // by writing to SPRs, so that tool may need to be modified too.
 
          cpureg_spr_sr   <= RESET_SPR_SR;
 
@@ -4139,8 +4150,9 @@ module or10_top
 
    task automatic check_debug_unit_operation_start;
 
-      inout is_debug_unit_active;
-      integer             watchpoint_index;
+      inout   is_debug_unit_active;
+
+      integer watchpoint_index;
 
       begin
          if ( synchronised_dbg_stb_i || dbg_is_stalled_o || stop_at_next_instruction_2 )

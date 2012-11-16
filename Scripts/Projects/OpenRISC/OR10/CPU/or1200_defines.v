@@ -59,12 +59,14 @@
 `define OR1200_DU_DRR       11'd21  // Debug Reason Register.
 // These registers are new for the OR10 CPU, they are not part of the original OpenRISC specification.
 `define OR1200_DU_EDIS      11'd200  // External Debug Interface Stall, makes the CPU stop at the next instruction.
-`define OR1200_DU_READ_MEM_ADDR  11'd201  // Memory address for Debug Interface memory read access. Writing to this SPR
-                                          // gives back the memory address contents. Note that this is a combined write/read operation
-                                          // on the Debug Interface.
-`define OR1200_DU_WRITE_MEM_ADDR 11'd202  // Memory address for Debug Interface memory write access.
-`define OR1200_DU_WRITE_MEM_DATA 11'd203  // Memory data for Debug Interface memory write access. Writing to the SPR
-                                          // triggers the actual memory write.
+`define OR1200_DU_READ_MEM_ADDR    11'd201  // Memory address for Debug Interface memory read access. Writing to this SPR
+                                            // gives back the memory address contents. Note that this is a combined write/read operation
+                                            // on the Debug Interface.
+`define OR1200_DU_WRITE_MEM_ADDR   11'd202  // Memory address for Debug Interface memory write access.
+`define OR1200_DU_WRITE_MEM_DATA   11'd203  // Memory data for Debug Interface memory write access. Writing to the SPR
+                                            // triggers the actual memory write.
+`define OR1200_DU_WATCHPOINT_COUNT 11'd204
+
 
 // SPR Group: Programmable Interrupt Controller (PIC)
 `define OR1200_PIC_OFS_PICMR  0
