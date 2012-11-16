@@ -135,6 +135,16 @@ module tap_or10
    localparam DEBUG_CMD_READ_CPU_SPR   = 3'd3;  // Followed by 16-bits with the CPU SPR number. The result is the same as for DEBUG_CMD_WRITE_CPU_SPR.
 
 
+   localparam OPERATION_COMPLETE_FLAG    = 1'b1;
+   localparam OPERATION_IN_PROGRESS_FLAG = 1'b0;
+
+   localparam OPERATION_SUCCEEDED_FLAG   = 1'b0;
+   localparam OPERATION_FAILED_FLAG      = 1'b1;
+
+   localparam DOES_NOT_MATTER_BIT        = 1'b0;  // A value of x would probably allow for better optimisation,
+                                                  // but I am not sure yet whether that would be OK. Filling with zeros help debugging.
+
+
    // The longest command has the structure: <command opcode (3 bits)> + <SPR number (16 bits)> + <new SPR value (32 bits)>
    localparam SHIFT_REG_LEN = DEBUG_CMD_LEN + SPR_NUMBER_WIDTH + `OR10_OPERAND_WIDTH;
    `define TAP_OR10_CMD_OPCODE  50:48
@@ -200,27 +210,27 @@ module tap_or10
          case ( input_shift_reg[`TAP_OR10_CMD_OPCODE] )
            DEBUG_CMD_NOP:
              begin
-                output_shift_reg <= {OUTPUT_REG_LEN{1'bx}};
+                output_shift_reg <= {OUTPUT_REG_LEN{DOES_NOT_MATTER_BIT}};
                 next_cpu_state = CPU_STATE_IDLE;
              end
 
            DEBUG_CMD_IS_CPU_STALLED:
              begin
                 // The result is available immediately and consists of just 1 bit of data.
-                output_shift_reg <= { {OUTPUT_REG_LEN-1{1'bx}}, synchronised_cpu_is_stalled_i };
+                output_shift_reg <= { {OUTPUT_REG_LEN-1{DOES_NOT_MATTER_BIT}}, synchronised_cpu_is_stalled_i };
                 next_cpu_state = CPU_STATE_IDLE;
              end
 
            DEBUG_CMD_READ_CPU_SPR, DEBUG_CMD_WRITE_CPU_SPR:
              begin
-                output_shift_reg <= 0;  // A value of '0' indicates that the debug operation is still in progress.
+                output_shift_reg <= { {OUTPUT_REG_LEN-1{DOES_NOT_MATTER_BIT}}, OPERATION_IN_PROGRESS_FLAG };
                 next_cpu_state = CPU_STATE_WAITING_FOR_CPU_IDLE;
              end
 
            default:
              begin
                 `ASSERT_FALSE;
-                output_shift_reg <= {OUTPUT_REG_LEN{1'bx}};
+                output_shift_reg <= {OUTPUT_REG_LEN{DOES_NOT_MATTER_BIT}};
                 // If the JTAG user writes an invalid command, just ignore it and go to
                 // the idle state, so that writing further commands will work later on.
                 next_cpu_state = CPU_STATE_IDLE;
@@ -253,7 +263,7 @@ module tap_or10
 
          // ------ Shift one bit out ------
          // Always shift, although for most commandos there is no need to shift anything.
-         output_shift_reg <= { 1'b0, output_shift_reg[OUTPUT_REG_LEN-1:1] };
+         output_shift_reg <= { DOES_NOT_MATTER_BIT, output_shift_reg[OUTPUT_REG_LEN-1:1] };
       end
    endtask
 
@@ -275,6 +285,8 @@ module tap_or10
 
            CPU_STATE_WAITING_FOR_CPU_IDLE:
              begin
+                output_shift_reg <= { {OUTPUT_REG_LEN-1{DOES_NOT_MATTER_BIT}}, OPERATION_IN_PROGRESS_FLAG };
+
                 // Do not start the next operation until the CPU has gone back to the idle state.
                 // Otherwise, we may issue the next debug interface transaction
                 // and still be reading the answer from the previous one.
@@ -319,12 +331,15 @@ module tap_or10
 
            CPU_STATE_DATA_WRITTEN:
              begin
+                output_shift_reg <= { {OUTPUT_REG_LEN-1{DOES_NOT_MATTER_BIT}}, OPERATION_IN_PROGRESS_FLAG };
                 cpu_stb_o <= 1;
                 next_cpu_state = CPU_STATE_WAITING_FOR_ACK;
              end
 
            CPU_STATE_WAITING_FOR_ACK:
              begin
+                output_shift_reg <= { {OUTPUT_REG_LEN-1{DOES_NOT_MATTER_BIT}}, OPERATION_IN_PROGRESS_FLAG };
+
                 if ( synchronised_cpu_ack_i )
                   begin
                      if ( cpu_err_i )
@@ -332,7 +347,7 @@ module tap_or10
                           if ( ENABLE_TRACE )
                             $display( "%sThe CPU dbg interface answered with error.", TRACE_PREFIX );
 
-                          output_shift_reg <= { {`OR10_OPERAND_WIDTH{1'bx}}, 1'b1, 1'b1 };
+                          output_shift_reg <= { {`OR10_OPERAND_WIDTH{DOES_NOT_MATTER_BIT}}, OPERATION_FAILED_FLAG, OPERATION_COMPLETE_FLAG };
                        end
                      else
                        begin
@@ -345,7 +360,7 @@ module tap_or10
                                               cpu_data_i );
                                  end
 
-                               output_shift_reg <= { cpu_data_i, 1'b0, 1'b1 };
+                               output_shift_reg <= { cpu_data_i, OPERATION_SUCCEEDED_FLAG, OPERATION_COMPLETE_FLAG };
                             end
                           else if ( next_cmd[`TAP_OR10_CMD_OPCODE] == DEBUG_CMD_WRITE_CPU_SPR )
                             begin
@@ -357,13 +372,13 @@ module tap_or10
                                // When writing to an SPR, the value read back in cpu_data_i does not matter and can be random garbage.
                                // However, when reading from a memory address, we write the address and read the data back
                                // in the same operation. Therefore, we must read and shift out here the data in cpu_data_i.
-                               output_shift_reg <= { cpu_data_i, 1'b0, 1'b1 };
+                               output_shift_reg <= { cpu_data_i, OPERATION_SUCCEEDED_FLAG, OPERATION_COMPLETE_FLAG };
                             end
                           else
                             begin
                                // $display( "Unexpected command code of 0x%1h", next_cmd[`TAP_OR10_CMD_OPCODE] );
                                `ASSERT_FALSE;
-                               output_shift_reg <= {OUTPUT_REG_LEN{1'bx}};
+                               output_shift_reg <= {OUTPUT_REG_LEN{DOES_NOT_MATTER_BIT}};
                             end
                        end
 
