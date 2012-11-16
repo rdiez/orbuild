@@ -38,6 +38,7 @@ void tap_set_ir ( unsigned instruction_opcode );
 void tap_move_from_idle_to_shift_dr ( void );
 void tap_move_from_exit_1_to_idle ( void );
 
+void finish_and_leave_a_dbg_nop_cmd_in_place ( void );
 
 // ----------- Low-level TAP operations -----------
 

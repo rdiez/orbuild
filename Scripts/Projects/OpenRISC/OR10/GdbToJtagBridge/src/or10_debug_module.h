@@ -1,0 +1,16 @@
+
+#ifndef OR10_DEBUG_MODULE_H_INCLUDED
+#define OR10_DEBUG_MODULE_H_INCLUDED
+
+
+#define DEBUG_CMD_LEN 3
+
+#define DEBUG_CMD_NOP            0
+#define DEBUG_CMD_IS_CPU_STALLED 1
+#define DEBUG_CMD_WRITE_CPU_SPR  2
+#define DEBUG_CMD_READ_CPU_SPR   3
+#define DEBUG_CMD_READ_FIXED_TEST_PATTERN 4
+#define DEBUG_CMD_WRITE_TEST_PATTERN 5
+
+
+#endif	// Include this header file only once.

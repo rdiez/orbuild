@@ -31,14 +31,8 @@
 #include "utilities.h"
 #include "string_utils.h"
 #include "spr-defs.h"
+#include "or10_debug_module.h"
 
-
-#define DEBUG_CMD_LEN 3
-
-#define DEBUG_CMD_NOP            0
-#define DEBUG_CMD_IS_CPU_STALLED 1
-#define DEBUG_CMD_WRITE_CPU_SPR  2
-#define DEBUG_CMD_READ_CPU_SPR   3
 
 #define BITS_PER_BYTE  8
 
@@ -108,21 +102,6 @@ static bool wait_for_cpu_ack ( void )
   trace_jtag( "Operation complete, the error bit read was %c.\n", error_bit_read ? '1' : '0' );
 
   return error_bit_read ? true : false;
-}
-
-
-void finish_and_leave_a_dbg_nop_cmd_in_place ( void )
-{
-  // POSSIBLE OPTIMISATION: DEBUG_CMD_NOP is made up of zeros, and we have just shifted a number
-  //                        of them in. We may have shifted enough in, so that there is
-  //                        a DEBUG_CMD_NOP already in place.
-  //                        Alternatively, if we knew what the next debug command is, we could write
-  //                        it here instead of flushing the old data out.
-
-  // Set TMS during the last bit transfer -> goes then to state EXIT1_DR.
-  jtag_shift_by_prefix_bits_with_ending_tms( DEBUG_CMD_LEN );
-
-  tap_move_from_exit_1_to_idle();
 }
 
 

@@ -36,6 +36,8 @@
 #include "errcodes.h"
 #include "string_utils.h"
 #include "linux_utils.h"
+#include "or10_debug_module.h"
+
 
 #define debug(...) //fprintf(stderr, __VA_ARGS__ )
 
@@ -472,6 +474,23 @@ void tap_reset ( void )
 }
 
 
+void finish_and_leave_a_dbg_nop_cmd_in_place ( void )
+{
+  trace_jtag( "Writing a debug nop command. This is part of the debug operation finish sequence.\n" );
+
+  // POSSIBLE OPTIMISATION: DEBUG_CMD_NOP is made up of zeros, and we have just shifted a number
+  //                        of them in. We may have shifted enough in, so that there is
+  //                        a DEBUG_CMD_NOP already in place.
+  //                        Alternatively, if we knew what the next debug command is, we could write
+  //                        it here instead of flushing the old data out.
+
+  // Set TMS during the last bit transfer -> goes then to state EXIT1_DR.
+  jtag_shift_by_prefix_bits_with_ending_tms( DEBUG_CMD_LEN );
+
+  tap_move_from_exit_1_to_idle();
+
+  trace_jtag( "Finished writing a debug nop command.\n" );
+}
 // Write the DEBUG instruction opcode to the IR register, one way or the other.
 
 void set_ir_to_cpu_debug_module ( void )
