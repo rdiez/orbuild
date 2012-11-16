@@ -149,7 +149,7 @@ const char *cable_get_args()
     return NULL;
 }
 
-// Prints a (short) useage message for each available cable.
+// Prints a (short) usage message for each available cable.
 void cable_print_help()
 {
   int i;
