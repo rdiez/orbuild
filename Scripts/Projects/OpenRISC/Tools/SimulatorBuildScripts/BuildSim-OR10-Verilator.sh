@@ -92,8 +92,15 @@ WARN_FLAGS="-Wall -Wwrite-strings"
 # I haven't way any other practical way to prevent some of the C++ compilation warnings that come up in this case.
 WARN_FLAGS+=" -Wno-unused-but-set-variable"
 
-# Debug flags: OPT_FLAGS="-O0 -g -DDEBUG"
-OPT_FLAGS="-O3 -g -flto -DNDEBUG"
+# If you enable optimisation it takes longer to build the simulator,
+# which may impact your productivity during development.
+SHOULD_OPTIMISE=0
+
+if [ "$SHOULD_OPTIMISE" -ne 0 ]; then
+  OPT_FLAGS="-O3 -g -flto -DNDEBUG"
+else
+  OPT_FLAGS="-O0 -g -DDEBUG"
+fi
 
 # Remember that the optimisation flags (-flto -O3) must be passed to the linker too.
 
