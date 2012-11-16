@@ -110,13 +110,14 @@
 #define SPR_DMR2    (SPRGROUP_D + 17)
 #define SPR_DWCR0   (SPRGROUP_D + 18)
 #define SPR_DWCR1   (SPRGROUP_D + 19)
-#define SPR_DSR     (SPRGROUP_D + 20)
-#define SPR_DRR     (SPRGROUP_D + 21)
+#define SPR_DSR     (SPRGROUP_D + 20)  // Debug Stop Register.
+#define SPR_DRR     (SPRGROUP_D + 21)  // Debug Reason Register.
 // These registers are new for the OR10 CPU, they are not part of the original OpenRISC specification.
 #define SPR_DU_EDIS (SPRGROUP_D + 200)  // External Debug Interface Stall
-#define SPR_DU_READ_MEM_ADDR     (SPRGROUP_D + 201)
-#define OR1200_DU_WRITE_MEM_ADDR (SPRGROUP_D + 202)
-#define OR1200_DU_WRITE_MEM_DATA (SPRGROUP_D + 203)
+#define SPR_DU_READ_MEM_ADDR       (SPRGROUP_D + 201)
+#define OR1200_DU_WRITE_MEM_ADDR   (SPRGROUP_D + 202)
+#define OR1200_DU_WRITE_MEM_DATA   (SPRGROUP_D + 203)
+#define OR1200_DU_WATCHPOINT_COUNT (SPRGROUP_D + 204)
 
 
 /* Performance counters group */
