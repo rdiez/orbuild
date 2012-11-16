@@ -23,10 +23,14 @@ SKIP_REPOSITORY_UPDATE := 0
 ONLY_ANONYMOUS_CHECKOUTS := 0
 
 
-# ----------- OpenRISC-specific options -----------
+# ----------- Options specific to this OpenRISC orbuild project -----------
+
+ENABLE_BARE_TOOLCHAIN := 1
 
 ENABLE_PGAVIN := 0  # Build and use Peter Gavin's toolchain, which supports OpenRISC implementations
                     # without the jump delay slot.
+
+ENABLE_PGAVIN_LINUX := 0
 
 ENABLE_LLVM := 0
 ENABLE_LLVM_CHECK := 0
@@ -46,7 +50,8 @@ ENABLE_XILINX := 0  # If enabled, orbuild assumes the Xilinx ISim simulator and 
                     # can find and run settings64.sh itself. For example:
                     #  export ORBUILD_XILINX_HOME=/opt/Xilinx/13.4
 
-# ------ Test Suite options ------
+
+# ------ OpenRISC Test Suite options ------
 
 ENABLE_OPEN_RISC_TEST_SUITE := 0  # Whether to run the Test Suite against the OpenRISC implementations built.
                                   # Please note that all CPU simulators and implementations except for the OR10 CPU
@@ -56,7 +61,7 @@ ENABLE_ORTS_ORPSOC := 0  # Please note that the current OR1200 implementation (a
 ENABLE_ORTS_OR10 := 0
 
 
-# ------ eCos options (eCos is a real-time operating system) ------
+# ------ Options for the eCos OpenRISC port (eCos is a real-time operating system) ------
 
 ENABLE_ECOS := 0
 ENABLE_ECOS_TEST := 0
@@ -66,7 +71,9 @@ ENABLE_ECOS_REDBOOT_TEST_VERILATOR := 0  # Warning: This test never ends (it han
 
 # ------ Other options ------
 
+ENABLE_VERILATOR_LINT := 0
 ENABLE_ORPSOC_RTL_TESTS := 0
+ENABLE_ORPSOC_DOC := 0
 ENABLE_OTHER_TESTS := 0
 
 
@@ -99,16 +106,25 @@ PGAVIN_LINUX_TOOLCHAIN_PREFIX := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/$(PGAVIN_OPENRISC
 
 .PHONY: all all_tests all_pgavin all_llvm
 
+
+ifeq "$(strip $(ENABLE_BARE_TOOLCHAIN))" "1"
+  all: all_bare
+endif
+
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
-all: all_pgavin
+  all: all_pgavin
+endif
+
+ifeq "$(strip $(ENABLE_PGAVIN_LINUX))" "1"
+  all: all_pgavin_linux
 endif
 
 ifeq "$(strip $(ENABLE_LLVM))" "1"
-all: all_llvm
+  all: all_llvm
 endif
 
 ifeq "$(strip $(ENABLE_OTHER_TESTS))" "1"
-all: all_tests
+  all: all_tests
 endif
 
 ifeq "$(strip $(ENABLE_ORTS_OR10))" "1"
@@ -397,7 +413,7 @@ $(eval $(call autotool_project_template,GCC_PHASE_2,GCC Phase 2,$(GCC_SRC_DIR)))
 
 $(GCC_PHASE_2_CONFIGURE_SENTINEL): $(NEWLIB_INSTALL_SENTINEL)
 
-all: $(GCC_PHASE_2_INSTALL_SENTINEL)
+all_bare: $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 
 # ----------- or1ksim -----------
@@ -416,7 +432,7 @@ OR1KSIM_EXTRA_GLOBAL_MAKE_ARGS := --no-builtin-rules
 OR1KSIM_AUTOCONF_PREPEND_PATH := $(BARE_TOOLCHAIN_DIR)/bin
 
 $(eval $(call autotool_project_template,OR1KSIM,or1ksim,$(OR1KSIM_CHECKOUT_DIR)))
-all: $(OR1KSIM_INSTALL_SENTINEL)
+all_bare: $(OR1KSIM_INSTALL_SENTINEL)
 $(OR1KSIM_CONFIGURE_SENTINEL): $(OR1KSIM_CHECKOUT_SENTINEL) $(GCC_PHASE_2_INSTALL_SENTINEL)
 
 # If the normal installation fails, do not attempt to do any checks.
@@ -427,7 +443,7 @@ all_tests: $(OR1KSIM_DISTCHECK_SENTINEL)
 # all_tests: $(OR1KSIM_CHECK_SENTINEL)
 
 
-# ----------- GDB cross-debugger for OpenRISC -----------
+# ----------- Bare metal GDB cross-debugger for OpenRISC -----------
 
 GDB_SRC_DIR := $(GNUSRC_CHECKOUT_DIR)/gdb-7.2
 GDB_BIN_DIR := $(BARE_TOOLCHAIN_DIR)
@@ -441,7 +457,7 @@ GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(OR1KSIM_BIN_DIR)
 $(eval $(call autotool_project_template,GDB,GDB,$(GDB_SRC_DIR)))
 
 $(GDB_CONFIGURE_SENTINEL): $(GCC_PHASE_2_INSTALL_SENTINEL) $(OR1KSIM_INSTALL_SENTINEL)
-all: $(GDB_INSTALL_SENTINEL)
+all_bare: $(GDB_INSTALL_SENTINEL)
 
 
 # ----------- Verilog Tools Path -----------
@@ -467,7 +483,7 @@ endif
 
 ORPSOC_NAME := ORPSOCv2
 
-# ------- Build the support tools, they are needed when running the Test Suite (see further below).
+# ------- Build the support tools, they are needed when running ORPSoC V2's rtl tests.
 
 # Note that this step slightly pollutes the source repository it is run upon.
 $(ORPSOC_NAME)_SW_UTILS_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/sw/utils && make $(FASTER_MAKE) all
@@ -484,7 +500,9 @@ $(value $(ORPSOC_NAME)_SW_UTILS_CMD_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 $(ORPSOC_NAME)_DOCUMENTATION_CMD := cd $(ORPSOCV2_CHECKOUT_DIR)/doc && ./configure && make $(FASTER_MAKE) pdf
 $(ORPSOC_NAME)_DOCUMENTATION_MAKEFLAGS_FILTER := pass-j
 $(eval $(call run_makefile_and_report_template,$(ORPSOC_NAME)_DOCUMENTATION,ORPSoC v2 documentation,$(SHELL) -c "$(value $(ORPSOC_NAME)_DOCUMENTATION_CMD)"))
-all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
+ifeq "$(strip $(ENABLE_ORPSOC_DOC))" "1"
+  all: $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL)
+endif
 $(value $(ORPSOC_NAME)_DOCUMENTATION_SENTINEL): $(ORPSOCV2_CHECKOUT_SENTINEL)
 
 
@@ -512,11 +530,13 @@ $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)       : $(IVERILOG_PREREQ) $(VERILA
 $(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL): $(IVERILOG_PREREQ) $(VERILATOR_PREREQ) $(ORPSOCV2_CHECKOUT_SENTINEL)
 $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)    : $(IVERILOG_PREREQ) $(VERILATOR_PREREQ) $(ORPSOCV2_CHECKOUT_SENTINEL)
 
-all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
-all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
-all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL)
-# TODO: not ready yet, must generate test-defines.v properly:
-#   all: $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)
+ifeq "$(strip $(ENABLE_VERILATOR_LINT))" "1"
+  all: $(value $(ORPSOC_NAME)_LINT_OR1200_SENTINEL)
+  all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_SENTINEL)
+  all: $(value $(ORPSOC_NAME)_LINT_ORPSOC_ALTCFG_SENTINEL)
+  # TODO: not ready yet, must generate test-defines.v properly:
+  #   all: $(value $(ORPSOC_NAME)_LINT_TESTBENCH_SENTINEL)
+endif
 
 LINT_GROUP := $(ORPSOC_NAME)_LINT_OR1200
 LINT_GROUP += $(ORPSOC_NAME)_LINT_ORPSOC
@@ -726,8 +746,8 @@ $(eval $(call autotool_project_template,PGAVIN_BINUTILS_PHASE_2,Peter Gavin's Bi
 $(PGAVIN_BINUTILS_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_GCC_PHASE_1_INSTALL_SENTINEL)
 
 ifeq "$(strip $(ENABLE_PGAVIN))" "1"
-# Disabled at the moment, see commentabove:
-#    all_tests: $(PGAVIN_BINUTILS_PHASE_2_CHECK_SENTINEL)
+  # Disabled at the moment, see comment above:
+  #    all_tests: $(PGAVIN_BINUTILS_PHASE_2_CHECK_SENTINEL)
 endif
 
 
@@ -786,7 +806,6 @@ PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS += --with-system-readline
 
 PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS := $(PGAVIN_LINUX_BINUTILS_EXTRA_CONFIG_ARGS)
 
-# TODO: we are using uclibc, right?
 PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-libgloss
 PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-newlib
 PGAVIN_LINUX_BINUTILS_PHASE_1_EXTRA_CONFIG_ARGS += --disable-sim
@@ -806,7 +825,7 @@ PGAVIN_LINUX_HEADERS_OBJ_DIR := $(ORBUILD_BUILD_DIR)/obj/PGAVIN_LINUX_HEADERS_OB
 PGAVIN_LINUX_HEADERS_INSTALL_DIR := $(PGAVIN_LINUX_TOOLCHAIN_PREFIX)
 
 PGAVIN_LINUX_HEADERS_CMD := if [ -d \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" ]; then echo \"Deleting previous output directory $(PGAVIN_LINUX_HEADERS_OBJ_DIR)...\" && rm -rf \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\"; fi &&
-PGAVIN_LINUX_HEADERS_CMD += mkdir \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" &&
+PGAVIN_LINUX_HEADERS_CMD += mkdir -p \"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" &&
 PGAVIN_LINUX_HEADERS_CMD += echo \"Creating the Linux headers configuration...\" &&
 PGAVIN_LINUX_HEADERS_CMD += make -C \"$(PGAVIN_LINUX_CHECKOUT_DIR)\" O=\"$(PGAVIN_LINUX_HEADERS_OBJ_DIR)\" ARCH=$(PGAVIN_LINUX_ARCH) defconfig &&
 PGAVIN_LINUX_HEADERS_CMD += echo \"Installing the Linux headers...\" &&
@@ -847,25 +866,29 @@ $(PGAVIN_LINUX_GCC_PHASE_1_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_BINUTILS_PHASE_1_
 
 # ---------- Peter Gavin's uClibc for Linux ----------
 
-# TODO: The config pollutes the source code repository, but uClibc does not seem to support out-of-tree builds yet:
-#       If I add  with O=\"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" , it fails to install file uClibc_config.h .
-# PGAVIN_LINUX_UCLIBC_OBJ_DIR := $(ORBUILD_BUILD_DIR)/PGAVIN_LINUX_UCLIBC_OBJ
+# uClibc does not seem to support out-of-tree builds yet,
+# if I add O=\"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" it fails to install file uClibc_config.h .
+# Therefore, this script clones the whole git repository to the obj dir and builds in there.
+PGAVIN_LINUX_UCLIBC_OBJ_DIR := $(ORBUILD_BUILD_DIR)/PGAVIN_LINUX_UCLIBC_OBJ
 
 PGAVIN_LINUX_UCLIBC_CMD :=
 
-# PGAVIN_LINUX_UCLIBC_CMD += if [ -d \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" ]; then echo \"Deleting previous output directory $(PGAVIN_LINUX_UCLIBC_OBJ_DIR)...\" && rm -rf \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\"; fi &&
-# PGAVIN_LINUX_UCLIBC_CMD += mkdir \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" &&
+PGAVIN_LINUX_UCLIBC_CMD += if [ -d \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" ]; then echo \"Deleting previous output directory $(PGAVIN_LINUX_UCLIBC_OBJ_DIR)...\" && rm -rf \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\"; fi &&
+PGAVIN_LINUX_UCLIBC_CMD += mkdir -p \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" &&
 
-PGAVIN_LINUX_UCLIBC_CMD += echo \"Cleaning any previous uClibc configuration ...\" &&
-PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_UCLIBC_CHECKOUT_DIR)\" ARCH=$(PGAVIN_LINUX_ARCH) clean &&
+PGAVIN_LINUX_UCLIBC_CMD += echo \"Getting a clean git shallow clone of uClibc's sources in directory \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" ...\" &&
+PGAVIN_LINUX_UCLIBC_CMD += cd \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" &&
+PGAVIN_LINUX_UCLIBC_CMD += git clone --depth 1 \"file://$(PGAVIN_UCLIBC_CHECKOUT_DIR)\" \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" &&
+
+#PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\" ARCH=$(PGAVIN_LINUX_ARCH) clean &&
 
 PGAVIN_LINUX_UCLIBC_CMD += echo \"Generating the uClibc configuration ...\" &&
-PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_UCLIBC_CHECKOUT_DIR)\"
+PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\"
 PGAVIN_LINUX_UCLIBC_CMD +=      ARCH=$(PGAVIN_LINUX_ARCH)
 PGAVIN_LINUX_UCLIBC_CMD +=      defconfig &&
 
-PGAVIN_LINUX_UCLIBC_CMD += echo \"Building uClibc ...\" &&
-PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_UCLIBC_CHECKOUT_DIR)\"
+PGAVIN_LINUX_UCLIBC_CMD += echo \"Building and installing uClibc ...\" &&
+PGAVIN_LINUX_UCLIBC_CMD += make -C \"$(PGAVIN_LINUX_UCLIBC_OBJ_DIR)\"
 PGAVIN_LINUX_UCLIBC_CMD +=      PREFIX=\"$(PGAVIN_LINUX_TOOLCHAIN_PREFIX)\"
 PGAVIN_LINUX_UCLIBC_CMD +=      KERNEL_HEADERS=\"$(PGAVIN_LINUX_HEADERS_INSTALL_DIR)/include\"
 PGAVIN_LINUX_UCLIBC_CMD +=      DEVEL_PREFIX=/ 
@@ -878,7 +901,6 @@ PGAVIN_LINUX_UCLIBC_PREPEND_PATH := $(PGAVIN_LINUX_TOOLCHAIN_DIR)/bin
 
 $(eval $(call run_makefile_and_report_template,PGAVIN_LINUX_UCLIBC,Peter Gavin's uClibc for Linux,$(SHELL) -c "$(PGAVIN_LINUX_UCLIBC_CMD)"))
 $(PGAVIN_LINUX_UCLIBC_SENTINEL): $(PGAVIN_UCLIBC_CHECKOUT_SENTINEL) $(PGAVIN_LINUX_HEADERS_SENTINEL) $(PGAVIN_LINUX_GCC_PHASE_1_INSTALL_SENTINEL)
-# TODO: all_pgavin: $(PGAVIN_LINUX_UCLIBC_SENTINEL)
 
 
 # ---------- Peter Gavin's Linux GCC phase 2 ----------
@@ -898,14 +920,18 @@ PGAVIN_LINUX_GCC_PHASE_2_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 $(eval $(call autotool_project_template,PGAVIN_LINUX_GCC_PHASE_2,Peter Gavin's Linux GCC Phase 2,$(PGAVIN_OR1K_GCC_CHECKOUT_DIR)))
 
 $(PGAVIN_LINUX_GCC_PHASE_2_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_UCLIBC_SENTINEL)
-# TODO: all_pgavin: $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
+all_pgavin_linux: $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL)
 
-# TODO: The bld-all.sh rebuilds uClibc with the final (phase 2) compiler, maybe we should do the same here.
+# TODO: The bld-all.sh script rebuilds uClibc with the final (phase 2) compiler.
+#       The instructions here do that too:  http://openrisc.net/toolchain-build.html
+#       However, the script that Jonas gave me does not.
+#       Is that step really necessary?
 
 
 # ----------- Linux GDB cross-debugger for OpenRISC -----------
 
-# TODO:  This is the old 7.2 debugger, we should probably use a newer one.
+# TODO: This builds the bare toolchain in order to compile or1ksim. Can we not compile
+#       or1ksim with the Linux toolchain?
 
 LINUX_GDB_SRC_DIR := $(GNUSRC_CHECKOUT_DIR)/gdb-7.2
 LINUX_GDB_BIN_DIR := $(PGAVIN_LINUX_TOOLCHAIN_DIR)
@@ -920,7 +946,7 @@ LINUX_GDB_EXTRA_CONFIG_ARGS += --with-or1ksim=$(PGAVIN_OR1KSIM_BIN_DIR)
 $(eval $(call autotool_project_template,LINUX_GDB,GDB 7.2 for Linux with Peter Gavin's toolchain,$(LINUX_GDB_SRC_DIR)))
 
 $(LINUX_GDB_CONFIGURE_SENTINEL): $(PGAVIN_LINUX_GCC_PHASE_2_INSTALL_SENTINEL) $(PGAVIN_OR1KSIM_INSTALL_SENTINEL) $(GNUSRC_CHECKOUT_SENTINEL)
-# TODO: all_pgavin: $(LINUX_GDB_INSTALL_SENTINEL)
+all_pgavin_linux: $(LINUX_GDB_INSTALL_SENTINEL)
 
 
 # ---- Build gdbserver ----
@@ -938,7 +964,7 @@ $(GDBSERVER_CONFIGURE_SENTINEL): $(LINUX_GDB_INSTALL_SENTINEL)
 
 # Disabled for the time being, as I have not been able to get this to work yet.
 ifeq "1" "0"
-all_pgavin: $(GDBSERVER_INSTALL_SENTINEL)
+  all_pgavin: $(GDBSERVER_INSTALL_SENTINEL)
 endif
 
 
@@ -1303,18 +1329,19 @@ BARE_TOOLCHAIN_GROUP += $(GDB_AUTOTOOLS_GROUP)
 VERILOG_TOOLS_GROUP := $(ICARUS_VERILOG_AUTOTOOLS_GROUP)
 VERILOG_TOOLS_GROUP += $(VERILATOR_AUTOTOOLS_GROUP)
 
-PGAVIN_TOOLCHAIN_GROUP := PGAVIN_LINUX_HEADERS
-PGAVIN_TOOLCHAIN_GROUP += PGAVIN_LINUX_UCLIBC
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_2_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_1_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_2_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_OR1KSIM_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_1_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_2_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(LINUX_GDB_AUTOTOOLS_GROUP)
-PGAVIN_TOOLCHAIN_GROUP += $(GDBSERVER_AUTOTOOLS_GROUP)
+PGAVIN_BARE_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
+PGAVIN_BARE_TOOLCHAIN_GROUP += $(PGAVIN_BINUTILS_PHASE_2_AUTOTOOLS_GROUP)
+PGAVIN_BARE_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_1_AUTOTOOLS_GROUP)
+PGAVIN_BARE_TOOLCHAIN_GROUP += $(PGAVIN_GCC_PHASE_2_AUTOTOOLS_GROUP)
+PGAVIN_BARE_TOOLCHAIN_GROUP += $(PGAVIN_OR1KSIM_AUTOTOOLS_GROUP)
+
+PGAVIN_LINUX_TOOLCHAIN_GROUP := PGAVIN_LINUX_HEADERS
+PGAVIN_LINUX_TOOLCHAIN_GROUP += PGAVIN_LINUX_UCLIBC
+PGAVIN_LINUX_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_BINUTILS_PHASE_1_AUTOTOOLS_GROUP)
+PGAVIN_LINUX_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_1_AUTOTOOLS_GROUP)
+PGAVIN_LINUX_TOOLCHAIN_GROUP += $(PGAVIN_LINUX_GCC_PHASE_2_AUTOTOOLS_GROUP)
+# TODO: PGAVIN_TOOLCHAIN_GROUP += $(LINUX_GDB_AUTOTOOLS_GROUP)
+# TODO: PGAVIN_TOOLCHAIN_GROUP += $(GDBSERVER_AUTOTOOLS_GROUP)
 
 LLVM_CLANG_GROUP := LLVM_CLANG_CHECK_TESTS
 LLVM_CLANG_GROUP += LINK_FROM_LVM_TO_CLANG
@@ -1352,7 +1379,8 @@ generate_groups_file:
 	echo "Subversion Repositories        = $(SVN_CHECKOUT_GROUP)"     >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Bare Toolchain                 = $(BARE_TOOLCHAIN_GROUP)"   >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Verilog Tools                  = $(VERILOG_TOOLS_GROUP)"    >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
-	echo "Peter Gavin's Toolchain        = $(PGAVIN_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Peter Gavin's Bare Toolchain   = $(PGAVIN_BARE_TOOLCHAIN_GROUP)"  >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
+	echo "Peter Gavin's Linux Toolchain  = $(PGAVIN_LINUX_TOOLCHAIN_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "Peter Gavin's Repositories     = $(PGAVIN_GIT_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "LLVM/Clang                     = $(LLVM_CLANG_GROUP)"       >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
 	echo "LLVM/Clang Git Repositories    = $(LLVM_CLANG_REPOS_GROUP)" >>$(ORBUILD_COMPONENT_GROUPS_FILENAME)
