@@ -18,6 +18,7 @@ void config_set_alt_vjtag(unsigned char enable);
 void config_set_vjtag_cmd_vir(unsigned int cmd);
 void config_set_vjtag_cmd_vdr(unsigned int cmd);
 void config_set_xilinx_bscan_internal_jtag ( bool enable );
+void config_set_trace ( bool enable_bit_data_trace );
 
 
 // ----------- High-level TAP operations -----------

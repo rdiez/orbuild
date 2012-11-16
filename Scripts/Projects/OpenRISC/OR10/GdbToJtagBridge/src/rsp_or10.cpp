@@ -113,7 +113,7 @@ static void collect_cpu_stop_reason ( const bool stopped_via_edis )
     case SPR_DRR_TE:     sigval  = TARGET_SIGNAL_TRAP; break;
 
     // In the current OR10 hardware implementation, a single-step does not raise a TRAP,
-    // so the DSR reads back 0. GDB expects a TRAP signal, so convert it here.
+    // so the DRR reads back 0. GDB expects a TRAP signal, so convert it here.
     // If the CPU was not in single-step mode, we have lost the last stop reason,
     // a TRAP should be alright too.
     case 0:
@@ -856,4 +856,9 @@ void poll_cpu ( void )
 void check_connection_with_cpu_is_still_there ( void )
 {
   dbg_cpu0_is_stalled();
+}
+
+void enable_or10_jtag_trace ( const bool enable_jtag_trace )
+{
+  dgb_enable_jtag_trace( enable_jtag_trace );
 }

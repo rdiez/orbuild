@@ -75,6 +75,8 @@ static std::vector< irset > cmd_line_ir_sizes;
 static int cmd_line_cmd_debug = -1;  // 0 is a valid debug command, so use -1
 
 static int listen_on_all_addrs = 0;
+static int trace_rsp = 0;
+static int trace_jtag_bit_data = 0;
 
 // TCP port to set up the server for GDB on
 static const char *port = NULL;
@@ -154,7 +156,10 @@ static uint32_t get_debug_cmd ( const int devidx )
     {
       retval = bsdl_get_user1_cmd( discovered_id_codes[devidx] );
       if(cmd_line_cmd_debug < 0)
-        printf( "Xilinx manufacturer code found in the device's IDCODE, assuming Xilinx' internal JTAG (BSCAN mode, using USER1 instead of DEBUG TAP command).\n" );
+        printf( "Xilinx manufacturer code found in the device's IDCODE, "
+                  "assuming Xilinx' internal JTAG (BSCAN mode, using USER1=0x%X "
+                "instead of DEBUG TAP command).\n",
+                retval );
     }
     else
     {
@@ -231,14 +236,17 @@ static void configure_chain ( void )
     exit(1);
   }
 
-  printf( "The target device is at JTAG chain position %d and has an IDCODE of 0x%08X.\n",
-          target_dev_pos,
-          discovered_id_codes[target_dev_pos] );
-
   const unsigned int manuf_id = (discovered_id_codes[target_dev_pos] >> 1) & IDCODE_MANUFACTURER_ID_MASK;
 
   // Use BSDL files to determine prefix bits, postfix bits, debug command, IR length
-  config_set_IR_size( get_IR_size(target_dev_pos) );
+  const int ir_size = get_IR_size(target_dev_pos);
+
+  printf( "The target device is at JTAG chain position %d and has an IDCODE of 0x%08X.\nThe IR register has a length of %d bits.\n",
+          target_dev_pos,
+          discovered_id_codes[target_dev_pos],
+          ir_size );
+
+  config_set_IR_size( ir_size );
 
   // Set the IR prefix / postfix bits
   int total = 0;
@@ -306,7 +314,7 @@ static void configure_chain ( void )
     }
   }
 
-  printf( "Performing a sanity check (write the IDCODE instruction code and read back the IDCODE value)...\n" );
+  printf( "Performing a TAP sanity check (explicitly write the IDCODE instruction code and read back the IDCODE value)...\n" );
   const uint32_t cmd = bsdl_get_idcode_cmd( discovered_id_codes[target_dev_pos] );
 
   if ( cmd == TAP_CMD_INVALID )
@@ -337,7 +345,7 @@ void print_usage ( const char * const func )
 #ifdef ENABLE_JSP
   printf("Compiled with support for the JTAG Serial Port (JSP).\n");
 #else
-  printf("Support for the JTAG serial port is NOT compiled in.\n");
+  // printf("Support for the JTAG serial port is NOT compiled in (the OR10 TAP does not supported it yet anyway).\n");
 #endif
 
   printf("\nUsage: %s (options) [cable] (cable options)\n", func);
@@ -359,8 +367,10 @@ void print_usage ( const char * const func )
   printf("  -r [hex cmd]  : VDR for target TAP, override autodetect\n");
   printf("                  (Altera virtual JTAG targets only)\n");
   printf("  -b [dirname]  : Add a directory to search for BSDL files\n");
+  printf("  --trace-rsp   : Trace the GDB RSP protocol data.\n");
+  printf("  --trace-jtag-bit-data : Trace the JTAG communication at bit level.\n");
 
-  printf("  -h            : show help\n\n");
+  printf("  -h, --help    : show this help text\n\n");
   cable_print_help();
   printf("\n");
   printf("The bridge terminates upon receiving signals SIGINT (Ctrl+C) or SIGHUP (closing a console window).\n");
@@ -392,7 +402,7 @@ void get_ir_opts ( char * const optstr,  // Modifes this string.
 }
 
 
-void parse_args ( const int argc, char ** const argv )
+static bool parse_args ( const int argc, char ** const argv )
 {
   port = NULL;
   force_alt_vjtag = 0;
@@ -409,6 +419,8 @@ void parse_args ( const int argc, char ** const argv )
     {
       { "help", no_argument, NULL, 'h' },
       { "listen-on-all-addrs", no_argument, &listen_on_all_addrs, 1 },
+      { "trace-rsp", no_argument, &trace_rsp, 1 },
+      { "trace-jtag-bit-data", no_argument, &trace_jtag_bit_data, 1 },
       { NULL, 0, NULL, 0 }  // All zeros, marks the end of the long options list.
     };
 
@@ -428,8 +440,7 @@ void parse_args ( const int argc, char ** const argv )
 
     case 'h':
       print_usage(argv[0]);
-      exit(0);
-      break;
+      return false;
 
     case 'g':
       port = optarg;
@@ -541,6 +552,8 @@ void parse_args ( const int argc, char ** const argv )
 
     cable_parse_opt( c, optarg );
   }
+
+  return true;
 }
 
 
@@ -563,7 +576,7 @@ static int main_2 ( int argc,  char * argv[] )
   try
   {
     // This application does not output large number of text messages,
-    // and, if logging is turned of, the user should see the log messages straight away.
+    // and, if logging is turned off, the user should see the log messages straight away.
     // Therefore, turn off buffering on stdout and stderr. Afterwards, there is no need
     // to call fflush( stdout/stderr ) any more.
     if ( 0 != setvbuf( stdout, NULL, _IONBF, 0 ) )
@@ -577,57 +590,64 @@ static int main_2 ( int argc,  char * argv[] )
 
     cable_setup();
 
-    parse_args( argc, argv );
-
-    char * server_port_first_err_char;
-    const long int gdb_rsp_server_port = strtol( port, &server_port_first_err_char, 10 );
-
-    if ( *server_port_first_err_char )
+    if ( parse_args( argc, argv ) )
     {
-      throw std::runtime_error( format_msg( "Failed to parse GDB RSP server port from the given parameter \"%s\".", port ) );
-      // This alternative code issues a warning and takes a default port number:
-      //   printf( "Failed to parse GDB RSP server port \'%s\', using default \'%s\'.\n", port, default_port );
-      //   gdb_rsp_server_port = strtol( default_port, &server_port_first_err_char, 10 );
-      //   if ( *server_port_first_err_char )
-      //     throw std::runtime_error( "Error retrieving the TCP port for the GDB RSP server." );
-    }
+      config_set_trace( trace_jtag_bit_data );
 
-    cable_init();
+      char * server_port_first_err_char;
+      const long int gdb_rsp_server_port = strtol( port, &server_port_first_err_char, 10 );
 
-    // Initialize a new connection to the or1k board, and make sure we are really connected.
-    configure_chain();
-
-  #ifdef ENABLE_JSP
-    long int jspserverport;
-    jspserverport = strtol(jspport,&s,10);
-    if(*s) {
-      printf("Failed to get JSP server port \'%s\', using default \'%s\'.\n", jspport, default_jspport);
-      serverPort = strtol(default_jspport,&s,10);
-      if(*s) {
-        printf("Failed to get default JSP port, exiting.\n");
-        return -1;
+      if ( *server_port_first_err_char )
+      {
+        throw std::runtime_error( format_msg( "Failed to parse GDB RSP server port from the given parameter \"%s\".", port ) );
+        // This alternative code issues a warning and takes a default port number:
+        //   printf( "Failed to parse GDB RSP server port \'%s\', using default \'%s\'.\n", port, default_port );
+        //   gdb_rsp_server_port = strtol( default_port, &server_port_first_err_char, 10 );
+        //   if ( *server_port_first_err_char )
+        //     throw std::runtime_error( "Error retrieving the TCP port for the GDB RSP server." );
       }
+
+      cable_init();
+
+      // Initialize a new connection to the or1k board, and make sure we are really connected.
+      configure_chain();
+
+#ifdef ENABLE_JSP
+      long int jspserverport;
+      jspserverport = strtol(jspport,&s,10);
+      if(*s) {
+        printf("Failed to get JSP server port \'%s\', using default \'%s\'.\n", jspport, default_jspport);
+        serverPort = strtol(default_jspport,&s,10);
+        if(*s) {
+          printf("Failed to get default JSP port, exiting.\n");
+          return -1;
+        }
+      }
+
+      jsp_init(jspserverport);
+      jsp_server_start();
+#endif
+
+      printf("The GDB to JTAG bridge is up and running.\n");
+
+      // If you update the signal list, please update the help text too.
+      install_signal_handler( SIGINT , exit_signal_handler );
+      install_signal_handler( SIGHUP , exit_signal_handler );
+      install_signal_handler( SIGPIPE, ignore_signal_handler );  // Otherwise, writing to a socket may kill us with a SIGPIPE signal.
+
+      handle_rsp( gdb_rsp_server_port,
+                  listen_on_all_addrs ? false : true,
+                  trace_rsp ? true : false,
+                  trace_jtag_bit_data ? true : false,
+                  &s_exit_request );
+
+      if ( s_exit_request )
+      {
+        printf( "Quitting after receiving signal number %d.\n", s_received_signal_number );
+      }
+
+      cable_close();
     }
-
-    jsp_init(jspserverport);
-    jsp_server_start();
-  #endif
-
-    printf("The GDB to JTAG bridge is up and running.\n");
-
-    // If you update the signal list, please update the help text too.
-    install_signal_handler( SIGINT , exit_signal_handler );
-    install_signal_handler( SIGHUP , exit_signal_handler );
-    install_signal_handler( SIGPIPE, ignore_signal_handler );  // Otherwise, writing to a socket may kill us with a SIGPIPE signal.
-
-    handle_rsp( gdb_rsp_server_port, listen_on_all_addrs ? false : true, &s_exit_request );
-
-    if ( s_exit_request )
-    {
-      printf( "Quitting after receiving signal number %d.\n", s_received_signal_number );
-    }
-
-    cable_close();
 
     bsdl_terminate();
 

@@ -22,6 +22,8 @@
 
 #include <stdio.h>
 #include <assert.h>
+#include <stdarg.h>
+
 #include <stdexcept>
 
 #include "chain_commands.h"
@@ -41,6 +43,39 @@
 #define BITS_PER_BYTE  8
 
 
+static bool s_enable_jtag_trace;
+
+
+void dgb_enable_jtag_trace ( const bool enable_jtag_trace )
+{
+  s_enable_jtag_trace = enable_jtag_trace;
+}
+
+static void trace_jtag ( const char * const format_str, ... )
+{
+  if ( !s_enable_jtag_trace )
+    return;
+
+  static const char TRACE_PREFIX[] = "Debug op: ";
+
+  va_list arg_list;
+  va_start( arg_list, format_str );
+
+  printf( "%s", TRACE_PREFIX );
+  vprintf( format_str, arg_list );
+
+  va_end( arg_list );
+}
+
+
+static std::string decode_spr_number ( const uint16_t cpu_spr_reg_number )
+{
+  return format_msg( "CPU SPR group number: %u, reg number: %u",
+                     (unsigned)(cpu_spr_reg_number >> 11),
+                     (unsigned)(cpu_spr_reg_number & 0x7FF) );
+}
+
+
 // TODO: The old code has always called cable_flush() after a transaction, is that really necessary?
 //       If so, which cables do need it?
 // extern int cable_flush ( void );
@@ -50,6 +85,8 @@
 static bool wait_for_cpu_ack ( void )
 {
   jtag_discard_postfix_bits();
+
+  trace_jtag( "Waiting for a '1' bit to signal operation completion...\n" );
 
   // Wait for a '1' bit that indicates the operation is complete.
   // POSSIBLE OPTIMISATION: We could read several bits at once here.
@@ -67,6 +104,8 @@ static bool wait_for_cpu_ack ( void )
 
   uint8_t error_bit_read;
   jtag_read_write_bit( 0, &error_bit_read );
+
+  trace_jtag( "Operation complete, the error bit read was %c.\n", error_bit_read ? '1' : '0' );
 
   return error_bit_read ? true : false;
 }
@@ -105,6 +144,7 @@ bool dbg_cpu0_read_spr ( const uint16_t cpu_spr_reg_number, uint32_t * const cpu
 {
   try
   {
+    trace_jtag( "Reading %s...\n", decode_spr_number(cpu_spr_reg_number).c_str() );
     tap_move_from_idle_to_shift_dr();
 
     const uint32_t read_spr_cmd = ( DEBUG_CMD_READ_CPU_SPR << sizeof(cpu_spr_reg_number) * BITS_PER_BYTE ) | cpu_spr_reg_number;
@@ -137,13 +177,14 @@ bool dbg_cpu0_read_spr ( const uint16_t cpu_spr_reg_number, uint32_t * const cpu
 
     finish_and_leave_a_dbg_nop_cmd_in_place();
 
+    trace_jtag( "Finished reading %s.\n", decode_spr_number(cpu_spr_reg_number).c_str() );
+
     return error_bit;
   }
   catch ( const std::exception & e )
   {
-    throw std::runtime_error( format_msg( "Error reading from CPU SPR group number: %u, reg number: %u: %s",
-                                          (unsigned)(cpu_spr_reg_number >> 11),
-                                          (unsigned)(cpu_spr_reg_number & 0x7FF),
+    throw std::runtime_error( format_msg( "Error reading from %s: %s",
+                                          decode_spr_number(cpu_spr_reg_number).c_str(),
                                           e.what() ) );
   }
 }
@@ -153,9 +194,8 @@ void dbg_cpu0_read_spr_e ( const uint16_t cpu_spr_reg_number, uint32_t * const c
 {
   if ( dbg_cpu0_read_spr( cpu_spr_reg_number, cpu_spr_reg_value ) )
   {
-    throw std::runtime_error( format_msg( "Error reading from CPU SPR group number: %u, reg number: %u: The CPU JTAG interface returned an error indication.",
-                                          (unsigned)(cpu_spr_reg_number >> 11),
-                                          (unsigned)(cpu_spr_reg_number & 0x7FF) ) );
+    throw std::runtime_error( format_msg( "Error reading from %s: The CPU JTAG interface returned an error indication.",
+                                          decode_spr_number(cpu_spr_reg_number).c_str() ) );
   }
 }
 
@@ -193,17 +233,20 @@ bool dbg_cpu0_write_spr ( const uint16_t cpu_spr_reg_number, const uint32_t cpu_
 {
   try
   {
+    trace_jtag( "Writing %s...\n", decode_spr_number(cpu_spr_reg_number).c_str() );
+
     const bool error_bit = write_spr( cpu_spr_reg_number, cpu_spr_reg_value );
 
     finish_and_leave_a_dbg_nop_cmd_in_place();
+
+    trace_jtag( "Finished writing %s.\n", decode_spr_number(cpu_spr_reg_number).c_str() );
 
     return error_bit;
   }
   catch ( const std::exception & e )
   {
-    throw std::runtime_error( format_msg( "Error writing to CPU SPR group number: %u, reg number: %u, new value: 0x%08X: %s",
-                                          (unsigned)(cpu_spr_reg_number >> 11),
-                                          (unsigned)(cpu_spr_reg_number & 0x7FF),
+    throw std::runtime_error( format_msg( "Error writing to %s, new value: 0x%08X: %s",
+                                          decode_spr_number(cpu_spr_reg_number).c_str(),
                                           (unsigned)cpu_spr_reg_value,
                                           e.what() ) );
   }
@@ -214,9 +257,8 @@ void dbg_cpu0_write_spr_e ( const uint16_t cpu_spr_reg_number, const uint32_t cp
 {
   if ( dbg_cpu0_write_spr( cpu_spr_reg_number, cpu_spr_reg_value ) )
   {
-    throw std::runtime_error( format_msg( "Error writing to CPU SPR group number: %u, reg number: %u, new value: 0x%08X: The CPU JTAG interface returned an error indication.",
-                                          (unsigned)(cpu_spr_reg_number >> 11),
-                                          (unsigned)(cpu_spr_reg_number & 0x7FF),
+    throw std::runtime_error( format_msg( "Error writing to %s, new value: 0x%08X: The CPU JTAG interface returned an error indication.",
+                                          decode_spr_number(cpu_spr_reg_number).c_str(),
                                           (unsigned)cpu_spr_reg_value ) );
   }
 }
@@ -247,9 +289,8 @@ static bool dbg_cpu0_write_and_read_spr ( const uint16_t cpu_spr_reg_number,
   }
   catch ( const std::exception & e )
   {
-    throw std::runtime_error( format_msg( "Error during a combined write+read operation on CPU SPR group number: %u, reg number: %u, value written: 0x%08X: %s",
-                                          (unsigned)(cpu_spr_reg_number >> 11),
-                                          (unsigned)(cpu_spr_reg_number & 0x7FF),
+    throw std::runtime_error( format_msg( "Error during a combined write+read operation on %s, value written: 0x%08X: %s",
+                                          decode_spr_number(cpu_spr_reg_number).c_str(),
                                           (unsigned)cpu_spr_reg_value_to_write,
                                           e.what() ) );
   }
@@ -260,7 +301,11 @@ bool dbg_cpu0_is_stalled ( void )
 {
   try
   {
+    trace_jtag( "Querying CPU stall status...\n" );
+
     tap_move_from_idle_to_shift_dr();
+
+    trace_jtag( "Writing a DEBUG_CMD_IS_CPU_STALLED command.\n" );
 
     const uint32_t is_stalled_cmd = DEBUG_CMD_IS_CPU_STALLED;
 
@@ -281,12 +326,16 @@ bool dbg_cpu0_is_stalled ( void )
 
     jtag_discard_postfix_bits();
 
+    trace_jtag( "Reading the 'is stalled' bit...\n" );
+
     uint8_t bit_read;
     jtag_read_write_bit( 0, &bit_read );
 
     const bool ret = ( bit_read != 0 );
 
     finish_and_leave_a_dbg_nop_cmd_in_place();
+
+    trace_jtag( "Finished querying CPU stall status, result is: %s.\n", ret ? "stalled" : "not stalled" );
 
     return ret;
   }
@@ -336,6 +385,8 @@ void dbg_cpu0_read_mem ( const uint32_t start_addr,
     return;
   }
 
+  trace_jtag( "Reading from memory, address 0x%08X, byte count %u...\n", start_addr, byte_count );
+
   // The code below assumes that the OR10 CPU is big endian.
   //
   // This code can be optimised by having a central loop that reads 4-byte aligned data in chunks.
@@ -356,56 +407,61 @@ void dbg_cpu0_read_mem ( const uint32_t start_addr,
   if ( error_bit_1 )
   {
     // printf("Error bit set at mem addr: 0x%08X\n", addr );
-    return;
+
+    // Nothing else to do here, the caller will get fewer bytes than requested,
+    // and that is the only error indication this routine is returning.
   }
-  // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_1 );
-  break_up_into_bytes( mem_val_1, &b1, &b2, &b3, &b4 );
-
-
-  for ( unsigned i = 0; i < byte_count; ++i )
+  else
   {
-    bool is_end_of_32_bit_word = false;
+    // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_1 );
+    break_up_into_bytes( mem_val_1, &b1, &b2, &b3, &b4 );
 
-    switch ( byte_pos )
+
+    for ( unsigned i = 0; i < byte_count; ++i )
     {
-    case 0: data_read->push_back( b1 ); break;
-    case 1: data_read->push_back( b2 ); break;
-    case 2: data_read->push_back( b3 ); break;
-    case 3: data_read->push_back( b4 );
-            is_end_of_32_bit_word = true;
-            break;
-    default:
-      assert( false );
-    }
+      bool is_end_of_32_bit_word = false;
 
-    if ( is_end_of_32_bit_word )
-    {
-      byte_pos = 0;
-      addr += 4;
-
-      uint32_t mem_val_2;
-      const bool error_bit_2 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_2 );
-      if ( error_bit_2 )
+      switch ( byte_pos )
       {
-        // printf("Error bit set at mem addr: 0x%08X\n", addr );
+      case 0: data_read->push_back( b1 ); break;
+      case 1: data_read->push_back( b2 ); break;
+      case 2: data_read->push_back( b3 ); break;
+      case 3: data_read->push_back( b4 );
+        is_end_of_32_bit_word = true;
         break;
+      default:
+        assert( false );
       }
-      // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_2 );
-      break_up_into_bytes( mem_val_2, &b1, &b2, &b3, &b4 );
-    }
-    else
-    {
-      byte_pos++;
+
+      if ( is_end_of_32_bit_word )
+      {
+        byte_pos = 0;
+        addr += 4;
+
+        uint32_t mem_val_2;
+        const bool error_bit_2 = dbg_cpu0_write_and_read_spr( SPR_DU_READ_MEM_ADDR, addr, &mem_val_2 );
+        if ( error_bit_2 )
+        {
+          // printf("Error bit set at mem addr: 0x%08X\n", addr );
+          break;
+        }
+        // printf("Mem addr: 0x%08X, value read: 0x%08X\n", addr, mem_val_2 );
+        break_up_into_bytes( mem_val_2, &b1, &b2, &b3, &b4 );
+      }
+      else
+      {
+        byte_pos++;
+      }
     }
   }
+
+  trace_jtag( "Finished reading from memory, address 0x%08X, byte count %u.\n", start_addr, byte_count );
 }
 
 
-// Returns true if there was an error writing to memory.
-
-bool dbg_cpu0_write_mem ( const uint32_t start_addr,
-                          const uint32_t byte_count,
-                          const std::vector< uint8_t > * const data_to_write )
+static bool dbg_cpu0_write_mem_2 ( const uint32_t start_addr,
+                                   const uint32_t byte_count,
+                                   const std::vector< uint8_t > * const data_to_write )
 {
   if ( byte_count == 0 )
   {
@@ -535,4 +591,26 @@ bool dbg_cpu0_write_mem ( const uint32_t start_addr,
   }
 
   return false;
+}
+
+
+// Returns true if there was an error writing to memory.
+
+bool dbg_cpu0_write_mem ( const uint32_t start_addr,
+                          const uint32_t byte_count,
+                          const std::vector< uint8_t > * const data_to_write )
+{
+  if ( byte_count == 0 )
+  {
+    assert( false );
+    return false;
+  }
+
+  trace_jtag( "Writing to memory, address 0x%08X, byte count %u...\n", start_addr, byte_count );
+
+  const bool ret = dbg_cpu0_write_mem_2 ( start_addr, byte_count, data_to_write );
+
+  trace_jtag( "Finished writing to memory, address 0x%08X, byte count %u.\n", start_addr, byte_count );
+
+  return ret;
 }

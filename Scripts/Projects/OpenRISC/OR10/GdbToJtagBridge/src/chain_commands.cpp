@@ -27,6 +27,7 @@
 #include <stdio.h>
 #include <string.h>  // For memset().
 #include <assert.h>
+#include <stdarg.h>
 
 #include <stdexcept>
 
@@ -68,6 +69,25 @@ static bool is_altera_virtual_jtag = 0;
 static bool is_xilinx_bscan_internal_jtag = false;
 static unsigned int vjtag_cmd_vir = ALTERA_CYCLONE_CMD_VIR;  // virtual IR-shift command for altera devices, may be configured on command line
 static unsigned int vjtag_cmd_vdr = ALTERA_CYCLONE_CMD_VDR; // virtual DR-shift, ditto
+
+static bool s_enable_bit_data_trace = false;
+static const char BIT_DATA_TRACE_PREFIX[] = "JTAG bit data: ";
+static std::string s_trace_buffer;
+
+
+static void trace_jtag ( const char * const format_str, ... )
+{
+  if ( !s_enable_bit_data_trace )
+    return;
+
+  va_list arg_list;
+  va_start( arg_list, format_str );
+
+  printf( "%s", BIT_DATA_TRACE_PREFIX );
+  vprintf( format_str, arg_list );
+
+  va_end( arg_list );
+}
 
 
 ///////////////////////////////////////////////////////////////////////
@@ -136,6 +156,106 @@ void config_set_vjtag_cmd_vdr ( unsigned int cmd )
   vjtag_cmd_vdr = cmd;
 }
 
+void config_set_trace ( const bool enable_bit_data_trace )
+{
+  s_enable_bit_data_trace = enable_bit_data_trace;
+}
+
+
+static void trace_outgoing_bit ( const uint8_t packet )
+{
+  if ( !s_enable_bit_data_trace )
+    return;
+
+  s_trace_buffer.clear();
+
+  if ( packet & TMS )
+  {
+    s_trace_buffer += ", TMS=1";
+  }
+  if ( packet & TRST )
+  {
+    s_trace_buffer += ", TRST=1";
+  }
+
+  printf( "%sSent bit TDO=%c%s\n",
+          BIT_DATA_TRACE_PREFIX,
+          packet & TMS ? '1' : '0',
+          s_trace_buffer.c_str() );
+}
+
+
+static void trace_outgoing_stream ( const uint32_t * const stream,
+                                    const int len_bits,
+                                    const bool set_TMS_during_the_last_bit_transfer )
+{
+  assert( len_bits > 0 );
+
+  if ( !s_enable_bit_data_trace )
+    return;
+
+  s_trace_buffer.clear();
+
+  int index = 0;
+  int bits_this_index = 0;
+
+  for ( int i = 0; i < len_bits; i++ )
+  {
+    const uint8_t out = (stream[index] >> bits_this_index) & 1;
+
+    s_trace_buffer += out ? '1' : '0';
+
+    bits_this_index++;
+
+    if ( bits_this_index >= 32 )
+    {
+      index++;
+      bits_this_index = 0;
+    }
+  }
+
+  if ( set_TMS_during_the_last_bit_transfer )
+    s_trace_buffer += ", last bit TMS=1";
+
+  printf( "%sSent bits: %s\n",
+          BIT_DATA_TRACE_PREFIX,
+          s_trace_buffer.c_str() );
+}
+
+
+static void trace_incoming_stream ( const uint32_t * const stream,
+                                    const int len_bits )
+{
+  assert( len_bits > 0 );
+
+  if ( !s_enable_bit_data_trace )
+    return;
+
+  s_trace_buffer.clear();
+
+  int index = 0;
+  int bits_this_index = 0;
+
+  for ( int i = 0; i < len_bits; i++ )
+  {
+    const uint8_t out = (stream[index] >> bits_this_index) & 1;
+
+    s_trace_buffer += out ? '1' : '0';
+
+    bits_this_index++;
+
+    if ( bits_this_index >= 32 )
+    {
+      index++;
+      bits_this_index = 0;
+    }
+  }
+
+  printf( "%sReceived bits: %s\n",
+          BIT_DATA_TRACE_PREFIX,
+          s_trace_buffer.c_str() );
+}
+
 
 ////////////////////////////////////////////////////////////////////
 // Operations to read / write data over JTAG
@@ -143,13 +263,21 @@ void config_set_vjtag_cmd_vdr ( unsigned int cmd )
 static void jtag_write_bit ( uint8_t packet  // See the TDO, TMS and TRST constants.
                            )
 {
+  trace_outgoing_bit( packet );
   throw_if_error( cable_write_bit( packet ) );
 }
 
-void jtag_read_write_bit ( uint8_t packet,  // See the TDO, TMS and TRST constants.
-                           uint8_t * in_bit )
+void jtag_read_write_bit ( const uint8_t packet,  // See the TDO, TMS and TRST constants.
+                           uint8_t * const in_bit )
 {
+  trace_outgoing_bit( packet );
+
   throw_if_error( cable_read_write_bit( packet, in_bit ) );
+
+  if ( s_enable_bit_data_trace )
+    printf( "%sReceived bit TDI=%c\n",
+            BIT_DATA_TRACE_PREFIX,
+            *in_bit ? '1' : '0' );
 }
 
 
@@ -162,16 +290,22 @@ void jtag_write_stream ( const uint32_t * const out_data,
 {
   if ( !set_TMS_during_the_last_bit_transfer )
   {
+    trace_outgoing_stream( out_data, length_bits, false );
+
     const int err = cable_write_stream( out_data, length_bits, 0 );
     throw_if_error( err );
   }
   else if ( global_DR_prefix_bits == 0 )
   {
+    trace_outgoing_stream( out_data, length_bits, true );
+
     const int err = cable_write_stream( out_data, length_bits, 1 );
     throw_if_error( err );
   }
   else
   {
+    trace_outgoing_stream( out_data, length_bits, false );
+
     const int err1 = cable_write_stream( out_data, length_bits, 0 );
     throw_if_error( err1 );
 
@@ -195,18 +329,29 @@ void jtag_read_write_stream ( const uint32_t * const out_data,
   // from the number of prefix shifts.  However, that way leads to madness.
   if ( !set_TMS_during_the_last_bit_transfer )
   {
+    trace_outgoing_stream( out_data, length_bits, false );
+
     const int err = cable_read_write_stream( out_data, in_data, length_bits, 0 );
     throw_if_error( err );
+
+    trace_incoming_stream( in_data, length_bits );
   }
   else if ( global_DR_prefix_bits == 0 )
   {
+    trace_outgoing_stream( out_data, length_bits, true );
     const int err = cable_read_write_stream( out_data, in_data, length_bits, 1 );
     throw_if_error( err );
+
+    trace_incoming_stream( in_data, length_bits );
   }
   else
   {
+    trace_outgoing_stream( out_data, length_bits, false );
+
     const int err1 = cable_read_write_stream( out_data, in_data, length_bits, 0 );
     throw_if_error( err1 );
+
+    trace_incoming_stream( in_data, length_bits );
 
     jtag_shift_by_prefix_bits_with_ending_tms( 0 );
   }
@@ -286,6 +431,8 @@ void tap_reset ( void )
 {
   try
   {
+    trace_jtag( "Resetting the TAP...\n" );
+
     // I don't know why we write a TDO bit value of 0 here,
     // it should not be necessary to reset the TAP.
     jtag_write_bit(0);
@@ -314,6 +461,8 @@ void tap_reset ( void )
     // If TRST is not connnected and we were already in the Run-Test/Idle state,
     // this has no effect (it does not change the state).
     jtag_write_bit(0);
+
+    trace_jtag( "Finished resetting the TAP.\n" );
   }
   catch ( const std::exception & e )
   {
@@ -327,6 +476,8 @@ void tap_reset ( void )
 
 void set_ir_to_cpu_debug_module ( void )
 {
+  trace_jtag( "Setting the JTAG IR to address the CPU Debug Module...\n" );
+
   try
   {
     if( is_altera_virtual_jtag )
@@ -359,6 +510,8 @@ void set_ir_to_cpu_debug_module ( void )
     throw std::runtime_error( format_msg( "Error switching to the debug module of the OR10 TAP: %s",
                                           e.what() ) );
   }
+
+  trace_jtag( "Finished setting the JTAG IR to address the CPU Debug Module.\n" );
 }
 
 
@@ -369,6 +522,8 @@ static std::vector< uint32_t > ir_chain;
 
 void tap_set_ir ( const unsigned instruction_opcode )
 {
+  trace_jtag( "Setting the JTAG IR to 0x%X...\n", instruction_opcode );
+
   int chain_size;
   int chain_size_words;
   int i;
@@ -408,27 +563,40 @@ void tap_set_ir ( const unsigned instruction_opcode )
   // Write data, EXIT1_IR.
   debug( "Setting IR, size %i, IR_size = %i, pre_size = %i, post_size = %i, data 0x%X\n",
          chain_size, global_IR_size, global_IR_prefix_bits, global_IR_postfix_bits, instruction_opcode );
+
+  trace_outgoing_stream( &ir_chain.front(), chain_size, true );
+
   const int err = cable_write_stream( &ir_chain.front(), chain_size, 1 );  // Use cable_ call directly (not jtag_), so we don't add DR prefix bits
   throw_if_error( err );
   debug("Done setting IR\n");
 
   jtag_write_bit(TMS); // UPDATE_IR
   jtag_write_bit(  0); // IDLE
+
+  trace_jtag( "Finished setting the JTAG IR.\n" );
 }
 
 
 void tap_move_from_idle_to_shift_dr ( void )
 {
+  trace_jtag( "Moving TAP from Idle to Shift-DR...\n" );
+
   jtag_write_bit(TMS);  // SELECT_DR SCAN
   jtag_write_bit(  0);  // CAPTURE_DR
   jtag_write_bit(  0);  // SHIFT_DR
+
+  trace_jtag( "Finished moving TAP from Idle to Shift-DR.\n" );
 }
 
 
 void tap_move_from_exit_1_to_idle ( void )
 {
+  trace_jtag( "Moving TAP from Exit-1 to Idle...\n" );
+
   jtag_write_bit(TMS); // UPDATE_DR
   jtag_write_bit(  0); // IDLE
+
+  trace_jtag( "Finished moving TAP from Exit-1 to Idle.\n" );
 }
 
 
@@ -447,6 +615,8 @@ void jtag_enumerate_chain ( std::vector< uint32_t > * const discovered_id_codes 
 {
   try
   {
+    trace_jtag( "Enumerating the TAP chain...\n" );
+
     const unsigned MAX_DEVICE_COUNT = 1024;
 
     assert( discovered_id_codes->size() == 0 );
@@ -519,6 +689,8 @@ void jtag_enumerate_chain ( std::vector< uint32_t > * const discovered_id_codes 
     jtag_write_bit(TMS); // EXIT1_DR
     jtag_write_bit(TMS); // UPDATE_DR
     jtag_write_bit(0);   // IDLE
+
+    trace_jtag( "Finished enumerating the TAP chain.\n" );
   }
   catch ( const std::exception & e )
   {
@@ -535,8 +707,12 @@ void jtag_get_idcode ( const uint32_t cmd, uint32_t * const idcode )
 
   try
   {
+    trace_jtag( "Writing the IDCODE instruction code...\n" );
+
     tap_set_ir( cmd );
     tap_move_from_idle_to_shift_dr();
+
+    trace_jtag( "Reading the IDCODE value...\n" );
 
     jtag_discard_postfix_bits();
 
@@ -544,6 +720,8 @@ void jtag_get_idcode ( const uint32_t cmd, uint32_t * const idcode )
     jtag_read_write_stream( &data_out, idcode, 32, true );  // EXIT1_DR
 
     tap_move_from_exit_1_to_idle();
+
+    trace_jtag( "Finished getting the IDCODE value.\n" );
 
     is_altera_virtual_jtag = saveconfig;
   }

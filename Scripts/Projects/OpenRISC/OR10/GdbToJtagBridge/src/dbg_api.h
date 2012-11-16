@@ -7,6 +7,8 @@
 
 // The xxx_e() versions throw an exception on error.
 
+void dgb_enable_jtag_trace ( bool enable_jtag_trace );
+
 bool dbg_cpu0_read_spr    ( uint16_t cpu_spr_reg_number, uint32_t * cpu_spr_reg_value );
 void dbg_cpu0_read_spr_e  ( uint16_t cpu_spr_reg_number, uint32_t * cpu_spr_reg_value );
 

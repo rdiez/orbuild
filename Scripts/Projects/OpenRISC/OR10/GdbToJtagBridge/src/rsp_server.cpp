@@ -395,7 +395,11 @@ static void shutdown ( void )
 }
 
 
-void handle_rsp ( const int port_number, const bool listen_on_local_addr_only, const bool * const exit_request )
+void handle_rsp ( const int port_number,
+                  const bool listen_on_local_addr_only,
+                  const bool trace_rsp,
+                  const bool trace_jtag,
+                  const bool * const exit_request )
 {
   try
   {
@@ -412,6 +416,9 @@ void handle_rsp ( const int port_number, const bool listen_on_local_addr_only, c
     // The current synchronous implementation has the usual weaknesses: if a socket stalls,
     // all other traffic is affected. If any of the 3 possible connections is lost, the code
     // may not realise if it's waiting on another socket.
+
+    enable_rsp_trace = trace_rsp;
+    enable_or10_jtag_trace( trace_jtag );
 
     rsp.server_fd = -1;
     rsp.client_fd = -1;

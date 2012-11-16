@@ -30,6 +30,7 @@ struct rsp_struct
 
 extern rsp_struct rsp;
 
+void enable_or10_jtag_trace ( bool enable_jtag_trace );
 void attach_to_cpu ( void );
 void detach_from_cpu ( void );
 void process_client_command ( const struct rsp_buf * buf );
