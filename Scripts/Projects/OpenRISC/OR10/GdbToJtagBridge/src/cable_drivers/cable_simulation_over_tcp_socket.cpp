@@ -46,7 +46,7 @@ static bool was_vpi_cable_driver_initialised = false;
 static jtag_cable_t vpi_cable_driver;
 
 static int connection_socket = -1;
-static int tcp_port = 4567;
+static in_port_t tcp_port = 4567;
 static std::string remote_hostname = "localhost";
 
 
@@ -188,14 +188,18 @@ static int cable_vpi_opt ( const int c, const char * const str )
   switch(c)
   {
   case 'p':
-    tcp_port = atoi(str);
-
-    if( tcp_port == 0 )
     {
-      fprintf(stderr, "Bad port value for VPI cable: %s\n", str);
-      return APP_ERR_BAD_PARAM;
+      const int val = atoi(str);
+
+      if ( val <= 0 || val > 0xFFFF )
+      {
+        fprintf(stderr, "Bad port value for VPI cable: %s\n", str);
+        return APP_ERR_BAD_PARAM;
+      }
+
+      tcp_port = in_port_t( val );
+      break;
     }
-    break;
   case 's':
     remote_hostname = str;
     break;
