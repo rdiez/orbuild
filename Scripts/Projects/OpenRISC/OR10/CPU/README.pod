@@ -25,7 +25,7 @@ OR10 is an open-source, hacker-friendly, 32-bit CPU for embedded systems written
 
 =over
 
-=item * Implements the L<< OpenRISC|http://en.wikipedia.org/wiki/OpenRISC >> ORBIS32 instruction set.
+=item * Implements the complete L<< OpenRISC|http://en.wikipedia.org/wiki/OpenRISC >> ORBIS32 instruction set.
 
 =item * Very simple design. One could say suboptimal, or even naive.
 
@@ -43,13 +43,11 @@ See the Verilog source code for the Wishbone datasheet.
 
 =item * No instruction or data caches, no MMU.
 
-=item * All ORBIS32 instructions are available.
-
 =item * Choice of barrel or serial shifter for the rotate and shift instructions.
 
-=item * Does not implement floating-point or anything advanced.
-
 =item * Debug Unit for JTAG debugging (see below for more information).
+
+=item * Does not implement floating-point or vector instructions.
 
 =item * Implements a few I<< l.nop >> opcodes like NOP_EXIT and NOP_REPORT (simulation only).
 
@@ -93,6 +91,8 @@ There are some things that could be done to improve FPGA area consumption:
 
 =over
 
+=item * Implement a pipelined design.
+
 =item * Implement an external multiplier and/or divider. See below for more information.
 
 =item * Implement a balanced bit shifter for I<< l.ror >> and the like.
@@ -123,11 +123,24 @@ OR10's Debug Unit bus and protocol are not compatible with the original OR1200 i
 so you need to use the supplied I<< GdbToJtagBridge >>. However, you can use
 the same GDB (or32-elf-gdb) that I<< orbuild >> builds for the "bare metal" OR32 toolchain.
 
-You'll need to instantiate a I<< tap_or10 >> and either a I<< tap_top >> or a Xilinx-specific BSCAN component like BSCAN_SPARTAN6. See
-I<< GdbToJtagBridge >>'s help for a list of supported JTAG cables.
+Issue command "monitor help" in the GDB console in order to see all OR10-specific commands available.
+You will probably want to use the "monitor reset" command every now and then.
+
+In order to implement JTAG on the CPU side, you'll need to instantiate a I<< tap_or10 >> and either
+a I<< tap_top >> or a Xilinx-specific BSCAN component like BSCAN_SPARTAN6.
+See I<< GdbToJtagBridge >>'s help for a list of supported JTAG cables.
 
 There are clock-domain-crossing components that synchronise the JTAG and the CPU clocks both ways. While not particularly fast,
 it should work with any JTAG clock frequency your FPGA can process.
+
+The current implementation favours reliability over performance: I<< GdbToJtagBridge >> waits until each CPU debug operation
+finishes, instead of assumming that such operations must complete in a given number of cycles, which may not be true
+if say the Ethernet DMA controller gets hold of the Wishbone bus for long periods of time.
+OR10's Debug Interface provides an error signal, so any failures are reported all the way back to the user.
+The error signal is just a single bit and provides no further clues about the error reason,
+but I<< GdbToJtagBridge >>'s error messages show exactly which debug operation failed,
+Debug operations normally consist of reading from or writing to a CPU SPR, and this information
+is normally enough to deduce what went wrong.
 
 =head3 Caveats
 
@@ -147,13 +160,17 @@ This means that program memory must be writeable,
 as the debugger writes I<< l.trap >> instructions in order to trigger breakpoins. Therefore, it is not possible
 to set breakpoints in ROM or Flash memory.
 
-=item * Wishbone access is always 32-bit wide.
+=item * Wishbone memory accesses are always 32-bit wide.
 
 The current Debug Interface implementation is not suitable for reading from or writing to byte-oriented Wishbone devices
 like 16550 UART controllers, as all reads and writes are 32-bits wide.
 
 Note also that the current I<< GdbToJtagBridge >> version does not support all unaligned address/size combinations,
 so reading from or writing to unaligned memory addresses or with unaligned data lengths may fail (you'll get a proper error message though).
+
+=item * No testing has been performed in JTAG chains with more than 1 device.
+
+Any feedback in this area will be appreciated.
 
 =back
 
@@ -194,7 +211,7 @@ the Wishbone bus is not used any more, so other peripherals can access RAM and s
 The new opcode starts with a 6-bit prefix of 0x08, like l.sys and l.trap. Use the following construct
 in order to generate a sleep instruction in a C program:
 
-  asm volatile ( ".word 0x20010000" );
+  asm volatile ( ".word 0x20010000" );  // l.sleep instruction.
 
 =item * The PIC interrupts are level triggered and must not be rearmed.
 
@@ -310,8 +327,11 @@ will be I<< or1k >>.
 
 =head2 Instruction execution time
 
-It takes 2 clock cycles to execute register-based instructions (assuming there are no Wishbone wait-states),
-and 4 cycles for instructions which access memory.
+It takes 2 clock cycles to execute register-based instructions (because of the instruction fetch memory access),
+and 4 cycles for instructions which access another memory address.
+This assumes that the Wishbone memory is synchronous RAM that needs 1 clock cycle to deliver the data (without any extra wait-states).
+Asynchronous RAM is rare, but would have no such delay and therefore it would deliver the results on the same Wishbone
+clock posedge as the request gets registered.
 
 For shift and rotate instructions, if you choose the serial shifter, it takes one extra clock cycle per shift/rotate bit to shift.
 Therefore, a shift instruction can take 2 + 31 clock cycles to complete.
