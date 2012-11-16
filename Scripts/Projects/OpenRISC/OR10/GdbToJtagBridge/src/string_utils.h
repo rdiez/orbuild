@@ -6,6 +6,7 @@
 #include <algorithm>
 
 std::string format_msg ( const char * format_str, ... );
+void format_buffer ( std::string * result, const char * format_str, ... );
 std::string format_errno_msg ( int errno_val,
                                const char * prefix_msg_fmt,
                                ... );

@@ -12,10 +12,8 @@
 #include <stdexcept>
 
 
-static std::string format_msg_v ( const char * format_str, va_list arg_list )
+static void format_msg_v ( std::string * const result, const char * format_str, va_list arg_list )
 {
-    std::string ret;
-
     char * str;
     const int res = vasprintf( &str, format_str, arg_list );
 
@@ -24,7 +22,7 @@ static std::string format_msg_v ( const char * format_str, va_list arg_list )
 
     try
     {
-      ret = str;
+      *result = str;
     }
     catch ( ... )
     {
@@ -33,7 +31,6 @@ static std::string format_msg_v ( const char * format_str, va_list arg_list )
     }
 
     free( str );
-    return ret;
 }
 
 
@@ -42,13 +39,24 @@ std::string format_msg ( const char * format_str, ... )
     va_list arg_list;
     va_start( arg_list, format_str );
 
-    const std::string ret = format_msg_v( format_str, arg_list );
+    std::string ret;
+
+    format_msg_v( &ret, format_str, arg_list );
 
     va_end( arg_list );
 
     return ret;
 }
 
+void format_buffer ( std::string * const result, const char * format_str, ... )
+{
+    va_list arg_list;
+    va_start( arg_list, format_str );
+
+    format_msg_v( result, format_str, arg_list );
+
+    va_end( arg_list );
+}
 
 std::string format_errno_msg ( const int errno_val,
                                const char * const prefix_msg_fmt,  // Can be NULL.
@@ -60,7 +68,7 @@ std::string format_errno_msg ( const int errno_val,
   std::string prefix_msg;
 
   if ( prefix_msg_fmt != NULL )
-    prefix_msg = format_msg_v( prefix_msg_fmt, arg_list );
+    format_msg_v( &prefix_msg, prefix_msg_fmt, arg_list );
 
   va_end( arg_list );
 
