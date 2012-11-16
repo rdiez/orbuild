@@ -1017,6 +1017,11 @@ $(eval $(call autogen_project_template,ORTS_EXES,OpenRISC Test Suite executables
 
 # Build the "GDB to JTAG Bridge" as a standard autoconf project.
 
+# Force a rebuild for development purposes:
+# $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/OR10_GDB_JTAG_BRIDGE.Autogen.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+# $(shell rm -rf $(ORBUILD_SANDBOX)/Builds/LatestBuildDir/obj/OR10_GDB_JTAG_BRIDGE-obj)
+# $(shell rm $(ORBUILD_AUTOCONF_SENTINELS_DIR)/OR10_GDB_JTAG_BRIDGE.Make.$(ORBUILD_SENTINEL_FILENAME_SUFFIX))
+
 OR10_GDB_JTAG_BRIDGE_EXTRA_CONFIG_ARGS := --enable-debug=yes --enable-jsp-server=no  # When development has settled down, turn off the debug build here.
 OR10_GDB_JTAG_BRIDGE_EXTRA_GLOBAL_MAKE_ARGS := $(FASTER_MAKE)
 OR10_GDB_JTAG_BRIDGE_MAKE_MAKEFLAGS_FILTER  := pass-j
