@@ -17,6 +17,8 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =pod
 
+=head1 WARNING: I am not maintaining this project any more
+
 =head1 About the OR10 CPU
 
 OR10 is an open-source, hacker-friendly, 32-bit CPU for embedded systems written in Verilog.

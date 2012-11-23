@@ -17,6 +17,8 @@ However, the POD syntax is quite simple and can be edited with a standard text e
 
 =pod
 
+=head1 WARNING: I am not maintaining this project any more
+
 =head1 I<< orbuild >> - a build system for OpenRISC
 
 =head2 Instructions for the impatient
